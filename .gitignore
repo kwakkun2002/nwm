@@ -8,3 +8,4 @@ models
 nwm/data
 data_splits/**/dataset*.pkl
 data
+cdit_s_100000.pth.tar
