@@ -4,6 +4,21 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 #
+# 데이터 전처리, 좌표 변환, 시각화, 이미지 정규화를 위한 공용 유틸리티 함수 모음.
+#
+# 주요 구성 요소:
+#   - 좌표 변환: to_local_coords(), yaw_rotmat(), angle_difference()
+#     글로벌 위치/yaw를 로봇 로컬 좌표계로 변환.
+#   - Action 유틸리티: normalize_data() / unnormalize_data()로 action을 [-1, 1]
+#     범위로 min-max 스케일링, get_delta_np()로 증분 action delta 계산,
+#     get_action_torch()로 정규화된 delta에서 누적 action 복원.
+#   - 이미지 변환: CenterCropAR (4:3 종횡비 중심 크롭), 표준 torchvision 변환
+#     파이프라인 (크롭, 224x224 리사이즈, [-1, 1] 정규화),
+#     unnormalize로 [0, 1] 범위로 역변환.
+#   - 시각화: log_viz_single()과 plot_images_and_actions()로 관측/goal 이미지와
+#     예측 및 ground truth trajectory를 함께 플로팅.
+#   - Planning 헬퍼: save_planning_pred()로 예측 텐서를 디스크에 저장.
+#
 import yaml
 import matplotlib.pyplot as plt
 import torch

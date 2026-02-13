@@ -7,6 +7,21 @@
 # References:
 # NoMaD, GNM, ViNT: https://github.com/robodhruv/visualnav-transformer
 # --------------------------------------------------------
+#
+# 로봇 내비게이션 trajectory 데이터를 로드하고 전처리하는 PyTorch Dataset 클래스 모음.
+#
+# 세 가지 Dataset 변형을 제공:
+#   - TrainingDataset: context 프레임과 무작위로 샘플링된 goal 프레임 및 해당 action을
+#     로드하여 CDiT world model 학습에 사용.
+#   - EvalDataset: context 프레임과 순차적 미래 프레임 및 delta action을 로드하여
+#     단일 timestep 예측 및 rollout 평가에 사용.
+#   - TrajectoryEvalDataset: 전체 trajectory 시퀀스(context, goal, action)를 로드하여
+#     trajectory 수준의 rollout 및 planning 평가에 사용.
+#
+# 각 trajectory는 번호가 매겨진 JPG 프레임(0.jpg, 1.jpg, ...)과 위치/yaw 배열이
+# 담긴 traj_data.pkl 파일로 저장됨. action은 현재 관측 프레임 기준의 로컬 좌표
+# delta로 계산됨.
+#
 
 import numpy as np
 import torch

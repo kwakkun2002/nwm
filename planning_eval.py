@@ -4,6 +4,21 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 #
+# Goal-conditioned 시각 내비게이션을 위해 CDiT world model과 Cross Entropy
+# Method (CEM)를 사용하는 planning 평가 스크립트.
+#
+# WM_Planning_Evaluator 클래스:
+#   1. 가우시안 분포(mu, sigma)에서 후보 action 시퀀스를 샘플링.
+#   2. 각 후보에 대해 world model을 통한 autoregressive rollout으로 미래 시각
+#      관측을 예측.
+#   3. LPIPS 지각적 손실로 goal 이미지 대비 각 rollout을 평가.
+#   4. 상위 K개 trajectory를 선택하고 가우시안을 재적합 (CEM 업데이트).
+#   5. 최적화 후, 최종 평균 action을 실행하고 trajectory metric으로 평가:
+#      ATE (절대 궤적 오차), RPE (상대 자세 오차), goal 위치 오차, yaw 오차.
+#
+# trajectory metric 계산에 evo 라이브러리를 사용하며, torchrun을 통한
+# 다중 GPU 분산 평가를 지원.
+#
 import torch
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True

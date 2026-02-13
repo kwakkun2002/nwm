@@ -4,6 +4,20 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 #
+# isolated_nwm_infer.py로 생성된 예측 이미지와 ground truth 이미지 간의
+# 지각적 유사도 metric을 계산하는 독립 평가 스크립트.
+#
+# 여러 시간 구간(1초, 2초, 4초, 8초, 16초)에서 세 가지 metric을 계산:
+#   - LPIPS (Learned Perceptual Image Patch Similarity)
+#   - DreamSim (지각적 거리)
+#   - FID (Frechet Inception Distance)
+#
+# 두 가지 평가 모드 지원:
+#   - 'time': 특정 미래 시간 오프셋에서의 단일 timestep 예측 품질 평가.
+#   - 'rollout': 주어진 FPS에서의 autoregressive rollout 예측 품질 평가.
+#
+# 결과는 데이터셋 및 평가 유형별로 JSON 파일로 저장됨.
+#
 import torch
 import argparse
 from tqdm import tqdm

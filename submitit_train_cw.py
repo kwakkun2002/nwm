@@ -6,6 +6,19 @@
 # --------------------------------------------------------
 # A script to run multinode training with submitit.
 # --------------------------------------------------------
+#
+# submitit 라이브러리를 사용하여 다중 노드 분산 CDiT 학습을 실행하는
+# SLURM 작업 제출 래퍼.
+#
+# 처리 항목:
+#   - SLURM 리소스 할당 (GPU, 메모리, CPU, 파티션, QoS).
+#   - 공유 checkpoint 폴더 하위에 자동 작업 디렉토리 생성.
+#   - submitit.JobEnvironment를 통한 GPU/rank/world-size 설정.
+#   - 선점(preemption) 시 checkpoint() 콜백을 통한 작업 재큐잉.
+#
+# train.py의 모든 학습 인자를 상속하며, SLURM 전용 옵션
+# (--nodes, --ngpus, --partition, --qos, --timeout 등)을 추가.
+#
 
 import argparse
 import os

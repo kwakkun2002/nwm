@@ -3,6 +3,21 @@
 #
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
+#
+# CDiT world model을 사용하여 예측을 생성하는 독립 추론 스크립트.
+#
+# 핵심 기능:
+#   - model_forward_wrapper(): 전체 추론 파이프라인을 래핑 — 입력 관측의 VAE 인코딩,
+#     CDiT 모델을 통한 DDPM diffusion 샘플링, VAE 디코딩으로 픽셀 공간 복원.
+#     평가 및 planning 스크립트 모두에서 사용됨.
+#   - generate_time(): 지수적으로 간격된 미래 시간 오프셋(1초, 2초, 4초, ...)에서
+#     action delta를 누적하여 단일 timestep 예측을 생성.
+#   - generate_rollout(): 다음 프레임을 예측하고 이를 context로 다시 입력하는
+#     반복 방식으로 autoregressive trajectory rollout을 생성.
+#
+# 평가 기준선 구축을 위한 ground truth 추출 모드(--gt 1)와 분산 데이터 병렬
+# 처리를 지원하는 모델 예측 모드를 모두 지원.
+#
 #from distributed import init_distributed
 import torch
 torch.backends.cuda.matmul.allow_tf32 = True

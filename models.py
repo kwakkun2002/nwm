@@ -8,6 +8,27 @@
 # GLIDE: https://github.com/openai/glide-text2im
 # MAE: https://github.com/facebookresearch/mae/blob/main/models_mae.py
 # --------------------------------------------------------
+#
+# 내비게이션 world modeling을 위한 CDiT (Conditional Diffusion Transformer) 모델
+# 아키텍처 — NWM 프로젝트의 핵심 신경망.
+#
+# 아키텍처 개요:
+#   - CDiTBlock: 세 개의 서브 레이어로 구성된 Transformer 블록 — 노이즈가 추가된
+#     타겟에 대한 self-attention, conditioning context 프레임에 대한 cross-attention,
+#     feed-forward MLP. 모든 레이어는 timestep + action + 상대 시간 임베딩의
+#     결합에 조건화된 adaptive layer normalization (adaLN-Zero)을 사용.
+#   - CDiT: 입력 latent를 patch 임베딩하고, context 및 타겟 프레임에 학습 가능한
+#     positional 임베딩을 추가한 후, N개의 CDiTBlock을 통과시키고 unpatchify하여
+#     노이즈(및 선택적으로 분산)를 예측하는 메인 모델.
+#   - Embedder: TimestepEmbedder (sinusoidal + MLP), ActionEmbedder (x/y/angle
+#     개별 임베딩)로 diffusion 프로세스를 조건화.
+#
+# 모델 변형 (CDiT_models dict로 정의):
+#   - CDiT-XL/2: 28 레이어, 1152 hidden, 16 heads (기본값)
+#   - CDiT-L/2:  24 레이어, 1024 hidden, 16 heads
+#   - CDiT-B/2:  12 레이어, 768 hidden, 12 heads
+#   - CDiT-S/2:  12 레이어, 384 hidden, 6 heads
+#
 import torch
 import torch.nn as nn
 import numpy as np

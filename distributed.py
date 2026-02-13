@@ -5,6 +5,17 @@
 # LICENSE file in the root directory of this source tree.
 # --------------------------------------------------------
 #
+# 분산 학습 유틸리티 및 metric 로깅 헬퍼 모음.
+#
+# 주요 기능:
+#   - init_distributed(): torchrun 및 SLURM 환경을 지원하는 PyTorch 분산
+#     프로세스 그룹 초기화.
+#   - SmoothedValue / MetricLogger: 학습/평가 metric을 smoothed 평균, ETA 추정,
+#     프로세스 간 동기화와 함께 추적 및 로깅.
+#   - sync_fid_loss_fns(): 일관된 평가를 위해 모든 분산 프로세스에서 FID
+#     (Frechet Inception Distance) metric 상태를 수집하고 병합.
+#   - 헬퍼 함수: get_world_size(), get_rank(), is_main_process() 등.
+#
 import torch
 import torch.distributed as dist
 from torcheval.metrics import FrechetInceptionDistance

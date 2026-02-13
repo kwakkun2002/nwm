@@ -7,6 +7,25 @@
 # References:
 # NoMaD, GNM, ViNT: https://github.com/robodhruv/visualnav-transformer
 # --------------------------------------------------------
+#
+# CDiT (Conditional Diffusion Transformer) world model의 메인 학습 스크립트.
+#
+# 학습 파이프라인:
+#   1. 고정된 StabilityAI VAE(sd-vae-ft-ema)를 사용하여 입력 이미지를 latent
+#      공간으로 인코딩하고, latent에 0.18215를 곱하여 스케일링.
+#   2. 각 샘플을 context 프레임(conditioning)과 goal 프레임(타겟)으로 분리.
+#   3. DDPM diffusion 손실로 CDiT 모델을 학습 — goal 프레임 latent에 추가된
+#      노이즈를 context latent, action, 상대 시간 조건 하에 예측.
+#   4. 안정적인 평가와 최종 추론을 위해 모델의 EMA (지수 이동 평균) 사본을 유지.
+#
+# 주요 기능:
+#   - torchrun 또는 SLURM을 통한 Distributed Data Parallel (DDP) 학습.
+#   - bfloat16과 GradScaler를 사용한 혼합 정밀도 학습.
+#   - 선택적 torch.compile로 약 40% 속도 향상.
+#   - 주기적 체크포인트 저장 (latest + 번호가 매겨진 스냅샷).
+#   - DreamSim 지각적 손실을 사용한 홀드아웃 테스트 셋 주기적 평가.
+#   - 다중 로봇 내비게이션 데이터셋 결합 (recon, scand, sacson, tartan_drive).
+#
 
 from isolated_nwm_infer import model_forward_wrapper
 import torch
