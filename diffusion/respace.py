@@ -8,6 +8,56 @@
 #     GLIDE: https://github.com/openai/glide-text2im/blob/main/glide_text2im/gaussian_diffusion.py
 #     ADM:   https://github.com/openai/guided-diffusion/blob/main/guided_diffusion
 #     IDDPM: https://github.com/openai/improved-diffusion/blob/main/improved_diffusion/gaussian_diffusion.py
+# --------------------------------------------------------
+# Diffusion timestep respacing — 원본 diffusion process에서 timestep 부분집합을 선택하여
+# 샘플링 속도를 높이는 모듈.
+#
+# Diffusion 모델은 학습 시 전체 T step(예: 1000)을 사용하지만, 추론 시에는 모든 step을
+# 거칠 필요가 없다. 이 모듈은 원본 schedule에서 일부 timestep만 골라 새로운 축약된
+# diffusion process를 구성함으로써 샘플링 횟수를 줄인다.
+#
+# ── 주요 구성 요소 ──
+#
+# 1. space_timesteps(num_timesteps, section_counts):
+#    원본 T개의 timestep에서 사용할 부분집합을 결정하는 함수.
+#
+#    지원하는 입력 형식:
+#    - 리스트 (예: [10, 15, 20]):
+#      원본 timestep을 균등한 구간으로 나누고, 각 구간에서 지정된 수의 step을 균등 간격으로
+#      선택한다. 예를 들어 T=300, section_counts=[10,15,20]이면:
+#      · 구간 [0,99]에서 10개, [100,199]에서 15개, [200,299]에서 20개 선택 → 총 45 step
+#    - 단일 숫자 문자열 (예: "250"):
+#      T=1000 전체를 하나의 구간으로 보고 250개를 균등 간격으로 선택
+#    - "ddimN" 형식 (예: "ddim50"):
+#      DDIM 논문의 고정 stride 방식으로 정확히 N개의 step을 선택.
+#      range(0, T, stride)에서 결과가 정확히 N개가 되는 정수 stride를 탐색.
+#
+#    반환값: 선택된 원본 timestep 인덱스의 set
+#
+# 2. SpacedDiffusion(GaussianDiffusion):
+#    GaussianDiffusion을 상속하여 respaced timestep으로 동작하는 diffusion 클래스.
+#
+#    초기화 과정:
+#    - 원본 betas로 GaussianDiffusion을 임시 생성하여 alphas_cumprod를 계산
+#    - 선택된 timestep들에 대해 new_betas를 역산:
+#      new_beta_i = 1 - ᾱ_{t_i} / ᾱ_{t_{i-1}}
+#      이렇게 하면 축약된 schedule의 alphas_cumprod가 원본의 선택된 지점과 정확히 일치
+#    - timestep_map: 축약된 인덱스 → 원본 인덱스 매핑 리스트
+#
+#    _wrap_model()을 통해 모델 호출 시 축약된 timestep을 원본 timestep으로 변환.
+#    이를 통해 학습된 모델을 수정 없이 respaced sampling에 사용할 수 있다.
+#
+# 3. _WrappedModel:
+#    축약된 timestep 인덱스를 원본 인덱스로 매핑하는 모델 래퍼.
+#    SpacedDiffusion의 reverse process에서 모델이 호출될 때, 내부적으로
+#    timestep_map[t]를 통해 원본 timestep을 모델에 전달한다.
+#    예: 축약 schedule의 step 3 → 원본의 step 120이면, 모델에는 t=120이 전달됨.
+#
+# NWM 프로젝트에서의 사용:
+#   __init__.py의 create_diffusion()에서 SpacedDiffusion을 생성하며, 이것이 학습과
+#   추론 모두에서 사용되는 실제 diffusion 객체이다. 학습 시에는 전체 1000 step을 사용하고
+#   (section_counts=[1000]), 추론 시에는 timestep_respacing 인자를 통해 step 수를
+#   줄여 빠른 샘플링을 수행한다.
 
 import numpy as np
 import torch as th

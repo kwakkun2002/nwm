@@ -22,7 +22,8 @@ distance:
 len_traj_pred: 64
 
 # dataset specific parameters
-image_size: 224
+# image_size: 224
+image_size: 128
 datasets:
   recon:
     data_folder: data/recon

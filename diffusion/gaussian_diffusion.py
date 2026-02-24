@@ -8,6 +8,83 @@
 #     GLIDE: https://github.com/openai/glide-text2im/blob/main/glide_text2im/gaussian_diffusion.py
 #     ADM:   https://github.com/openai/guided-diffusion/blob/main/guided_diffusion
 #     IDDPM: https://github.com/openai/improved-diffusion/blob/main/improved_diffusion/gaussian_diffusion.py
+# --------------------------------------------------------
+# DDPM(Denoising Diffusion Probabilistic Models) 기반의 Gaussian diffusion 프로세스 핵심 구현.
+#
+# 이 모듈은 diffusion 패키지에서 가장 중심적인 역할을 하며, forward(노이즈 추가) 및
+# reverse(노이즈 제거) diffusion 과정의 모든 수학적 연산을 담당한다.
+#
+# ── 주요 구성 요소 ──
+#
+# 1. Enum 클래스들 (모델 설정을 위한 타입 정의):
+#    - ModelMeanType: 모델이 예측하는 대상 (epsilon / x_0 / x_{t-1})
+#    - ModelVarType: 모델의 variance 처리 방식 (고정 / 학습)
+#    - LossType: 학습 손실 함수 종류 (MSE / KL / RESCALED 변형들)
+#
+# 2. Beta schedule 함수들:
+#    - get_named_beta_schedule(): 이름으로 beta schedule 생성
+#      · "linear": Ho et al. (2020)의 선형 schedule (beta_start=0.0001 → beta_end=0.02)
+#      · "squaredcos_cap_v2": Nichol & Dhariwal (2021)의 cosine schedule
+#    - get_beta_schedule(): deprecated API (quad, warmup, const, jsd 등 지원)
+#    - betas_for_alpha_bar(): 임의의 alpha_bar 함수에서 beta 역산
+#
+# 3. GaussianDiffusion 클래스:
+#    생성자에서 betas 배열을 받아 다음의 사전 계산값들을 캐싱한다:
+#    - alphas_cumprod (ᾱ_t): 누적곱 alpha, forward process의 신호 감쇠 정도
+#    - sqrt_alphas_cumprod, sqrt_one_minus_alphas_cumprod: q(x_t|x_0) 샘플링용 계수
+#    - posterior_mean_coef1/2, posterior_variance: q(x_{t-1}|x_t,x_0) 후방분포 계수
+#
+#    주요 메서드:
+#
+#    [Forward process - 학습 시 노이즈 추가]
+#    - q_sample(x_start, t, noise):
+#      깨끗한 이미지 x_0에서 timestep t의 노이즈 이미지 x_t를 샘플링.
+#      x_t = √(ᾱ_t) · x_0 + √(1-ᾱ_t) · ε
+#
+#    - q_mean_variance(x_start, t): q(x_t|x_0)의 평균/분산 반환
+#    - q_posterior_mean_variance(x_start, x_t, t): q(x_{t-1}|x_t,x_0)의 후방분포 계산
+#
+#    [Reverse process - 추론 시 노이즈 제거]
+#    - p_mean_variance(model, x, t):
+#      모델 출력으로부터 p(x_{t-1}|x_t)의 평균/분산을 계산.
+#      모델이 epsilon을 예측하면 _predict_xstart_from_eps()로 x_0 복원 후 후방분포 계산.
+#      learned variance인 경우 출력 채널 후반부에서 분산 범위를 보간.
+#
+#    - p_sample(model, x, t): DDPM 방식으로 x_{t-1}을 한 step 샘플링
+#    - p_sample_loop(model, shape): 전체 reverse 과정을 반복하여 최종 이미지 생성
+#    - p_sample_loop_progressive(): 위와 동일하나 중간 결과를 yield하는 generator
+#
+#    [DDIM sampling - 결정론적/준결정론적 빠른 샘플링]
+#    - ddim_sample(model, x, t, eta): Song et al. (2020)의 DDIM sampler.
+#      eta=0이면 완전 결정론적, eta=1이면 DDPM과 동일.
+#    - ddim_reverse_sample(): DDIM의 역방향 ODE로 이미지→노이즈 인코딩
+#    - ddim_sample_loop(): DDIM으로 전체 샘플링 루프 수행
+#
+#    [Conditioning - 조건부 생성]
+#    - condition_mean(): Sohl-Dickstein et al. (2015) 방식의 gradient 기반 conditioning
+#    - condition_score(): Song et al. (2020) 방식의 score function conditioning
+#
+#    [학습 손실 계산]
+#    - training_losses(model, x_start, t):
+#      단일 timestep에 대한 학습 손실 계산.
+#      · MSE 모드: 모델 출력과 target(epsilon 또는 x_0) 사이의 MSE
+#      · KL 모드: variational lower bound
+#      · learned variance 사용 시 VLB 항을 추가 손실로 포함
+#
+#    [평가/분석용]
+#    - calc_bpd_loop(): 전체 timestep에 대한 bits-per-dim VLB 계산
+#    - _prior_bpd(): prior KL 항 계산
+#    - _vb_terms_bpd(): 단일 timestep의 VLB 항 계산
+#
+# 4. 유틸리티 함수:
+#    - _extract_into_tensor(arr, timesteps, broadcast_shape):
+#      1-D numpy 배열에서 배치 인덱스에 해당하는 값을 추출하여 broadcast 가능한 텐서로 변환.
+#      diffusion 계수를 timestep별로 배치 차원에 맞춰 꺼내는 데 핵심적으로 사용됨.
+#
+# NWM 프로젝트에서의 사용:
+#   CDiT 모델이 latent space에서 epsilon을 예측하도록 학습되며(ModelMeanType.EPSILON),
+#   variance는 LEARNED_RANGE로 설정된다. 학습 시 training_losses()가 호출되고,
+#   추론 시에는 SpacedDiffusion을 통해 p_sample_loop() 또는 ddim_sample_loop()가 호출된다.
 
 
 import math

@@ -8,6 +8,55 @@
 #     GLIDE: https://github.com/openai/glide-text2im/blob/main/glide_text2im/gaussian_diffusion.py
 #     ADM:   https://github.com/openai/guided-diffusion/blob/main/guided_diffusion
 #     IDDPM: https://github.com/openai/improved-diffusion/blob/main/improved_diffusion/gaussian_diffusion.py
+# --------------------------------------------------------
+# 학습 시 diffusion timestep을 샘플링하는 전략을 정의하는 모듈.
+#
+# Diffusion 모델 학습에서는 매 배치마다 랜덤 timestep t를 선택하여 해당 노이즈 수준에서의
+# 손실을 계산한다. 이 모듈은 timestep 샘플링 분포를 제어하여 학습 효율을 조절한다.
+#
+# ── 주요 구성 요소 ──
+#
+# 1. ScheduleSampler (추상 기반 클래스):
+#    모든 timestep sampler의 부모 클래스. Importance sampling 프레임워크를 제공.
+#
+#    - weights(): 각 timestep의 샘플링 가중치를 반환 (서브클래스에서 구현)
+#    - sample(batch_size, device):
+#      가중치를 확률로 정규화한 후 np.random.choice()로 timestep을 샘플링.
+#      Importance sampling 보정을 위해 역확률 가중치(1/(T·p_t))도 함께 반환.
+#      이 가중치를 손실에 곱하면 기대값이 uniform sampling과 동일해진다.
+#
+#      반환: (timestep 인덱스 텐서, importance weight 텐서)
+#
+# 2. UniformSampler(ScheduleSampler):
+#    모든 timestep에 동일한 가중치(=1)를 부여하는 균등 샘플러.
+#    가장 단순한 전략으로, 모든 timestep이 동일한 확률로 선택된다.
+#    NWM 프로젝트의 학습에서 기본적으로 사용됨.
+#
+# 3. LossAwareSampler(ScheduleSampler):
+#    손실 값에 기반하여 timestep 샘플링 확률을 동적으로 조절하는 추상 클래스.
+#
+#    - update_with_local_losses(local_ts, local_losses):
+#      분산 학습 환경에서 각 rank의 로컬 손실을 all_gather로 수집하여 동기화.
+#      모든 rank가 동일한 상태를 유지하도록 보장.
+#    - update_with_all_losses(): 서브클래스에서 구현, 전체 손실로 가중치 갱신.
+#
+# 4. LossSecondMomentResampler(LossAwareSampler):
+#    Improved DDPM(Nichol & Dhariwal, 2021)의 importance sampling 전략 구현.
+#
+#    각 timestep별로 최근 history_per_term(기본 10)개의 손실 이력을 유지하고,
+#    손실의 이차 모멘트(second moment) √(E[L²])에 비례하여 샘플링 확률을 설정.
+#    → 손실이 크고 분산이 높은 timestep이 더 자주 샘플링되어 학습 분산을 줄임.
+#
+#    uniform_prob(기본 0.001)를 혼합하여 모든 timestep이 최소한의 확률을 가지도록 보장.
+#    모든 timestep에 대해 history_per_term개의 손실이 수집될 때까지(_warmed_up)는
+#    uniform sampling을 사용.
+#
+# ── 팩토리 함수 ──
+#
+# create_named_schedule_sampler(name, diffusion):
+#   이름으로 sampler를 생성.
+#   - "uniform": UniformSampler
+#   - "loss-second-moment": LossSecondMomentResampler
 
 from abc import ABC, abstractmethod
 
