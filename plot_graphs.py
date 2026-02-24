@@ -193,7 +193,7 @@ RAW_LOG_L = r"""
 ==================================================
   GPU Resource Usage (NVIDIA RTX 5000 Ada Generation)
 ==================================================
-  Inference time        : 30120.4 ms (30.12 s)
+  Inference time        : 7734.6 ms (7.73 s)
   VRAM before inference  : 2941.4 MB
   VRAM after inference   : 2950.8 MB
   VRAM peak (allocated)  : 3335.8 MB
@@ -206,7 +206,7 @@ RAW_LOG_L = r"""
 ==================================================
   GPU Resource Usage (NVIDIA RTX 5000 Ada Generation)
 ==================================================
-  Inference time        : 3260.9 ms (3.26 s)
+  Inference time        : 3283.0 ms (3.28 s)
   VRAM before inference  : 2950.2 MB
   VRAM after inference   : 2950.5 MB
   VRAM peak (allocated)  : 3344.7 MB
@@ -219,7 +219,7 @@ RAW_LOG_L = r"""
 ==================================================
   GPU Resource Usage (NVIDIA RTX 5000 Ada Generation)
 ==================================================
-  Inference time        : 3268.1 ms (3.27 s)
+  Inference time        : 3469.0 ms (3.47 s)
   VRAM before inference  : 2950.2 MB
   VRAM after inference   : 2950.5 MB
   VRAM peak (allocated)  : 3344.7 MB
@@ -232,7 +232,7 @@ RAW_LOG_L = r"""
 ==================================================
   GPU Resource Usage (NVIDIA RTX 5000 Ada Generation)
 ==================================================
-  Inference time        : 3256.3 ms (3.26 s)
+  Inference time        : 3229.1 ms (3.23 s)
   VRAM before inference  : 2950.2 MB
   VRAM after inference   : 2950.5 MB
   VRAM peak (allocated)  : 3344.7 MB
@@ -245,7 +245,7 @@ RAW_LOG_L = r"""
 ==================================================
   GPU Resource Usage (NVIDIA RTX 5000 Ada Generation)
 ==================================================
-  Inference time        : 3206.3 ms (3.21 s)
+  Inference time        : 3193.9 ms (3.19 s)
   VRAM before inference  : 2950.5 MB
   VRAM after inference   : 2950.8 MB
   VRAM peak (allocated)  : 3345.0 MB
@@ -258,7 +258,7 @@ RAW_LOG_L = r"""
 ==================================================
   GPU Resource Usage (NVIDIA RTX 5000 Ada Generation)
 ==================================================
-  Inference time        : 3217.2 ms (3.22 s)
+  Inference time        : 3250.9 ms (3.25 s)
   VRAM before inference  : 2950.8 MB
   VRAM after inference   : 2951.1 MB
   VRAM peak (allocated)  : 3345.2 MB
@@ -271,7 +271,7 @@ RAW_LOG_L = r"""
 ==================================================
   GPU Resource Usage (NVIDIA RTX 5000 Ada Generation)
 ==================================================
-  Inference time        : 3229.6 ms (3.23 s)
+  Inference time        : 3204.9 ms (3.20 s)
   VRAM before inference  : 2951.1 MB
   VRAM after inference   : 2951.4 MB
   VRAM peak (allocated)  : 3345.5 MB
@@ -489,16 +489,15 @@ def summarize_model(model: str, df: pd.DataFrame) -> dict:
     return stats
 
 
-def plot_compare_bar(summary_df: pd.DataFrame, metric: str, ylabel: str, title: str, filename: str, yerr: bool = True) -> None:
+def plot_compare_bar(summary_df: pd.DataFrame, metric: str, ylabel: str, title: str, filename: str) -> None:
     compare_dir = os.path.join(OUT_DIR, "compare")
     os.makedirs(compare_dir, exist_ok=True)
 
     x_labels = summary_df["model"]
     values = summary_df[f"{metric}_mean"]
-    errors = summary_df[f"{metric}_std"].fillna(0) if yerr else None
 
     plt.figure()
-    plt.bar(x_labels, values, yerr=errors if yerr else None, capsize=5)
+    plt.bar(x_labels, values)
     plt.ylabel(ylabel)
     plt.title(title)
     plt.grid(axis="y")
@@ -570,7 +569,6 @@ def main() -> None:
         ylabel="Delta alloc (MB)",
         title="Average delta allocated VRAM by model",
         filename="04_compare_delta_alloc_mb.png",
-        yerr=True,
     )
 
     plot_compare_bar(
@@ -579,7 +577,6 @@ def main() -> None:
         ylabel="Peak usage ratio (%)",
         title="Average VRAM peak usage ratio by model",
         filename="05_compare_peak_usage_ratio_pct.png",
-        yerr=True,
     )
 
 
