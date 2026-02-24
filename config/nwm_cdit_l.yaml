@@ -1,11 +1,11 @@
-run_name: nwm_cdit_xl
+run_name: nwm_cdit_l
 
 # training setup
 results_dir: logs
 train: True
 batch_size: 16
 num_workers: 12
-model: CDiT-XL/2
+model: CDiT-L/2
 lr: 8e-5
 
 # normalization for the action space
