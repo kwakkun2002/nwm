@@ -1,0 +1,317 @@
+좋다. 이거 그냥 “연구계획”이 아니라 **실제 돌아가는 시스템 만드는 로드맵**으로 쪼개야 한다.
+말 그대로 **에이전트가 바로 실행할 수 있는 TODO**로 떨어뜨린다.
+
+---
+
+# 전체 전략 (한 줄 요약)
+
+> “텍스트가 진짜 쓸모 있는지”가 아니라
+> **“텍스트 덕분에 더 싸고 빠르게 쓸 수 있냐”**를 증명하는 프로젝트다.
+
+---
+
+# Phase 0 — 환경 & 베이스라인 고정 (이거 안 하면 다 무너짐)
+
+## TODO
+
+* [X] NWM smallest variant 코드 확보 및 실행
+  - smallest = `config/nwm_cdit_s.yaml` (`CDiT-S/2`)
+  - local ckpt 확인: `logs/nwm_cdit_s/checkpoints/cdit_s_100000.pth.tar`
+  - inference/eval 시 checkpoint arg는 기본값 `0100000` 대신 `--ckp cdit_s_100000` 사용
+  - 남은 blocker: RECON 데이터 다운로드/전처리, `eval_datasets.recon.data_folder` 로컬 절대경로 수정, 필요 시 VAE를 `logs/sd-vae-ft-ema`로 로컬 로드
+* [X] RECON 데이터셋 다운로드 
+  - direct dataset archive 다운로드 후 압축 해제 완료
+  - 압축 해제 프로세스 종료: `exit code 0`
+  - 결과 폴더: `/home/kun/kun_ssd/nwm/datasets/recon_raw/recon_release`
+  - 현재 크기: 약 `72G`
+  - 파일 수: `11836`개 `.hdf5`
+* [ ] RECON 데이터셋 로딩 + inference pipeline 확인
+* [ ] baseline metric 재현 (LPIPS / PSNR / FVD 등)
+* [ ] rollout (1s / 2s / 4s) evaluation 코드 확보
+* [ ] GPU profiling (latency / VRAM / FLOPs baseline 기록)
+
+## 산출물
+
+* baseline 성능 표 (무조건 필요)
+* baseline inference latency log
+
+이거 없으면 나중에 “좋아졌는지” 판단 자체가 불가능
+
+---
+
+# Phase 1 — 데이터 파이프라인 구축 (여기서 승부 50% 결정됨)
+
+## 1.1 프레임 추출
+
+* [ ] video → frame (1 FPS)
+* [ ] keyframe sampling 옵션 구현 (추후 실험용)
+
+## 1.2 오프라인 캡션 생성
+
+* [ ] Qwen2-VL / LLaVA inference pipeline 구축
+* [ ] prompt 템플릿 설계 (scene-only / goal 포함 분리)
+* [ ] batch caption generation (병렬화 필수)
+
+## 1.3 텍스트 정제
+
+* [ ] caption → structured text (tag or short sentence)
+* [ ] 불필요한 문장 제거 (압축 중요)
+
+## 1.4 embedding precompute
+
+* [ ] CLIP text encoder 로 embedding 생성
+* [ ] (frame_id → text_embedding) 캐싱
+* [ ] dataloader에서 바로 불러오도록 설계
+
+## 산출물
+
+* frame + action + text_embedding aligned dataset
+
+핵심: **학습 때 텍스트 인코더 절대 돌리지 마라 (속도 병목 터짐)**
+
+---
+
+# Phase 2 — 모델 결합 (Text Conditioning)
+
+## 2.1 최소 변경 버전 (무조건 먼저)
+
+* [ ] text → projection layer 추가
+* [ ] 기존 conditioning vector에 단순 concat or sum
+
+## 2.2 안정성 장치
+
+* [ ] projection layer zero init
+* [ ] text dropout (p=0.3~0.5)
+* [ ] 일부 샘플 text 제거
+
+## 2.3 gated fusion (2차)
+
+* [ ] gating scalar or MLP 추가
+* [ ] text influence 조절
+
+## 구조 목표
+
+```
+cond = f(image, action, timestep, text)
+```
+
+핵심: **NWM을 깨지 말고 “옆에 붙인다”**
+
+---
+
+# Phase 3 — PoC (진짜 중요한 첫 검증)
+
+## 실험
+
+* [ ] Base NWM
+* [ ] + Scene text
+* [ ] + Goal text
+* [ ] + Scene+Goal
+
+## 평가
+
+* [ ] LPIPS / PSNR / DreamSim
+* [ ] rollout stability (1s / 2s / 4s)
+
+## 판단 기준
+
+* 텍스트가 **조금이라도 의미 있게 도움 되냐**
+
+여기서 효과 없으면 방향 바꿔야 한다 (냉정하게)
+
+---
+
+# Phase 4 — Resolution Scaling (이게 핵심 논문 포인트)
+
+## TODO
+
+* [ ] 해상도 단계별 실험
+
+  * high → 128 → 112 → 64
+* [ ] 각 단계에서
+
+  * no-text vs text 비교
+
+## 분석
+
+* [ ] degradation slope 계산
+* [ ] text가 손실 얼마나 줄이는지 정량화
+
+## 목표
+
+* low-res + text ≈ mid/high-res without text
+
+이거 나오면 논문 먹힌다
+
+---
+
+# Phase 5 — OOD 일반화
+
+## TODO
+
+* [ ] GO Stanford 데이터셋 evaluation
+* [ ] unseen scene rollout 테스트
+
+## 분석
+
+* [ ] hallucination 발생 시점
+* [ ] trajectory 붕괴 시점
+* [ ] text vs no-text 비교
+
+## 포인트
+
+* text가 context 유지해주냐
+
+이건 “진짜 의미 이해했냐” 테스트다
+(데이비드 흄: “인간은 반복이 아니라 의미로 세계를 이해한다”)
+
+---
+
+# Phase 6 — Online Lightweight Text Pipeline
+
+## 6.1 YOLO 기반 (우선)
+
+* [ ] YOLOv10 Nano inference
+* [ ] detection → tag 변환
+* [ ] tag → text template
+
+## 6.2 optional (비교용)
+
+* [ ] Moondream2 경량 caption
+
+## 6.3 integration
+
+* [ ] real-time frame → text → embedding → NWM
+
+## 산출물
+
+* 실제 inference pipeline
+
+---
+
+# Phase 7 — End-to-End 시스템 평가
+
+## TODO
+
+* [ ] 전체 pipeline latency 측정
+
+  * image → text → NWM → output
+* [ ] FPS 측정
+* [ ] VRAM usage 기록
+
+## 비교군
+
+* [ ] high-res NWM
+* [ ] low-res no-text
+* [ ] low-res + YOLO text
+* [ ] low-res + Moondream
+
+## 핵심 질문
+
+* “텍스트 넣었더니 느려졌다” → 바로 실패
+
+반드시 **total system 기준으로 이득 보여야 함**
+
+---
+
+# Phase 8 — Ablation (논문 완성 단계)
+
+## TODO
+
+* [ ] text source 비교 (VLM vs YOLO vs template)
+* [ ] fusion 방식 비교
+* [ ] text noise robustness
+* [ ] wrong tag injection 실험
+* [ ] text dropout 효과
+
+---
+
+# Phase 9 — 결과 정리 & 메시지 만들기
+
+## 필수 그래프
+
+* [ ] resolution vs performance curve
+* [ ] latency vs performance tradeoff
+* [ ] rollout degradation graph
+* [ ] OOD failure case visualization
+
+## 핵심 주장 정리
+
+* 텍스트 = 성능 향상이 아니라
+  → **정보 압축 보조 채널**
+
+---
+
+# 최종 Deliverable (논문/발표 기준)
+
+* [ ] pipeline diagram (필수)
+* [ ] architecture diagram (baseline vs ours)
+* [ ] quantitative table (in-domain / OOD)
+* [ ] efficiency table (latency / VRAM)
+* [ ] qualitative visualization (rollout 비교)
+
+---
+
+# 진짜 중요한 핵심 포인트 (팩트로 말한다)
+
+1. 이 연구의 본질은 멀티모달이 아니다
+   → **compression + prior injection 문제다**
+
+2. 실패하는 가장 흔한 이유
+   → 텍스트가 “정보 추가”가 아니라
+   → 그냥 **노이즈 + 계산량 증가**가 되는 경우
+
+3. 성공 조건
+
+   * 텍스트가 **이미지보다 싸고**
+   * **의미는 더 잘 보존**해야 한다
+
+이거 한 줄로 요약하면
+
+> “semantic bitrate를 높인다”
+
+(클로드 섀넌: “정보는 압축될수록 가치가 드러난다” — 정보이론 창시자)
+
+---
+
+# 너한테 진짜 중요한 선택
+
+솔직하게 말하면 지금 갈림길은 이거다:
+
+* YOLO tag 기반 (빠름, 정보 제한)
+* lightweight caption (느림, 정보 풍부)
+
+나는 강하게 말한다:
+
+> **1차는 무조건 YOLO로 가라.**
+
+이유:
+
+* 논문 메시지가 “경량화”인데
+* heavy caption 붙이면 바로 논리 붕괴됨
+
+---
+
+# 한 줄 액션 플랜
+
+> **“Baseline 재현 → 텍스트 데이터 구축 → 최소 결합 → PoC 검증 → 해상도 축소 → OOD → 시스템 평가”**
+
+이 순서 절대 바꾸지 마라.
+
+---
+
+# 다음 단계 추천 (너 기준으로 현실적인 루트)
+
+1. 이번 주
+   → Phase 0 + Phase 1 일부
+
+2. 다음 주
+   → PoC 결과 확보
+
+3. 그 다음
+   → resolution scaling
+
+
+원하면
+바로 **코드 구조 (PyTorch + dataloader + conditioning injection)**까지 설계해줄게
+이건 진짜 중요하다.
