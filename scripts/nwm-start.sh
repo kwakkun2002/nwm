@@ -7,6 +7,11 @@ CONTAINER_WORKDIR="${NWM_CONTAINER_WORKDIR:-/workspace/nwm}"
 IMAGE_NAME="${NWM_IMAGE_NAME:-nwm:cu126}"
 GPU_REQUEST="${NWM_GPU_REQUEST:-all}"
 PORT_MAPPING="${NWM_PORT_MAPPING:-8888:8888}"
+DOCKER_GPU_REQUEST="$GPU_REQUEST"
+
+if [[ "$GPU_REQUEST" == device=* ]]; then
+  DOCKER_GPU_REQUEST="\"$GPU_REQUEST\""
+fi
 
 if docker inspect "$CONTAINER_NAME" >/dev/null 2>&1; then
   if [ "$(docker inspect -f '{{.State.Running}}' "$CONTAINER_NAME")" = "true" ]; then
@@ -27,7 +32,7 @@ echo "GPU request: $GPU_REQUEST"
 
 docker run -d \
   --name "$CONTAINER_NAME" \
-  --gpus "$GPU_REQUEST" \
+  --gpus "$DOCKER_GPU_REQUEST" \
   -p "$PORT_MAPPING" \
   -v "$PWD":"$CONTAINER_WORKDIR" \
   "$IMAGE_NAME" \
