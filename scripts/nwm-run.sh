@@ -27,4 +27,8 @@ if [ -t 0 ] && [ -t 1 ]; then
   DOCKER_TTY_ARGS=(-it)
 fi
 
-docker exec "${DOCKER_TTY_ARGS[@]}" -w "$CONTAINER_WORKDIR" "$CONTAINER_NAME" bash -lc "$*"
+docker exec "${DOCKER_TTY_ARGS[@]}" -w "$CONTAINER_WORKDIR" "$CONTAINER_NAME" bash -lc \
+  "export CONDA_PREFIX=/opt/micromamba/envs/nwm; \
+   export PATH=\$CONDA_PREFIX/bin:\$PATH; \
+   export LD_LIBRARY_PATH=\$CONDA_PREFIX/lib:\${LD_LIBRARY_PATH:-}; \
+   $*"

@@ -32,10 +32,20 @@
   - 코드 조치: inference / training / planning에서 VAE를 로컬 `logs/sd-vae-ft-ema` 우선 로드하도록 수정
   - 코드 조치: `isolated_nwm_infer.py`에서 `dist.init_distributed()` 호출로 entrypoint 오류 수정
   - 코드 조치: `scripts/nwm-run.sh`가 비대화형 환경에서도 실행되도록 TTY 감지 추가
+  - 컨테이너 상태: `nwm_dev` detached 실행 중, `./scripts/nwm-run.sh`로 컨테이너 내부 명령 실행 가능
   - 컨테이너 검증: `EvalDataset(recon)[0]` 로드 성공
   - 컨테이너 검증 결과: `loaded_shapes [(1,), (4, 3, 224, 224), (64, 3, 224, 224), (64, 3)]`
   - 컨테이너 검증: `config/nwm_cdit_s.yaml` + `logs/nwm_cdit_s/checkpoints/cdit_s_100000.pth.tar`로 1-sample forward 성공
   - 컨테이너 검증 결과: `pred_shape (1, 3, 224, 224)`
+  - 추가 검증: raw RECON `.hdf5` 기준 `EvalDataset(recon)` 길이 `500`, 첫 배치 shape `(1, 4, 3, 224, 224) / (1, 64, 3, 224, 224) / (1, 64, 3)` 확인
+  - 추가 검증: `logs/nwm_cdit_xl/checkpoints/cdit_xl_100000.pth.tar` + 로컬 VAE로 1-sample forward 성공, 샘플 출력 `/tmp/nwm_recon_smoke/recon_pred_t8.png`
+  - 환경 조치: running container 안 `torchaudio 2.11.0.dev...` -> `torchaudio 2.10.0` 재설치로 `torch 2.10.0`과 ABI 정합성 복구
+  - 환경 조치: `Dockerfile` / `README.md`의 PyTorch stack을 `torch==2.10.0 torchvision==0.25.0 torchaudio==2.10.0`으로 고정
+  - 운영 조치: `logs/nwm_cdit_{s,b,l,xl}/checkpoints/0100000.pth.tar` symlink 추가, 코드 fallback 없이 기존 `--ckp 0100000` 규약 유지
+  - 현재 상태: `isolated_nwm_infer.py` import 및 `0100000.pth.tar` 로드 성공
+  - 환경 조치: `Dockerfile`에 `CONDA_PREFIX` / `LD_LIBRARY_PATH=${CONDA_PREFIX}/lib:${LD_LIBRARY_PATH}` 추가
+  - 운영 조치: `scripts/nwm-run.sh`가 컨테이너 내부 실행 전 `CONDA_PREFIX`, `PATH`, `LD_LIBRARY_PATH`를 명시적으로 export하도록 수정
+  - 해결 결과: `torch` import 이후에도 `sqlite3` import 성공, `planning_eval.py` import 성공
   - 재현 메모: 현재 떠 있는 `nwm:cu126` 이미지에는 `h5py`가 없어서 컨테이너 내부에서 1회 설치함. 새 이미지에서는 `env.yaml` 반영 후 재빌드 필요
   - 운영 메모: 새 Python 라이브러리는 먼저 running container 안에 임시 설치하고, 반복 사용이 확정되면 `env.yaml`에 반영한 뒤 필요 시만 이미지 재빌드
 * [ ] baseline metric 재현 (LPIPS / PSNR / FVD 등)

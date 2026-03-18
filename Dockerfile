@@ -16,12 +16,16 @@ ENV PATH=/root/.local/bin:${PATH}
 # Create env (without torch)
 COPY env.yaml /tmp/env.yaml
 RUN micromamba create -y -n nwm -f /tmp/env.yaml && micromamba clean -a -y
-ENV PATH=${MAMBA_ROOT_PREFIX}/envs/nwm/bin:${PATH}
+ENV CONDA_PREFIX=${MAMBA_ROOT_PREFIX}/envs/nwm
+ENV PATH=${CONDA_PREFIX}/bin:${PATH}
+ENV LD_LIBRARY_PATH=${CONDA_PREFIX}/lib:${LD_LIBRARY_PATH}
 
-# Install PyTorch nightly cu126 (README 기준)
+# Install a matched PyTorch stack.
 RUN python -m pip install --upgrade pip && \
-    pip install --pre torch torchvision torchaudio \
-      --index-url https://download.pytorch.org/whl/nightly/cu126
+    pip install \
+      torch==2.10.0 \
+      torchvision==0.25.0 \
+      torchaudio==2.10.0
 
 # Copy code
 COPY . /workspace/nwm

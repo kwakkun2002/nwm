@@ -55,7 +55,7 @@ nwm/data
 ```bash
 mamba create -n nwm python=3.10
 mamba activate nwm
-pip3 install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu126
+pip3 install torch==2.10.0 torchvision==0.25.0 torchaudio==2.10.0
 mamba install ffmpeg
 pip3 install decord einops evo transformers diffusers tqdm timm notebook dreamsim torcheval lpips ipywidgets
 ```
