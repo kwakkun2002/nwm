@@ -49,13 +49,12 @@ import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data import DataLoader, ConcatDataset
 from torch.utils.data.distributed import DistributedSampler
-from diffusers.models import AutoencoderKL
 
 from distributed import init_distributed
 from models import CDiT_models
 from diffusion import create_diffusion
 from datasets import TrainingDataset
-from misc import transform
+from misc import transform, load_vae
 
 #################################################################################
 #                             Training Helper Functions                         #
@@ -142,7 +141,7 @@ def main(args):
         logger = create_logger(None)
 
     # Create model:
-    tokenizer = AutoencoderKL.from_pretrained(f"stabilityai/sd-vae-ft-ema").to(device)
+    tokenizer = load_vae(device)
     latent_size = config['image_size'] // 8
 
     assert config['image_size'] % 8 == 0, "Image size must be divisible by 8 (for the VAE encoder)."

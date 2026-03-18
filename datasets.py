@@ -26,13 +26,12 @@
 import numpy as np
 import torch
 import os
-from PIL import Image
 from typing import Tuple
 import yaml
 import pickle
 import tqdm
 from torch.utils.data import Dataset
-from misc import angle_difference, get_data_path, get_delta_np, normalize_data, to_local_coords
+from misc import angle_difference, get_delta_np, normalize_data, to_local_coords, load_traj_data, load_traj_image
 
 class BaseDataset(Dataset):
     def __init__(
@@ -132,11 +131,7 @@ class BaseDataset(Dataset):
         return samples_index, goals_index
   
     def _get_trajectory(self, trajectory_name):
-        with open(os.path.join(self.data_folder, trajectory_name, "traj_data.pkl"), "rb") as f:
-            traj_data = pickle.load(f)
-        for k,v in traj_data.items():
-            traj_data[k] = v.astype('float')
-        return traj_data
+        return load_traj_data(self.data_folder, trajectory_name)
 
     def __len__(self) -> int:
         return len(self.index_to_data)
@@ -205,7 +200,7 @@ class TrainingDataset(BaseDataset):
             context_times = list(range(curr_time - self.context_size + 1, curr_time + 1))
             context = [(f_curr, t) for t in context_times] + [(f_curr, t) for t in goal_time]
 
-            obs_image = torch.stack([self.transform(Image.open(get_data_path(self.data_folder, f, t))) for f, t in context])
+            obs_image = torch.stack([self.transform(load_traj_image(self.data_folder, f, t)) for f, t in context])
 
             # Load other trajectory data
             curr_traj_data = self._get_trajectory(f_curr)
@@ -253,8 +248,8 @@ class EvalDataset(BaseDataset):
             context = [(f_curr, t) for t in context_times]
             pred = [(f_curr, t) for t in pred_times]
 
-            obs_image = torch.stack([self.transform(Image.open(get_data_path(self.data_folder, f, t))) for f, t in context])
-            pred_image = torch.stack([self.transform(Image.open(get_data_path(self.data_folder, f, t))) for f, t in pred])
+            obs_image = torch.stack([self.transform(load_traj_image(self.data_folder, f, t)) for f, t in context])
+            pred_image = torch.stack([self.transform(load_traj_image(self.data_folder, f, t)) for f, t in pred])
 
             curr_traj_data = self._get_trajectory(f_curr)
 
@@ -312,8 +307,8 @@ class TrajectoryEvalDataset(BaseDataset):
             context_times = list(range(curr_time - self.context_size + 1, curr_time + 1))           
             context = [(f_curr, t) for t in context_times]
 
-            obs_image = torch.stack([self.transform(Image.open(get_data_path(self.data_folder, f, t))) for f, t in context])
-            goal_image = self.transform(Image.open(get_data_path(self.data_folder, f_goal, goal_time))).unsqueeze(0)
+            obs_image = torch.stack([self.transform(load_traj_image(self.data_folder, f, t)) for f, t in context])
+            goal_image = self.transform(load_traj_image(self.data_folder, f_goal, goal_time)).unsqueeze(0)
             curr_traj_data = self._get_trajectory(f_curr)
 
             actions, goal_pos = self._compute_actions(curr_traj_data, curr_time, np.array([goal_time]))

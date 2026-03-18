@@ -31,8 +31,6 @@ import lpips
 import torchvision.utils as vutils
 import matplotlib.pyplot as plt
 
-from diffusers.models import AutoencoderKL
-
 ### evo evaluation library ###
 from evo.core.trajectory import PoseTrajectory3D
 from evo.core import sync, metrics
@@ -43,7 +41,7 @@ from evo.core.metrics import PoseRelation
 from diffusion import create_diffusion
 from datasets import TrajectoryEvalDataset
 from isolated_nwm_infer import model_forward_wrapper
-from misc import calculate_delta_yaw, get_action_torch, save_planning_pred, log_viz_single, transform, unnormalize_data
+from misc import calculate_delta_yaw, get_action_torch, save_planning_pred, log_viz_single, transform, unnormalize_data, load_vae
 from isolated_nwm_eval import save_metric_to_disk
 import distributed as dist
 from models import CDiT_models
@@ -209,7 +207,7 @@ class WM_Planning_Evaluator:
         model.to(self.device)
         self.model = torch.compile(model)
         self.diffusion = create_diffusion(str(250))
-        self.vae = AutoencoderKL.from_pretrained(f"stabilityai/sd-vae-ft-ema").to(device)
+        self.vae = load_vae(device)
         self.model = torch.nn.parallel.DistributedDataParallel(self.model, device_ids=[self.device], find_unused_parameters=False)
         self.model_without_ddp = self.model.module
          

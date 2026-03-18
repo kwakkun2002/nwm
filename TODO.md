@@ -25,7 +25,18 @@
   - 결과 폴더: `/home/kun/kun_ssd/nwm/datasets/recon_raw/recon_release`
   - 현재 크기: 약 `72G`
   - 파일 수: `11836`개 `.hdf5`
-* [ ] RECON 데이터셋 로딩 + inference pipeline 확인
+* [X] RECON 데이터셋 로딩 + inference pipeline 확인
+  - 확인 결과: 현재 워크스페이스의 RECON은 processed JPG 폴더가 아니라 raw `.hdf5`만 존재
+  - 코드 조치: `datasets.py`가 raw RECON `.hdf5`를 직접 읽도록 확장
+  - 코드 조치: `config/eval_config.yaml`의 `eval_datasets.recon.data_folder`를 `datasets/recon_raw/recon_release`로 변경
+  - 코드 조치: inference / training / planning에서 VAE를 로컬 `logs/sd-vae-ft-ema` 우선 로드하도록 수정
+  - 코드 조치: `isolated_nwm_infer.py`에서 `dist.init_distributed()` 호출로 entrypoint 오류 수정
+  - 코드 조치: `scripts/nwm-run.sh`가 비대화형 환경에서도 실행되도록 TTY 감지 추가
+  - 컨테이너 검증: `EvalDataset(recon)[0]` 로드 성공
+  - 컨테이너 검증 결과: `loaded_shapes [(1,), (4, 3, 224, 224), (64, 3, 224, 224), (64, 3)]`
+  - 컨테이너 검증: `config/nwm_cdit_s.yaml` + `logs/nwm_cdit_s/checkpoints/cdit_s_100000.pth.tar`로 1-sample forward 성공
+  - 컨테이너 검증 결과: `pred_shape (1, 3, 224, 224)`
+  - 재현 메모: 현재 떠 있는 `nwm:cu126` 이미지에는 `h5py`가 없어서 컨테이너 내부에서 1회 설치함. 새 이미지에서는 `env.yaml` 반영 후 재빌드 필요
 * [ ] baseline metric 재현 (LPIPS / PSNR / FVD 등)
 * [ ] rollout (1s / 2s / 4s) evaluation 코드 확보
 * [ ] GPU profiling (latency / VRAM / FLOPs baseline 기록)

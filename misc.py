@@ -24,10 +24,17 @@ import matplotlib.pyplot as plt
 import torch
 import numpy as np
 import os
+import io
+import pickle
 from matplotlib.backends.backend_agg import FigureCanvasAgg as FigureCanvas
 from PIL import Image
 from torchvision import transforms
 import torchvision.transforms.functional as TF
+
+try:
+    import h5py
+except ImportError:
+    h5py = None
 
 
 IMAGE_ASPECT_RATIO = (4 / 3)  # all images are centered cropped to a 4:3 aspect ratio in training
@@ -155,6 +162,77 @@ def get_data_path(data_folder: str, f: str, time: int, data_type: str = "image")
         # add more data types here
     }
     return os.path.join(data_folder, f, f"{str(time)}{data_ext[data_type]}")
+
+
+def get_raw_recon_hdf5_path(data_folder: str, trajectory_name: str) -> str:
+    return os.path.join(data_folder, f"{trajectory_name}.hdf5")
+
+
+def has_raw_recon_hdf5(data_folder: str, trajectory_name: str) -> bool:
+    return os.path.isfile(get_raw_recon_hdf5_path(data_folder, trajectory_name))
+
+
+def load_traj_data(data_folder: str, trajectory_name: str):
+    processed_traj_path = os.path.join(data_folder, trajectory_name, "traj_data.pkl")
+    if os.path.isfile(processed_traj_path):
+        with open(processed_traj_path, "rb") as f:
+            traj_data = pickle.load(f)
+        for key, value in traj_data.items():
+            traj_data[key] = value.astype("float")
+        return traj_data
+
+    raw_recon_path = get_raw_recon_hdf5_path(data_folder, trajectory_name)
+    if os.path.isfile(raw_recon_path):
+        if h5py is None:
+            raise ImportError(
+                "h5py is required to read raw RECON .hdf5 files. "
+                "Install it in the active environment first."
+            )
+        with h5py.File(raw_recon_path, "r") as h5_f:
+            return {
+                "position": np.asarray(h5_f["jackal"]["position"][:, :2], dtype="float"),
+                "yaw": np.asarray(h5_f["jackal"]["yaw"][()], dtype="float"),
+            }
+
+    raise FileNotFoundError(
+        f"Could not find processed trajectory or raw RECON file for {trajectory_name} under {data_folder}"
+    )
+
+
+def load_traj_image(data_folder: str, trajectory_name: str, time: int) -> Image.Image:
+    processed_image_path = get_data_path(data_folder, trajectory_name, time)
+    if os.path.isfile(processed_image_path):
+        return Image.open(processed_image_path).convert("RGB")
+
+    raw_recon_path = get_raw_recon_hdf5_path(data_folder, trajectory_name)
+    if os.path.isfile(raw_recon_path):
+        if h5py is None:
+            raise ImportError(
+                "h5py is required to read raw RECON .hdf5 files. "
+                "Install it in the active environment first."
+            )
+        with h5py.File(raw_recon_path, "r") as h5_f:
+            image_bytes = h5_f["images"]["rgb_left"][time]
+            if hasattr(image_bytes, "tobytes"):
+                image_bytes = image_bytes.tobytes()
+        return Image.open(io.BytesIO(image_bytes)).convert("RGB")
+
+    raise FileNotFoundError(
+        f"Could not find processed image or raw RECON frame for {trajectory_name} at t={time} under {data_folder}"
+    )
+
+
+def resolve_vae_source(local_path: str = "logs/sd-vae-ft-ema", hf_name: str = "stabilityai/sd-vae-ft-ema") -> str:
+    if os.path.isdir(local_path):
+        return local_path
+    return hf_name
+
+
+def load_vae(device, local_path: str = "logs/sd-vae-ft-ema", hf_name: str = "stabilityai/sd-vae-ft-ema"):
+    from diffusers.models import AutoencoderKL
+
+    vae_source = resolve_vae_source(local_path=local_path, hf_name=hf_name)
+    return AutoencoderKL.from_pretrained(vae_source).to(device)
 
 def yaw_rotmat(yaw: float) -> np.ndarray:
     return np.array(

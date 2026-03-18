@@ -29,8 +29,6 @@ import os
 import numpy as np
 
 from diffusion import create_diffusion
-from diffusers.models import AutoencoderKL
-
 import misc
 import distributed as dist
 from models import CDiT_models
@@ -138,9 +136,9 @@ def visualize_preds(output_dir, idxs, sec, x_pred_pixels):
         image_file = os.path.join(sample_folder, f'{sec}.png')
         save_image(image_file, x_pred_pixels[batch_idx], True)
 
-@torch.no_grad
+@torch.no_grad()
 def main(args):
-    _, _, device, _ = init_distributed()
+    _, _, device, _ = dist.init_distributed()
     print(args)
     device = torch.device(device)
     num_tasks = dist.get_world_size()
@@ -181,7 +179,7 @@ def main(args):
         model.to(device)
         model = torch.compile(model)
         diffusion = create_diffusion(str(250))
-        vae = AutoencoderKL.from_pretrained(f"stabilityai/sd-vae-ft-ema").to(device)
+        vae = misc.load_vae(device)
         model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[device], find_unused_parameters=False)
         model_lst = (model, diffusion, vae)
 

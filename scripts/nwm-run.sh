@@ -22,4 +22,9 @@ if [ "$(docker inspect -f '{{.State.Running}}' "$CONTAINER_NAME")" != "true" ]; 
   docker start "$CONTAINER_NAME" >/dev/null
 fi
 
-docker exec -it -w "$CONTAINER_WORKDIR" "$CONTAINER_NAME" bash -lc "$*"
+DOCKER_TTY_ARGS=(-i)
+if [ -t 0 ] && [ -t 1 ]; then
+  DOCKER_TTY_ARGS=(-it)
+fi
+
+docker exec "${DOCKER_TTY_ARGS[@]}" -w "$CONTAINER_WORKDIR" "$CONTAINER_NAME" bash -lc "$*"
