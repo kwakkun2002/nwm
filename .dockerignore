@@ -1,0 +1,12 @@
+.git
+.gitignore
+__pycache__/
+*.pyc
+.pytest_cache/
+
+datasets/
+data/
+logs/
+gpu_plots/
+
+*.ipynb

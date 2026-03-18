@@ -37,6 +37,7 @@
   - 컨테이너 검증: `config/nwm_cdit_s.yaml` + `logs/nwm_cdit_s/checkpoints/cdit_s_100000.pth.tar`로 1-sample forward 성공
   - 컨테이너 검증 결과: `pred_shape (1, 3, 224, 224)`
   - 재현 메모: 현재 떠 있는 `nwm:cu126` 이미지에는 `h5py`가 없어서 컨테이너 내부에서 1회 설치함. 새 이미지에서는 `env.yaml` 반영 후 재빌드 필요
+  - 운영 메모: 새 Python 라이브러리는 먼저 running container 안에 임시 설치하고, 반복 사용이 확정되면 `env.yaml`에 반영한 뒤 필요 시만 이미지 재빌드
 * [ ] baseline metric 재현 (LPIPS / PSNR / FVD 등)
 * [ ] rollout (1s / 2s / 4s) evaluation 코드 확보
 * [ ] GPU profiling (latency / VRAM / FLOPs baseline 기록)
