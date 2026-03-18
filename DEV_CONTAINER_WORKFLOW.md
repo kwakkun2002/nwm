@@ -40,13 +40,19 @@ In short, do not "work inside the container" unless necessary. Instead, send com
 For one-off usage:
 
 ```bash
-docker run --rm -it --gpus '"device=1"' -p 8888:8888 -v "$PWD":/workspace/nwm nwm:cu126
+docker run --rm -it --gpus all -p 8888:8888 -v "$PWD":/workspace/nwm nwm:cu126
 ```
 
 For a reusable named container:
 
 ```bash
-docker run -it --name nwm_dev --gpus "device=1" -p 8888:8888 -v "$PWD":/workspace/nwm nwm:cu126
+docker run -it --name nwm_dev --gpus all -p 8888:8888 -v "$PWD":/workspace/nwm nwm:cu126
+```
+
+If you want to pin a subset of GPUs, use Docker's device selector:
+
+```bash
+docker run -it --name nwm_dev --gpus '"device=0,1"' -p 8888:8888 -v "$PWD":/workspace/nwm nwm:cu126
 ```
 
 Useful lifecycle commands:
@@ -80,6 +86,8 @@ docker exec -it -w /workspace/nwm nwm_dev bash -lc "python train.py --config con
 You can also use the wrapper script in this repository:
 
 ```bash
+./scripts/nwm-start.sh
+NWM_GPU_REQUEST='device=0,1' ./scripts/nwm-start.sh
 ./scripts/nwm-run.sh "python train.py --config config/nwm_cdit_xl.yaml"
 ./scripts/nwm-run.sh "python isolated_nwm_eval.py --datasets recon ..."
 ```
@@ -133,6 +141,8 @@ chmod +x ./scripts/nwm-run.sh
 
 The script:
 
+- `nwm-start.sh` creates `nwm_dev` if it does not exist, or starts it if it is stopped
+- `nwm-start.sh` supports `NWM_GPU_REQUEST=all` and `NWM_GPU_REQUEST='device=0,1'`
 - Uses `nwm_dev` by default
 - Starts the container automatically if it exists but is stopped
 - Runs commands in `/workspace/nwm`
