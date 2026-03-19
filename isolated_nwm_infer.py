@@ -129,7 +129,7 @@ def generate_time(args, output_dir, idxs, all_models, obs_image, gt_output, delt
         visualize_preds(output_dir, idxs, sec, x_pred_pixels)
 
 def visualize_preds(output_dir, idxs, sec, x_pred_pixels):
-    for batch_idx, sample_idx in enumerate(idxs.squeeze()):
+    for batch_idx, sample_idx in enumerate(idxs.reshape(-1)):
         sample_idx = int(sample_idx.item())
         sample_folder = os.path.join(output_dir, f'id_{sample_idx}')
         os.makedirs(sample_folder, exist_ok=True)

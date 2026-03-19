@@ -11,3 +11,4 @@ data
 datasets
 cdit_s_100000.pth.tar
 artifacts
+.cache

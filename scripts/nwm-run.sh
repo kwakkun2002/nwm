@@ -4,6 +4,7 @@ set -euo pipefail
 
 CONTAINER_NAME="${NWM_CONTAINER_NAME:-nwm_dev}"
 CONTAINER_WORKDIR="${NWM_CONTAINER_WORKDIR:-/workspace/nwm}"
+CACHE_ROOT="${NWM_CACHE_DIR:-${CONTAINER_WORKDIR}/.cache}"
 
 if [ "$#" -eq 0 ]; then
   echo "Usage: $0 '<command>'"
@@ -29,7 +30,13 @@ if [ -t 0 ] && [ -t 1 ]; then
 fi
 
 docker exec "${DOCKER_TTY_ARGS[@]}" -w "$CONTAINER_WORKDIR" "$CONTAINER_NAME" bash -lc \
-  "export CONDA_PREFIX=/opt/micromamba/envs/nwm; \
+  "mkdir -p '$CACHE_ROOT/torch' '$CACHE_ROOT/xdg' '$CACHE_ROOT/huggingface'; \
+   export CONDA_PREFIX=/opt/micromamba/envs/nwm; \
    export PATH=\$CONDA_PREFIX/bin:\$PATH; \
    export LD_LIBRARY_PATH=\$CONDA_PREFIX/lib:\${LD_LIBRARY_PATH:-}; \
+   export TORCH_HOME='$CACHE_ROOT/torch'; \
+   export XDG_CACHE_HOME='$CACHE_ROOT/xdg'; \
+   export HF_HOME='$CACHE_ROOT/huggingface'; \
+   export HUGGINGFACE_HUB_CACHE=\"\$HF_HOME/hub\"; \
+   export TRANSFORMERS_CACHE=\"\$HF_HOME/transformers\"; \
    $*"

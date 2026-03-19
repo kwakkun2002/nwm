@@ -35,6 +35,10 @@ from torchvision import transforms
 import distributed as dist
 
 
+def load_rgb_image_np(path):
+    return np.array(Image.open(path).convert("RGB"))
+
+
 def get_loss_fn(loss_fn_type, secs, device):
     if loss_fn_type == 'lpips':
         general_lpips_loss_fn = lpips.LPIPS(net='alex').to(device)
@@ -43,8 +47,8 @@ def get_loss_fn(loss_fn_type, secs, device):
             img1_list = []
             
             for img0_path, img1_path in zip(img0_paths, img1_paths):
-                img0 = lpips.im2tensor(lpips.load_image(img0_path)).to(device) # RGB image from [-1,1]
-                img1 = lpips.im2tensor(lpips.load_image(img1_path)).to(device)
+                img0 = lpips.im2tensor(load_rgb_image_np(img0_path)).to(device) # RGB image from [-1,1]
+                img1 = lpips.im2tensor(load_rgb_image_np(img1_path)).to(device)
                 
                 img0_list.append(img0)
                 img1_list.append(img1)

@@ -51,8 +51,31 @@
   - 문서 조치: `DEV_CONTAINER_WORKFLOW.md`에 멀티 GPU 컨테이너 실행 예시 추가
   - 재현 메모: 현재 떠 있는 `nwm:cu126` 이미지에는 `h5py`가 없어서 컨테이너 내부에서 1회 설치함. 새 이미지에서는 `env.yaml` 반영 후 재빌드 필요
   - 운영 메모: 새 Python 라이브러리는 먼저 running container 안에 임시 설치하고, 반복 사용이 확정되면 `env.yaml`에 반영한 뒤 필요 시만 이미지 재빌드
-* [ ] baseline metric 재현 (LPIPS / PSNR / FVD 등)
-* [ ] rollout (1s / 2s / 4s) evaluation 코드 확보
+* [X] baseline metric 재현 (LPIPS / DreamSim / FID)
+  - 범위: `RECON + config/nwm_cdit_s.yaml + 0100000 + time/rollout eval`
+  - GT PNG `2500`장 생성 완료: `artifacts/lpips_time_recon_s/gt/recon/time`
+  - 예측 PNG `2500`장 생성 완료: `artifacts/lpips_time_recon_s/nwm_cdit_s/recon/time`
+  - 결과 JSON: `artifacts/lpips_time_recon_s/nwm_cdit_s/recon_time.json`
+  - LPIPS: `1s 0.3106`, `2s 0.3416`, `4s 0.3699`, `8s 0.4031`, `16s 0.4632`
+  - DreamSim: `1s 0.1390`, `2s 0.1499`, `4s 0.1615`, `8s 0.1784`, `16s 0.2286`
+  - FID: `1s 35.0850`, `2s 34.4481`, `4s 33.9934`, `8s 33.4646`, `16s 40.3887`
+  - rollout GT PNG 생성 완료: `artifacts/lpips_time_recon_s/gt/recon/rollout_1fps` `2400`장, `artifacts/lpips_time_recon_s/gt/recon/rollout_4fps` `9600`장
+  - rollout 예측 PNG 생성 완료: `artifacts/lpips_time_recon_s/nwm_cdit_s/recon/rollout_1fps` `2400`장, `artifacts/lpips_time_recon_s/nwm_cdit_s/recon/rollout_4fps` `9600`장
+  - rollout 결과 JSON: `artifacts/lpips_time_recon_s/nwm_cdit_s/recon_rollout_1fps.json`, `artifacts/lpips_time_recon_s/nwm_cdit_s/recon_rollout_4fps.json`
+  - rollout 1fps LPIPS: `1s 0.3172`, `2s 0.3501`, `4s 0.4146`, `8s 0.4964`, `16s 0.5930`
+  - rollout 1fps DreamSim: `1s 0.1414`, `2s 0.1526`, `4s 0.2034`, `8s 0.3106`, `16s 0.4629`
+  - rollout 1fps FID: `1s 60.69`, `2s 65.64`, `4s 70.72`, `8s 102.75`, `16s 141.49`
+  - rollout 4fps LPIPS: `1s 0.3401`, `2s 0.3825`, `4s 0.4447`, `8s 0.5115`, `16s 0.5715`
+  - rollout 4fps DreamSim: `1s 0.1458`, `2s 0.1707`, `4s 0.2128`, `8s 0.2880`, `16s 0.3619`
+  - rollout 4fps FID: `1s 63.40`, `2s 65.96`, `4s 72.98`, `8s 88.54`, `16s 92.41`
+  - 평가 중 `cv2` 의존성으로 LPIPS가 죽는 문제를 `isolated_nwm_eval.py`에서 `PIL + numpy` 로더로 우회
+  - rollout 생성 중 `batch_size=1`에서 `idxs.squeeze()`가 0-d tensor가 되는 버그를 `isolated_nwm_infer.py`에서 `idxs.reshape(-1)`로 수정
+  - 캐시 조치: `scripts/nwm-run.sh`가 레포 내부 `.cache`를 쓰도록 수정, 기존 AlexNet cache도 `.cache/torch/hub/checkpoints`로 복사
+  - 운영 메모: 오래 살아 있던 `nwm_dev` 컨테이너에서 CUDA 인식이 깨져 rollout eval이 실패했고, `GPU 1`로 컨테이너 재생성 후 정상 완료
+  - 꽤 빨리 끝남! 다만 rollout 예측 생성은 autoregressive + diffusion sampling 때문에 오래 걸림
+* [X] rollout (1s / 2s / 4s) evaluation 코드 확보
+  - 현재 코드 경로로 `rollout_1fps`, `rollout_4fps` 평가 완료
+  - 결과 JSON: `artifacts/lpips_time_recon_s/nwm_cdit_s/recon_rollout_1fps.json`, `artifacts/lpips_time_recon_s/nwm_cdit_s/recon_rollout_4fps.json`
 * [ ] GPU profiling (latency / VRAM / FLOPs baseline 기록)
 
 ## 산출물
