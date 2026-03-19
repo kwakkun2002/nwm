@@ -99,13 +99,19 @@
 
 * [x] 오프라인 파이프라인 스크립트 추가 완료
 * [x] 학습/추론 코드에 cached text embedding 경로 연결 완료
-* [ ] 실데이터 end-to-end 실행은 아직 미완료
+* [x] raw RECON subset 기준 end-to-end smoke 실행 완료
+* [ ] full dataset end-to-end 실행은 아직 미완료
 * [ ] 최종 aligned dataset 산출물 생성은 아직 미완료
 
 ## 1.1 프레임 추출
 
 * [x] video → frame (1 FPS) 스크립트 구현
 * [x] keyframe sampling 옵션 구현 (추후 실험용)
+* [x] raw RECON `.hdf5`에서 직접 caption용 manifest 생성 스크립트 추가
+* [x] raw RECON `.hdf5` -> downsampled `jpg + traj_data.pkl` export 스크립트 추가
+* [x] raw RECON 1 trajectory 기준 downsampled export smoke 완료
+* [x] raw RECON test split 전체 `1fps` export 완료 (`2367 traj`, `13193 frames`)
+* [x] raw RECON train split 전체 `1fps` export 완료 (`9468 traj`, `53395 frames`)
 
 ## 1.2 오프라인 캡션 생성
 
@@ -114,24 +120,31 @@
 * [x] batch caption generation (병렬화 필수)
 * [x] 도커에서 외부 모델 디렉터리 mount 가능하도록 `scripts/nwm-start.sh` 확장
 * [x] `openai/clip-vit-base-patch32` HF cache 다운로드 완료
+* [x] raw RECON subset (`2 traj x 4 frames`) Qwen caption smoke 완료
+* [x] exported RECON test split full manifest 생성 완료 (`13193` records)
+* [x] exported RECON train split full manifest 생성 완료 (`53395` records)
 * [ ] Qwen2-VL 실제 full-dataset caption run
 
 ## 1.3 텍스트 정제
 
 * [x] caption → structured text (tag or short sentence)
 * [x] 불필요한 문장 제거 (압축 중요)
+* [x] `the scene shows/depicts/features` boilerplate 제거 규칙 추가
 
 ## 1.4 embedding precompute
 
 * [x] CLIP text encoder 로 embedding 생성 스크립트 구현
 * [x] (frame_id → text_embedding) 캐싱
 * [x] dataloader에서 바로 불러오도록 설계
-* [ ] 실제 caption 결과로 embedding precompute 실행
-* [ ] cached embedding 붙인 train smoke test
+* [x] subset caption 결과로 embedding precompute 실행
+* [x] cached embedding 붙인 dataloader/model smoke test
+* [ ] full dataset caption 결과로 embedding precompute 실행
 
 ## 산출물
 
 * [ ] frame + action + text_embedding aligned dataset
+* [x] raw RECON test split에 대해 1fps processed dataset export
+* [x] raw RECON train split에 대해 1fps processed dataset export
 
 핵심: **학습 때 텍스트 인코더 절대 돌리지 마라 (속도 병목 터짐)**
 

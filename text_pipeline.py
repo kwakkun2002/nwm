@@ -27,6 +27,7 @@ PROMPT_TEMPLATES = {
 TEXT_BOILERPLATE_PATTERNS = [
     r"^\s*this image (shows|depicts|contains)\s+",
     r"^\s*the image (shows|depicts|contains)\s+",
+    r"^\s*the scene (shows|depicts|features|contains)\s+",
     r"^\s*in this image[, ]+",
     r"^\s*we can see\s+",
     r"^\s*you can see\s+",

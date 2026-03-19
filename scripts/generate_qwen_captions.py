@@ -5,12 +5,12 @@ import sys
 from typing import List
 
 import torch
-from PIL import Image
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
+from misc import load_traj_image
 from text_pipeline import PROMPT_TEMPLATES, discover_image_records, iter_jsonl, write_jsonl
 
 
@@ -65,11 +65,29 @@ def build_prompt(prompt_mode: str, prompt_text: str = None) -> str:
     return PROMPT_TEMPLATES[prompt_mode]
 
 
-def build_messages(batch_records: List[dict], prompt: str):
+def load_record_image(record: dict, data_root: str = None):
+    image_path = record.get("image_path")
+    if image_path:
+        from PIL import Image
+
+        return Image.open(image_path).convert("RGB")
+
+    trajectory_name = record.get("trajectory_name")
+    frame_time = record.get("frame_time")
+    if data_root and trajectory_name is not None and frame_time is not None:
+        return load_traj_image(data_root, trajectory_name, int(frame_time))
+
+    raise ValueError(
+        "Record must include either image_path or trajectory_name/frame_time with --data-root. "
+        f"Got: {record}"
+    )
+
+
+def build_messages(batch_records: List[dict], prompt: str, data_root: str = None):
     messages = []
     images = []
     for record in batch_records:
-        image = Image.open(record["image_path"]).convert("RGB")
+        image = load_record_image(record, data_root=data_root)
         images.append(image)
         messages.append(
             [
@@ -86,8 +104,8 @@ def build_messages(batch_records: List[dict], prompt: str):
 
 
 @torch.inference_mode()
-def generate_batch(processor, model, batch_records: List[dict], prompt: str, max_new_tokens: int):
-    messages, images = build_messages(batch_records, prompt)
+def generate_batch(processor, model, batch_records: List[dict], prompt: str, max_new_tokens: int, data_root: str = None):
+    messages, images = build_messages(batch_records, prompt, data_root=data_root)
     texts = [processor.apply_chat_template(message, tokenize=False, add_generation_prompt=True) for message in messages]
     inputs = processor(
         text=texts,
@@ -110,6 +128,7 @@ def main():
     parser.add_argument("--model-name-or-path", type=str, default="/home/wklee/models/Qwen2-VL-7B-Instruct")
     parser.add_argument("--input-root", type=str, default=None)
     parser.add_argument("--manifest", type=str, default=None)
+    parser.add_argument("--data-root", type=str, default=None)
     parser.add_argument("--output", type=str, required=True)
     parser.add_argument("--prompt-mode", type=str, default="scene_only", choices=sorted(PROMPT_TEMPLATES.keys()))
     parser.add_argument("--prompt-text", type=str, default=None)
@@ -142,6 +161,7 @@ def main():
             batch_records=batch_records,
             prompt=prompt,
             max_new_tokens=args.max_new_tokens,
+            data_root=args.data_root,
         )
         for record, caption in zip(batch_records, captions):
             output_records.append(
