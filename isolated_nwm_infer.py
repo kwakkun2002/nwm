@@ -34,6 +34,22 @@ import distributed as dist
 from models import CDiT_models
 from datasets import EvalDataset
 from PIL import Image
+from text_pipeline import infer_text_embedding_dim
+
+
+def get_text_conditioning_config(config):
+    text_config = config.get("text_conditioning", {})
+    enabled = bool(text_config.get("enabled", False))
+    embedding_root = text_config.get("embedding_root")
+    text_dim = int(text_config.get("text_dim", 0))
+    if enabled and text_dim <= 0 and embedding_root:
+        text_dim = infer_text_embedding_dim(embedding_root)
+    return {
+        "enabled": enabled,
+        "embedding_root": embedding_root,
+        "condition_source": text_config.get("condition_source", "current"),
+        "text_dim": text_dim,
+    }
 
 
 def save_image(output_file, img, unnormalize_img):
@@ -50,6 +66,7 @@ def save_image(output_file, img, unnormalize_img):
     
 def get_dataset_eval(config, dataset_name, eval_type, predefined_index=True):
     data_config = config["eval_datasets"][dataset_name]    
+    text_config = get_text_conditioning_config(config)
     if predefined_index:
         predefined_index = f"data_splits/{dataset_name}/test/{eval_type}.pkl"
     else:
@@ -70,13 +87,27 @@ def get_dataset_eval(config, dataset_name, eval_type, predefined_index=True):
                 transform=misc.transform,
                 goals_per_obs=4,
                 predefined_index=predefined_index,
-                traj_names='traj_names.txt'
+                traj_names='traj_names.txt',
+                text_embedding_root=text_config["embedding_root"] if text_config["enabled"] else None,
+                text_condition_source=text_config["condition_source"],
             )
     
     return dataset
 
 @torch.no_grad()
-def model_forward_wrapper(all_models, curr_obs, curr_delta, num_timesteps, latent_size, device, num_cond, num_goals=1, rel_t=None, progress=False):
+def model_forward_wrapper(
+    all_models,
+    curr_obs,
+    curr_delta,
+    num_timesteps,
+    latent_size,
+    device,
+    num_cond,
+    num_goals=1,
+    rel_t=None,
+    text_emb=None,
+    progress=False,
+):
     model, diffusion, vae = all_models
     x = curr_obs.to(device)
     y = curr_delta.to(device)
@@ -93,7 +124,9 @@ def model_forward_wrapper(all_models, curr_obs, curr_delta, num_timesteps, laten
         x_cond = x[:, :num_cond].unsqueeze(1).expand(B, num_goals, num_cond, x.shape[2], x.shape[3], x.shape[4]).flatten(0, 1)
         z = torch.randn(B*num_goals, 4, latent_size, latent_size, device=device)
         y = y.flatten(0, 1)
-        model_kwargs = dict(y=y, x_cond=x_cond, rel_t=rel_t)      
+        model_kwargs = dict(y=y, x_cond=x_cond, rel_t=rel_t)
+        if text_emb is not None:
+            model_kwargs["text_emb"] = text_emb.flatten(0, 1).to(device)
         samples = diffusion.p_sample_loop(
                 model.forward, z.shape, z, clip_denoised=False, model_kwargs=model_kwargs, progress=progress, device=device
         )
@@ -101,7 +134,7 @@ def model_forward_wrapper(all_models, curr_obs, curr_delta, num_timesteps, laten
 
         return torch.clip(samples, -1., 1.)
 
-def generate_rollout(args, output_dir, rollout_fps, idxs, all_models, obs_image, gt_image, delta, num_cond, device):
+def generate_rollout(args, output_dir, rollout_fps, idxs, all_models, obs_image, gt_image, delta, num_cond, device, text_emb=None):
     rollout_stride = args.input_fps // rollout_fps
     gt_image = gt_image[:, rollout_stride-1::rollout_stride]
     delta = delta.unflatten(1, (-1, rollout_stride)).sum(2)
@@ -112,20 +145,40 @@ def generate_rollout(args, output_dir, rollout_fps, idxs, all_models, obs_image,
         if args.gt:
             x_pred_pixels = gt_image[:, i].clone().to(device)
         else:
-            x_pred_pixels = model_forward_wrapper(all_models, curr_obs, curr_delta, rollout_stride, args.latent_size, num_cond=num_cond, num_goals=1, device=device)
+            x_pred_pixels = model_forward_wrapper(
+                all_models,
+                curr_obs,
+                curr_delta,
+                rollout_stride,
+                args.latent_size,
+                num_cond=num_cond,
+                num_goals=1,
+                device=device,
+                text_emb=text_emb,
+            )
 
         curr_obs = torch.cat((curr_obs, x_pred_pixels.unsqueeze(1)), dim=1) # append current prediction
         curr_obs = curr_obs[:, 1:] # remove first observation
         visualize_preds(output_dir, idxs, i, x_pred_pixels)
 
-def generate_time(args, output_dir, idxs, all_models, obs_image, gt_output, delta, secs, num_cond, device):
+def generate_time(args, output_dir, idxs, all_models, obs_image, gt_output, delta, secs, num_cond, device, text_emb=None):
     eval_timesteps = [sec*args.input_fps for sec in secs]
     for sec, timestep in zip(secs, eval_timesteps):
         curr_delta = delta[:, :timestep].sum(dim=1, keepdim=True)
         if args.gt:
             x_pred_pixels = gt_output[:, timestep-1].clone().to(device)
         else:
-            x_pred_pixels = model_forward_wrapper(all_models, obs_image, curr_delta, timestep, args.latent_size, num_cond=num_cond, num_goals=1, device=device)
+            x_pred_pixels = model_forward_wrapper(
+                all_models,
+                obs_image,
+                curr_delta,
+                timestep,
+                args.latent_size,
+                num_cond=num_cond,
+                num_goals=1,
+                device=device,
+                text_emb=text_emb,
+            )
         visualize_preds(output_dir, idxs, sec, x_pred_pixels)
 
 def visualize_preds(output_dir, idxs, sec, x_pred_pixels):
@@ -164,6 +217,7 @@ def main(args):
     with open(exp_eval, "r") as f:
         user_config = yaml.safe_load(f)
     config.update(user_config)
+    text_config = get_text_conditioning_config(config)
 
     latent_size = config['image_size'] // 8
     args.latent_size = config['image_size'] // 8
@@ -172,7 +226,12 @@ def main(args):
     print("loading")
     model_lst = (None, None, None)
     if not args.gt:
-        model = CDiT_models[config['model']](context_size=num_cond, input_size=latent_size, in_channels=4)
+        model = CDiT_models[config['model']](
+            context_size=num_cond,
+            input_size=latent_size,
+            in_channels=4,
+            text_dim=text_config["text_dim"] if text_config["enabled"] else 0,
+        )
         ckp = torch.load(f'{config["results_dir"]}/{config["run_name"]}/checkpoints/{args.ckp}.pth.tar', map_location='cpu', weights_only=False)
         print(model.load_state_dict(ckp["ema"], strict=True))
         model.eval()
@@ -215,7 +274,13 @@ def main(args):
         os.makedirs(dataset_save_output_dir, exist_ok=True)
         curr_data_loader = datasets[dataset_name]
         
-        for data_iter_step, (idxs, obs_image, gt_image, delta) in enumerate(metric_logger.log_every(curr_data_loader, print_freq, header)):
+        for data_iter_step, batch in enumerate(metric_logger.log_every(curr_data_loader, print_freq, header)):
+            if len(batch) == 5:
+                idxs, obs_image, gt_image, delta, text_emb = batch
+                text_emb = text_emb.to(device)
+            else:
+                idxs, obs_image, gt_image, delta = batch
+                text_emb = None
             with torch.amp.autocast('cuda', enabled=True, dtype=torch.bfloat16):
                 obs_image = obs_image[:, -num_cond:].to(device)
                 gt_image = gt_image.to(device)
@@ -224,12 +289,12 @@ def main(args):
                     for rollout_fps in args.rollout_fps_values:
                         curr_rollout_output_dir = os.path.join(dataset_save_output_dir, f'rollout_{rollout_fps}fps')
                         os.makedirs(curr_rollout_output_dir, exist_ok=True)
-                        generate_rollout(args, curr_rollout_output_dir, rollout_fps, idxs, model_lst, obs_image, gt_image, delta, num_cond, device)
+                        generate_rollout(args, curr_rollout_output_dir, rollout_fps, idxs, model_lst, obs_image, gt_image, delta, num_cond, device, text_emb=text_emb)
                 elif args.eval_type == 'time':
                     secs = np.array([2**i for i in range(0, args.num_sec_eval)])
                     curr_time_output_dir = os.path.join(dataset_save_output_dir, 'time')
                     os.makedirs(curr_time_output_dir, exist_ok=True)
-                    generate_time(args, curr_time_output_dir, idxs, model_lst, obs_image, gt_image, delta, secs, num_cond, device)
+                    generate_time(args, curr_time_output_dir, idxs, model_lst, obs_image, gt_image, delta, secs, num_cond, device, text_emb=text_emb)
     
 
 if __name__ == "__main__":

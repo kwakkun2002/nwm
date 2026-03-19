@@ -95,31 +95,43 @@
 
 # Phase 1 — 데이터 파이프라인 구축 (여기서 승부 50% 결정됨)
 
+진행 메모:
+
+* [x] 오프라인 파이프라인 스크립트 추가 완료
+* [x] 학습/추론 코드에 cached text embedding 경로 연결 완료
+* [ ] 실데이터 end-to-end 실행은 아직 미완료
+* [ ] 최종 aligned dataset 산출물 생성은 아직 미완료
+
 ## 1.1 프레임 추출
 
-* [ ] video → frame (1 FPS)
-* [ ] keyframe sampling 옵션 구현 (추후 실험용)
+* [x] video → frame (1 FPS) 스크립트 구현
+* [x] keyframe sampling 옵션 구현 (추후 실험용)
 
 ## 1.2 오프라인 캡션 생성
 
-* [ ] Qwen2-VL / LLaVA(사용X) inference pipeline 구축
-* [ ] prompt 템플릿 설계 (scene-only / goal 포함 분리)
-* [ ] batch caption generation (병렬화 필수)
+* [x] Qwen2-VL / LLaVA(사용X) inference pipeline 구축
+* [x] prompt 템플릿 설계 (scene-only / goal 포함 분리)
+* [x] batch caption generation (병렬화 필수)
+* [x] 도커에서 외부 모델 디렉터리 mount 가능하도록 `scripts/nwm-start.sh` 확장
+* [x] `openai/clip-vit-base-patch32` HF cache 다운로드 완료
+* [ ] Qwen2-VL 실제 full-dataset caption run
 
 ## 1.3 텍스트 정제
 
-* [ ] caption → structured text (tag or short sentence)
-* [ ] 불필요한 문장 제거 (압축 중요)
+* [x] caption → structured text (tag or short sentence)
+* [x] 불필요한 문장 제거 (압축 중요)
 
 ## 1.4 embedding precompute
 
-* [ ] CLIP text encoder 로 embedding 생성
-* [ ] (frame_id → text_embedding) 캐싱
-* [ ] dataloader에서 바로 불러오도록 설계
+* [x] CLIP text encoder 로 embedding 생성 스크립트 구현
+* [x] (frame_id → text_embedding) 캐싱
+* [x] dataloader에서 바로 불러오도록 설계
+* [ ] 실제 caption 결과로 embedding precompute 실행
+* [ ] cached embedding 붙인 train smoke test
 
 ## 산출물
 
-* frame + action + text_embedding aligned dataset
+* [ ] frame + action + text_embedding aligned dataset
 
 핵심: **학습 때 텍스트 인코더 절대 돌리지 마라 (속도 병목 터짐)**
 

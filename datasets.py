@@ -26,12 +26,13 @@
 import numpy as np
 import torch
 import os
-from typing import Tuple
+from typing import Optional, Tuple
 import yaml
 import pickle
 import tqdm
 from torch.utils.data import Dataset
 from misc import angle_difference, get_delta_np, normalize_data, to_local_coords, load_traj_data, load_traj_image
+from text_pipeline import build_text_cache_path
 
 class BaseDataset(Dataset):
     def __init__(
@@ -50,6 +51,8 @@ class BaseDataset(Dataset):
         normalize: bool = True,
         predefined_index: list = None,
         goals_per_obs: int = 1,
+        text_embedding_root: Optional[str] = None,
+        text_condition_source: str = "current",
     ):
         self.data_folder = data_folder
         self.data_split_folder = data_split_folder
@@ -73,6 +76,11 @@ class BaseDataset(Dataset):
 
         self.context_size = context_size
         self.normalize = normalize
+        self.text_embedding_root = text_embedding_root
+        self.text_condition_source = text_condition_source
+        self._text_cache = {}
+        self.text_embedding_dim = 0
+        self._zero_text_embedding = None
 
         # load data/data_config.yaml
         with open("config/data_config.yaml", "r") as f:
@@ -87,6 +95,9 @@ class BaseDataset(Dataset):
         self.ACTION_STATS = {}
         for key in all_data_config['action_stats']:
             self.ACTION_STATS[key] = np.expand_dims(all_data_config['action_stats'][key], axis=0)
+        if self.text_embedding_root:
+            self.text_embedding_dim = self._infer_text_embedding_dim()
+            self._zero_text_embedding = np.zeros((self.text_embedding_dim,), dtype=np.float32)
 
     def _load_index(self, predefined_index) -> None:
         """
@@ -135,6 +146,80 @@ class BaseDataset(Dataset):
 
     def __len__(self) -> int:
         return len(self.index_to_data)
+
+    def _infer_text_embedding_dim(self) -> int:
+        for root, _, files in os.walk(self.text_embedding_root):
+            for filename in sorted(files):
+                if not filename.endswith(".npz"):
+                    continue
+                path = os.path.join(root, filename)
+                with np.load(path, allow_pickle=False) as text_data:
+                    embeddings = text_data["embeddings"]
+                    if embeddings.ndim != 2:
+                        raise ValueError(f"Expected 2D embeddings in {path}, got shape {embeddings.shape}")
+                    return int(embeddings.shape[-1])
+        raise FileNotFoundError(f"Could not find text embedding cache under {self.text_embedding_root}")
+
+    def _load_text_cache(self, trajectory_name: str):
+        if trajectory_name in self._text_cache:
+            return self._text_cache[trajectory_name]
+
+        if not self.text_embedding_root:
+            return None
+
+        text_cache_path = build_text_cache_path(self.text_embedding_root, trajectory_name)
+        if not os.path.isfile(text_cache_path):
+            self._text_cache[trajectory_name] = None
+            return None
+
+        with np.load(text_cache_path, allow_pickle=False) as text_data:
+            times = text_data["times"].astype(np.int64)
+            embeddings = text_data["embeddings"].astype(np.float32)
+
+        cache = {
+            "times": times,
+            "embeddings": embeddings,
+            "time_to_index": {int(time): idx for idx, time in enumerate(times.tolist())},
+        }
+        self._text_cache[trajectory_name] = cache
+        return cache
+
+    def _get_text_embedding(self, trajectory_name: str, frame_time: int) -> np.ndarray:
+        if not self.text_embedding_root:
+            raise RuntimeError("Text embeddings requested but text_embedding_root is not configured")
+
+        cache = self._load_text_cache(trajectory_name)
+        if cache is None:
+            return self._zero_text_embedding.copy()
+
+        index = cache["time_to_index"].get(int(frame_time))
+        if index is None:
+            return self._zero_text_embedding.copy()
+        return cache["embeddings"][index]
+
+    def _build_text_condition(self, trajectory_name: str, curr_time: int, goal_time, context_times) -> Optional[np.ndarray]:
+        if not self.text_embedding_root:
+            return None
+
+        goal_times = np.atleast_1d(goal_time).astype(int)
+        num_goals = len(goal_times)
+
+        if self.text_condition_source == "current":
+            curr_embedding = self._get_text_embedding(trajectory_name, int(curr_time))
+            return np.repeat(curr_embedding[None], num_goals, axis=0)
+
+        if self.text_condition_source == "goal":
+            return np.stack([self._get_text_embedding(trajectory_name, frame_time) for frame_time in goal_times], axis=0)
+
+        if self.text_condition_source == "context_mean":
+            context_embeddings = np.stack(
+                [self._get_text_embedding(trajectory_name, frame_time) for frame_time in context_times],
+                axis=0,
+            )
+            context_mean = context_embeddings.mean(axis=0)
+            return np.repeat(context_mean[None], num_goals, axis=0)
+
+        raise ValueError(f"Unsupported text_condition_source: {self.text_condition_source}")
 
     def _compute_actions(self, traj_data, curr_time, goal_time):
         start_index = curr_time
@@ -185,9 +270,12 @@ class TrainingDataset(BaseDataset):
         normalize: bool = True,
         predefined_index: list = None,
         goals_per_obs: int = 1,
+        text_embedding_root: Optional[str] = None,
+        text_condition_source: str = "current",
     ):
         super().__init__(data_folder, data_split_folder, dataset_name, image_size, min_dist_cat, max_dist_cat,
-            len_traj_pred, traj_stride, context_size, transform, traj_names, normalize, predefined_index, goals_per_obs)
+            len_traj_pred, traj_stride, context_size, transform, traj_names, normalize, predefined_index, goals_per_obs,
+            text_embedding_root, text_condition_source)
 
 
     def __getitem__(self, i: int) -> Tuple[torch.Tensor]:
@@ -208,12 +296,16 @@ class TrainingDataset(BaseDataset):
             # Compute actions
             _, goal_pos = self._compute_actions(curr_traj_data, curr_time, goal_time)
             goal_pos[:, :2] = normalize_data(goal_pos[:, :2], self.ACTION_STATS)
+            text_condition = self._build_text_condition(f_curr, curr_time, goal_time, context_times)
 
-            return (
+            outputs = [
                 torch.as_tensor(obs_image, dtype=torch.float32),
                 torch.as_tensor(goal_pos, dtype=torch.float32),
                 torch.as_tensor(rel_time, dtype=torch.float32),
-            )
+            ]
+            if text_condition is not None:
+                outputs.append(torch.as_tensor(text_condition, dtype=torch.float32))
+            return tuple(outputs)
         except Exception as e:
             print(f"Exception in {self.dataset_name}", e)
             raise Exception(e)
@@ -235,9 +327,12 @@ class EvalDataset(BaseDataset):
         normalize: bool = True,
         predefined_index: list = None,
         goals_per_obs: int = 1,
+        text_embedding_root: Optional[str] = None,
+        text_condition_source: str = "current",
     ):
         super().__init__(data_folder, data_split_folder, dataset_name, image_size, min_dist_cat, max_dist_cat,
-            len_traj_pred, traj_stride, context_size, transform, traj_names, normalize, predefined_index, goals_per_obs)
+            len_traj_pred, traj_stride, context_size, transform, traj_names, normalize, predefined_index, goals_per_obs,
+            text_embedding_root, text_condition_source)
   
     def __getitem__(self, i: int) -> Tuple[torch.Tensor]:
         try:
@@ -257,13 +352,17 @@ class EvalDataset(BaseDataset):
             actions, _ = self._compute_actions(curr_traj_data, curr_time, np.array([curr_time+1])) # last argument is dummy goal
             actions[:, :2] = normalize_data(actions[:, :2], self.ACTION_STATS)
             delta = get_delta_np(actions)
+            text_condition = self._build_text_condition(f_curr, curr_time, np.array([curr_time]), context_times)
 
-            return (
+            outputs = [
                 torch.tensor([i], dtype=torch.float32), # for logging purposes
                 torch.as_tensor(obs_image, dtype=torch.float32),
                 torch.as_tensor(pred_image, dtype=torch.float32),
                 torch.as_tensor(delta, dtype=torch.float32),
-            )
+            ]
+            if text_condition is not None:
+                outputs.append(torch.as_tensor(text_condition, dtype=torch.float32))
+            return tuple(outputs)
         except Exception as e:
             print(f"Exception in {self.dataset_name}", e)
             raise Exception(e)
@@ -285,9 +384,12 @@ class TrajectoryEvalDataset(BaseDataset):
         normalize: bool = True,
         predefined_index: list = None,
         goals_per_obs: int = 1,
+        text_embedding_root: Optional[str] = None,
+        text_condition_source: str = "current",
     ):
         super().__init__(data_folder, data_split_folder, dataset_name, image_size, min_dist_cat, max_dist_cat,
-            len_traj_pred, traj_stride, context_size, transform, traj_names, normalize, predefined_index, goals_per_obs)
+            len_traj_pred, traj_stride, context_size, transform, traj_names, normalize, predefined_index, goals_per_obs,
+            text_embedding_root, text_condition_source)
 
    
     def _sample_goal(self, trajectory_name, curr_time, min_goal_dist, max_goal_dist):
@@ -312,14 +414,18 @@ class TrajectoryEvalDataset(BaseDataset):
             curr_traj_data = self._get_trajectory(f_curr)
 
             actions, goal_pos = self._compute_actions(curr_traj_data, curr_time, np.array([goal_time]))
+            text_condition = self._build_text_condition(f_curr, curr_time, np.array([curr_time]), context_times)
 
-            return (
+            outputs = [
                 torch.tensor([i], dtype=torch.float32), # for logging purposes
                 torch.as_tensor(obs_image, dtype=torch.float32),
                 torch.as_tensor(goal_image, dtype=torch.float32),
                 torch.as_tensor(actions, dtype=torch.float32),
                 torch.as_tensor(goal_pos, dtype=torch.float32),
-            )
+            ]
+            if text_condition is not None:
+                outputs.append(torch.as_tensor(text_condition, dtype=torch.float32))
+            return tuple(outputs)
         except Exception as e:
             print(f"Exception in {self.dataset_name}", e)
             raise Exception(e)

@@ -160,6 +160,7 @@ class CDiT(nn.Module):
         context_size=2,
         patch_size=2,
         in_channels=4,
+        text_dim=0,
         hidden_size=1152,
         depth=28,
         num_heads=16,
@@ -173,9 +174,11 @@ class CDiT(nn.Module):
         self.out_channels = in_channels * 2 if learn_sigma else in_channels
         self.patch_size = patch_size
         self.num_heads = num_heads
+        self.text_dim = text_dim
         self.x_embedder = PatchEmbed(input_size, patch_size, in_channels, hidden_size, bias=True)
         self.t_embedder = TimestepEmbedder(hidden_size)
         self.y_embedder = ActionEmbedder(hidden_size)
+        self.text_proj = nn.Linear(text_dim, hidden_size, bias=True) if text_dim > 0 else None
         num_patches = self.x_embedder.num_patches
         self.pos_embed = nn.Parameter(torch.zeros(self.context_size + 1, num_patches, hidden_size), requires_grad=True) # for context and for predicted frame
         self.blocks = nn.ModuleList([CDiTBlock(hidden_size, num_heads, mlp_ratio=mlp_ratio) for _ in range(depth)])
@@ -217,6 +220,9 @@ class CDiT(nn.Module):
         
         nn.init.normal_(self.time_embedder.mlp[0].weight, std=0.02)
         nn.init.normal_(self.time_embedder.mlp[2].weight, std=0.02)
+        if self.text_proj is not None:
+            nn.init.normal_(self.text_proj.weight, std=0.02)
+            nn.init.constant_(self.text_proj.bias, 0)
             
         # Zero-out adaLN modulation layers in DiT blocks:
         for block in self.blocks:
@@ -244,7 +250,7 @@ class CDiT(nn.Module):
         imgs = x.reshape(shape=(x.shape[0], c, h * p, h * p))
         return imgs
 
-    def forward(self, x, t, y, x_cond, rel_t):
+    def forward(self, x, t, y, x_cond, rel_t, text_emb=None):
         """
         Forward pass of DiT.
         x: (N, C, H, W) tensor of spatial inputs (images or latent representations of images)
@@ -258,6 +264,8 @@ class CDiT(nn.Module):
         y = self.y_embedder(y) 
         time_emb = self.time_embedder(rel_t[..., None])
         c = t + time_emb + y # if training on unlabeled data, dont add y.
+        if text_emb is not None and self.text_proj is not None:
+            c = c + self.text_proj(text_emb)
 
         for block in self.blocks:
             x = block(x, c, x_cond)

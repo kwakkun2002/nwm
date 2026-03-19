@@ -55,6 +55,7 @@ from models import CDiT_models
 from diffusion import create_diffusion
 from datasets import TrainingDataset
 from misc import transform, load_vae
+from text_pipeline import infer_text_embedding_dim
 
 #################################################################################
 #                             Training Helper Functions                         #
@@ -105,6 +106,21 @@ def create_logger(logging_dir):
         logger.addHandler(logging.NullHandler())
     return logger
 
+
+def get_text_conditioning_config(config):
+    text_config = config.get("text_conditioning", {})
+    enabled = bool(text_config.get("enabled", False))
+    embedding_root = text_config.get("embedding_root")
+    text_dim = int(text_config.get("text_dim", 0))
+    if enabled and text_dim <= 0 and embedding_root:
+        text_dim = infer_text_embedding_dim(embedding_root)
+    return {
+        "enabled": enabled,
+        "embedding_root": embedding_root,
+        "condition_source": text_config.get("condition_source", "current"),
+        "text_dim": text_dim,
+    }
+
 #################################################################################
 #                                  Training Loop                                #
 #################################################################################
@@ -128,6 +144,7 @@ def main(args):
     with open(args.config, "r") as f:
         user_config = yaml.safe_load(f)
     config.update(user_config)
+    text_config = get_text_conditioning_config(config)
     
     # Setup an experiment folder:
     os.makedirs(config['results_dir'], exist_ok=True)  # Make results folder (holds all experiment subfolders)
@@ -146,7 +163,12 @@ def main(args):
 
     assert config['image_size'] % 8 == 0, "Image size must be divisible by 8 (for the VAE encoder)."
     num_cond = config['context_size']
-    model = CDiT_models[config['model']](context_size=num_cond, input_size=latent_size, in_channels=4).to(device)
+    model = CDiT_models[config['model']](
+        context_size=num_cond,
+        input_size=latent_size,
+        in_channels=4,
+        text_dim=text_config["text_dim"] if text_config["enabled"] else 0,
+    ).to(device)
     
     ema = deepcopy(model).to(device)  # Create an EMA of the model for use after training
     requires_grad(ema, False)
@@ -241,6 +263,8 @@ def main(args):
                         transform=transform,
                         predefined_index=None,
                         traj_stride=1,
+                        text_embedding_root=text_config["embedding_root"] if text_config["enabled"] else None,
+                        text_condition_source=text_config["condition_source"],
                     )
                     if data_split_type == "train":
                         train_dataset.append(dataset)
@@ -286,7 +310,13 @@ def main(args):
         sampler.set_epoch(epoch)
         logger.info(f"Beginning epoch {epoch}...")
 
-        for x, y, rel_t in loader:
+        for batch in loader:
+            if len(batch) == 4:
+                x, y, rel_t, text_emb = batch
+                text_emb = text_emb.to(device, non_blocking=True)
+            else:
+                x, y, rel_t = batch
+                text_emb = None
             x = x.to(device, non_blocking=True)
             y = y.to(device, non_blocking=True)
             rel_t = rel_t.to(device, non_blocking=True)
@@ -304,9 +334,13 @@ def main(args):
                 x_cond = x[:, :num_cond].unsqueeze(1).expand(B, num_goals, num_cond, x.shape[2], x.shape[3], x.shape[4]).flatten(0, 1)
                 y = y.flatten(0, 1)
                 rel_t = rel_t.flatten(0, 1)
+                if text_emb is not None:
+                    text_emb = text_emb.flatten(0, 1)
                 
                 t = torch.randint(0, diffusion.num_timesteps, (x_start.shape[0],), device=device)
                 model_kwargs = dict(y=y, x_cond=x_cond, rel_t=rel_t)
+                if text_emb is not None:
+                    model_kwargs["text_emb"] = text_emb
                 loss_dict = diffusion.training_losses(model, x_start, t, model_kwargs)
                 loss = loss_dict["loss"].mean()
 
@@ -367,7 +401,10 @@ def main(args):
             if train_steps % args.eval_every == 0 and train_steps > 0:
                 eval_start_time = time()
                 save_dir = os.path.join(experiment_dir, str(train_steps))
-                sim_score = evaluate(ema, tokenizer, diffusion, test_dataset, rank, config["batch_size"], config["num_workers"], latent_size, device, save_dir, args.global_seed, bfloat_enable, num_cond)
+                sim_score = evaluate(
+                    ema, tokenizer, diffusion, test_dataset, rank, config["batch_size"], config["num_workers"],
+                    latent_size, device, save_dir, args.global_seed, bfloat_enable, num_cond,
+                )
                 dist.barrier()
                 eval_end_time = time()
                 eval_time = eval_end_time - eval_start_time
@@ -404,14 +441,31 @@ def evaluate(model, vae, diffusion, test_dataloaders, rank, batch_size, num_work
     n_samples = torch.tensor(0).to(device)
 
     # Run for 1 step
-    for x, y, rel_t in loader:
+    for batch in loader:
+        if len(batch) == 4:
+            x, y, rel_t, text_emb = batch
+            text_emb = text_emb.to(device).flatten(0, 1)
+        else:
+            x, y, rel_t = batch
+            text_emb = None
         x = x.to(device)
         y = y.to(device)
         rel_t = rel_t.to(device).flatten(0, 1)
         with torch.amp.autocast('cuda', enabled=True, dtype=torch.bfloat16):
             B, T = x.shape[:2]
             num_goals = T - num_cond
-            samples = model_forward_wrapper((model, diffusion, vae), x, y, num_timesteps=None, latent_size=latent_size, device=device, num_cond=num_cond, num_goals=num_goals, rel_t=rel_t)
+            samples = model_forward_wrapper(
+                (model, diffusion, vae),
+                x,
+                y,
+                num_timesteps=None,
+                latent_size=latent_size,
+                device=device,
+                num_cond=num_cond,
+                num_goals=num_goals,
+                rel_t=rel_t,
+                text_emb=text_emb,
+            )
             x_start_pixels = x[:, num_cond:].flatten(0, 1)
             x_cond_pixels = x[:, :num_cond].unsqueeze(1).expand(B, num_goals, num_cond, x.shape[2], x.shape[3], x.shape[4]).flatten(0, 1)
             samples = samples * 0.5 + 0.5

@@ -26,6 +26,11 @@ len_traj_pred: 64
 
 # dataset specific parameters
 image_size: 224
+text_conditioning:
+  enabled: False
+  embedding_root: null
+  condition_source: current
+  text_dim: 0
 datasets:
   recon:
     data_folder: /checkpoint/amaia/video/amirbar/processed_datasets/recon

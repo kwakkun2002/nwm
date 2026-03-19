@@ -45,6 +45,7 @@ from misc import calculate_delta_yaw, get_action_torch, save_planning_pred, log_
 from isolated_nwm_eval import save_metric_to_disk
 import distributed as dist
 from models import CDiT_models
+from text_pipeline import infer_text_embedding_dim
 
 
 with open("config/data_config.yaml", "r") as f:
@@ -56,6 +57,21 @@ with open("config/data_hyperparams_plan.yaml", "r") as f:
 ACTION_STATS_TORCH = {}
 for key in data_config['action_stats']:
     ACTION_STATS_TORCH[key] = torch.tensor(data_config['action_stats'][key])
+
+
+def get_text_conditioning_config(config):
+    text_config = config.get("text_conditioning", {})
+    enabled = bool(text_config.get("enabled", False))
+    embedding_root = text_config.get("embedding_root")
+    text_dim = int(text_config.get("text_dim", 0))
+    if enabled and text_dim <= 0 and embedding_root:
+        text_dim = infer_text_embedding_dim(embedding_root)
+    return {
+        "enabled": enabled,
+        "embedding_root": embedding_root,
+        "condition_source": text_config.get("condition_source", "current"),
+        "text_dim": text_dim,
+    }
 
 def plot_images_with_losses(preds, losses, save_path="predictions_with_losses.png"):
     # Denormalize images from [-1, 1] to [0, 1]
@@ -115,6 +131,7 @@ def plot_batch_final(init_imgs, pred_imgs, goal_imgs, idxs, losses, save_path="f
 
 def get_dataset_eval(config, dataset_name, predefined_index=True):
     data_config = config["eval_datasets"][dataset_name]
+    text_config = get_text_conditioning_config(config)
     if predefined_index:
         predefined_index = f"data_splits/{dataset_name}/test/navigation_eval.pkl"
     else:
@@ -133,7 +150,9 @@ def get_dataset_eval(config, dataset_name, predefined_index=True):
                 normalize=config["normalize"],
                 transform=transform,
                 predefined_index=predefined_index,
-                traj_names="rollout_traj_names.txt"
+                traj_names="rollout_traj_names.txt",
+                text_embedding_root=text_config["embedding_root"] if text_config["enabled"] else None,
+                text_condition_source=text_config["condition_source"],
             )
     
     return dataset
@@ -161,6 +180,7 @@ class WM_Planning_Evaluator:
         with open(self.exp_eval, "r") as f:
             user_config = yaml.safe_load(f)
         self.config.update(user_config)
+        self.text_config = get_text_conditioning_config(self.config)
 
         latent_size = self.config['image_size'] // 8
         self.latent_size = self.config['image_size'] // 8
@@ -199,6 +219,7 @@ class WM_Planning_Evaluator:
         model = CDiT_models[self.config['model']](
             context_size=self.num_cond,
             input_size=latent_size,
+            text_dim=self.text_config["text_dim"] if self.text_config["enabled"] else 0,
         )
 
         ckp = torch.load(f'{self.config["results_dir"]}/{self.config["run_name"]}/checkpoints/{args.ckp}.pth.tar', map_location='cpu', weights_only=False)
@@ -227,7 +248,7 @@ class WM_Planning_Evaluator:
         sigma[:, ] = torch.tensor(data_hyperparams[self.args.datasets]['var_scale']) 
         return mu, sigma
         
-    def generate_actions(self, dataset_save_output_dir, dataset_name, idxs, obs_image, goal_image, gt_actions, len_traj_pred):
+    def generate_actions(self, dataset_save_output_dir, dataset_name, idxs, obs_image, goal_image, gt_actions, len_traj_pred, text_emb=None):
         idx_string = "_".join(map(str, idxs.flatten().int().tolist())) 
         image_plot_dir = os.path.join(dataset_save_output_dir, 'plots')
         os.makedirs(image_plot_dir, exist_ok=True)
@@ -255,7 +276,8 @@ class WM_Planning_Evaluator:
                 if self.num_repeat_eval * self.num_samples > 120:
                     cur_losses = []
                     for r in range(self.num_repeat_eval):
-                        preds = self.autoregressive_rollout(cur_obs_image, deltas, self.args.rollout_stride)
+                        cur_text_emb = None if text_emb is None else text_emb[traj:traj + 1].repeat(self.num_samples, 1, 1)
+                        preds = self.autoregressive_rollout(cur_obs_image, deltas, self.args.rollout_stride, text_emb=cur_text_emb)
                         preds = preds[:, -1] # take the last predicted image
                         loss = self.loss_fn(preds.to(self.device), cur_goal_image.to(self.device)).flatten(0)
                         cur_losses.append(loss)
@@ -266,7 +288,8 @@ class WM_Planning_Evaluator:
                     expanded_obs_image = cur_obs_image.repeat(self.num_repeat_eval, 1, 1, 1, 1) 
                     expanded_goal_image = cur_goal_image.repeat(self.num_repeat_eval, 1, 1, 1) 
 
-                    preds = self.autoregressive_rollout(expanded_obs_image, expanded_deltas, self.args.rollout_stride)
+                    expanded_text_emb = None if text_emb is None else text_emb[traj:traj + 1].repeat(self.num_repeat_eval * self.num_samples, 1, 1)
+                    preds = self.autoregressive_rollout(expanded_obs_image, expanded_deltas, self.args.rollout_stride, text_emb=expanded_text_emb)
                     preds = preds[:, -1]
 
                     loss = self.loss_fn(preds.to(self.device), expanded_goal_image.to(self.device)).flatten(0)
@@ -295,7 +318,7 @@ class WM_Planning_Evaluator:
         deltas = torch.cat((deltas, delta_yaw.to(deltas.device)), dim=-1)
         deltas[:, -1, -1] += mu[:, -1] * np.pi
 
-        preds = self.autoregressive_rollout(obs_image, deltas, self.args.rollout_stride)
+        preds = self.autoregressive_rollout(obs_image, deltas, self.args.rollout_stride, text_emb=text_emb)
         preds = preds[:, -1] # take the last predicted image
 
         loss = self.loss_fn(preds.to(self.device), goal_image.squeeze(1).to(self.device)).flatten(0)
@@ -332,7 +355,7 @@ class WM_Planning_Evaluator:
                         output_dir=plot_name
                     )
     
-    def autoregressive_rollout(self, obs_image, deltas, rollout_stride):
+    def autoregressive_rollout(self, obs_image, deltas, rollout_stride, text_emb=None):
         deltas = deltas.unflatten(1, (-1, rollout_stride)).sum(2)
         preds = []
         curr_obs = obs_image.clone().to(self.device)
@@ -340,7 +363,16 @@ class WM_Planning_Evaluator:
         for i in range(deltas.shape[1]):
             curr_delta = deltas[:, i:i+1]
             all_models = self.model, self.diffusion, self.vae
-            x_pred_pixels = model_forward_wrapper(all_models, curr_obs, curr_delta, self.args.rollout_stride, self.latent_size, num_cond=self.num_cond, device=self.device)
+            x_pred_pixels = model_forward_wrapper(
+                all_models,
+                curr_obs,
+                curr_delta,
+                self.args.rollout_stride,
+                self.latent_size,
+                num_cond=self.num_cond,
+                device=self.device,
+                text_emb=text_emb,
+            )
             x_pred_pixels = x_pred_pixels.unsqueeze(1)
             
             curr_obs = torch.cat((curr_obs, x_pred_pixels), dim=1) # append current prediction
@@ -378,10 +410,25 @@ class WM_Planning_Evaluator:
                 os.makedirs(eval_save_output_dir, exist_ok=True)
             
             curr_data_loader = self.datasets[dataset_name]
-            for (idxs, obs_image, goal_image, gt_actions, goal_pos) in metric_logger.log_every(curr_data_loader, 1, header):
+            for batch in metric_logger.log_every(curr_data_loader, 1, header):
+                if len(batch) == 6:
+                    idxs, obs_image, goal_image, gt_actions, goal_pos, text_emb = batch
+                    text_emb = text_emb.to(self.device)
+                else:
+                    idxs, obs_image, goal_image, gt_actions, goal_pos = batch
+                    text_emb = None
                 obs_image = obs_image[:, -self.num_cond:]
                 with torch.amp.autocast('cuda', enabled=True, dtype=torch.bfloat16):
-                    pred_actions, pred_yaw = self.generate_actions(eval_save_output_dir, dataset_name, idxs, obs_image, goal_image, gt_actions, self.config["trajectory_eval_len_traj_pred"])
+                    pred_actions, pred_yaw = self.generate_actions(
+                        eval_save_output_dir,
+                        dataset_name,
+                        idxs,
+                        obs_image,
+                        goal_image,
+                        gt_actions,
+                        self.config["trajectory_eval_len_traj_pred"],
+                        text_emb=text_emb,
+                    )
                 for i in range(len(obs_image)):
                     pred_traj_i = self.actions_to_traj(pred_actions[i, :, :2])
                     gt_traj_i = self.actions_to_traj(gt_actions[i, :, :2])
