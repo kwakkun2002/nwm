@@ -76,7 +76,13 @@
 * [X] rollout (1s / 2s / 4s) evaluation 코드 확보
   - 현재 코드 경로로 `rollout_1fps`, `rollout_4fps` 평가 완료
   - 결과 JSON: `artifacts/lpips_time_recon_s/nwm_cdit_s/recon_rollout_1fps.json`, `artifacts/lpips_time_recon_s/nwm_cdit_s/recon_rollout_4fps.json`
-* [ ] GPU profiling (latency / VRAM / FLOPs baseline 기록)
+* [X] GPU profiling (latency / VRAM / FLOPs baseline 기록)
+  - `2026-03-19 KST`, `CDiT-S`, `recon`, `batch_size=1`, `diffusion_steps=250`, `torch.compile on`
+  - single-step baseline: `1315.3 +- 10.0 ms`, `p50 1310.5 ms`, `p90 1327.6 ms`, `peak alloc 919.3 MB`, `peak reserved 1016.0 MB`
+  - rollout baseline (`rollout_fps=1`, `16` autoregressive frames): `21867.5 +- 158.0 ms`, `p50 21809.8 ms`, `p90 21998.9 ms`, `peak alloc 926.1 MB`, `peak reserved 1022.0 MB`
+  - FLOPs baseline (`torch.profiler`, `single-step`, `torch.compile off`): `6435.0 GFLOPs` (`6.44 TFLOPs`)
+  - rollout total FLOPs (`rollout_fps=1`, `16` frames, derived): `102960.2 GFLOPs` (`102.96 TFLOPs`) = `16 x` single-step FLOPs
+  - 결과 파일: `artifacts/gpu_profile_baseline/nwm_cdit_s_recon_sample0_bs1_diff250_single.json`, `artifacts/gpu_profile_baseline/nwm_cdit_s_recon_sample0_bs1_diff250_single_step.csv`, `artifacts/gpu_profile_baseline/nwm_cdit_s_recon_sample0_bs1_diff250_rollout.json`, `artifacts/gpu_profile_baseline/nwm_cdit_s_recon_sample0_bs1_diff250_rollout.csv`
 
 ## 산출물
 
@@ -96,7 +102,7 @@
 
 ## 1.2 오프라인 캡션 생성
 
-* [ ] Qwen2-VL / LLaVA inference pipeline 구축
+* [ ] Qwen2-VL / LLaVA(사용X) inference pipeline 구축
 * [ ] prompt 템플릿 설계 (scene-only / goal 포함 분리)
 * [ ] batch caption generation (병렬화 필수)
 
