@@ -100,7 +100,8 @@
 * [x] 오프라인 파이프라인 스크립트 추가 완료
 * [x] 학습/추론 코드에 cached text embedding 경로 연결 완료
 * [x] raw RECON subset 기준 end-to-end smoke 실행 완료
-* [ ] full dataset end-to-end 실행은 아직 미완료
+* [x] full dataset Qwen caption run 완료
+* [ ] full dataset clean + embedding + train smoke는 아직 미완료
 * [ ] 최종 aligned dataset 산출물 생성은 아직 미완료
 
 ## 1.1 프레임 추출
@@ -123,7 +124,12 @@
 * [x] raw RECON subset (`2 traj x 4 frames`) Qwen caption smoke 완료
 * [x] exported RECON test split full manifest 생성 완료 (`13193` records)
 * [x] exported RECON train split full manifest 생성 완료 (`53395` records)
-* [ ] Qwen2-VL 실제 full-dataset caption run
+* [x] Qwen2-VL 실제 full-dataset caption run 완료
+  - test split: `16 / 16` shards 완료, merged output 생성
+  - train split: `64 / 64` shards 완료, merged output 생성
+  - merged caption output:
+    - `/.cache/phase1_qwen/recon_test_1fps/all.jsonl`
+    - `/.cache/phase1_qwen/recon_train_1fps/all.jsonl`
 
 ## 1.3 텍스트 정제
 
@@ -138,13 +144,14 @@
 * [x] dataloader에서 바로 불러오도록 설계
 * [x] subset caption 결과로 embedding precompute 실행
 * [x] cached embedding 붙인 dataloader/model smoke test
-* [ ] full dataset caption 결과로 embedding precompute 실행
+* [ ] full dataset cleaned caption 결과로 embedding precompute 실행
 
 ## 산출물
 
 * [ ] frame + action + text_embedding aligned dataset
 * [x] raw RECON test split에 대해 1fps processed dataset export
 * [x] raw RECON train split에 대해 1fps processed dataset export
+* [x] raw RECON test/train full caption merged JSONL 생성
 
 핵심: **학습 때 텍스트 인코더 절대 돌리지 마라 (속도 병목 터짐)**
 
