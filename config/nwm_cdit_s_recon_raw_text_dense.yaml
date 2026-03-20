@@ -1,0 +1,35 @@
+run_name: nwm_cdit_s_recon_raw_text_dense
+
+# training setup
+results_dir: logs
+train: True
+batch_size: 16
+num_workers: 12
+model: CDiT-S/2
+lr: 8e-5
+from_checkpoint: logs/nwm_cdit_s/checkpoints/0100000.pth.tar
+
+normalize: True
+grad_clip_val: 10.0
+context_size: 4
+
+distance:
+  min_dist_cat: -64
+  max_dist_cat: 64
+
+len_traj_pred: 64
+
+image_size: 224
+checkpoint_strict: False
+load_training_state: False
+text_conditioning:
+  enabled: True
+  embedding_root: .cache/phase1_text_embeds_dense/recon_all_raw_rel
+  condition_source: current
+  text_dim: 0
+datasets:
+  recon:
+    data_folder: datasets/recon_raw/recon_release
+    train: data_splits/recon/train/
+    test: data_splits/recon/test/
+    goals_per_obs: 4

@@ -121,6 +121,19 @@ def get_text_conditioning_config(config):
         "text_dim": text_dim,
     }
 
+
+def load_model_state(module, state_dict, strict: bool, label: str):
+    result = module.load_state_dict(state_dict, strict=strict)
+    print(f"Loading {label} weights", result)
+    if not strict:
+        missing = list(result.missing_keys)
+        unexpected = list(result.unexpected_keys)
+        if missing:
+            print(f"{label} missing keys ({len(missing)}): {missing[:8]}")
+        if unexpected:
+            print(f"{label} unexpected keys ({len(unexpected)}): {unexpected[:8]}")
+    return result
+
 #################################################################################
 #                                  Training Loop                                #
 #################################################################################
@@ -145,6 +158,8 @@ def main(args):
         user_config = yaml.safe_load(f)
     config.update(user_config)
     text_config = get_text_conditioning_config(config)
+    checkpoint_strict = bool(config.get("checkpoint_strict", True))
+    load_training_state = bool(config.get("load_training_state", True))
     
     # Setup an experiment folder:
     os.makedirs(config['results_dir'], exist_ok=True)  # Make results folder (holds all experiment subfolders)
@@ -191,31 +206,29 @@ def main(args):
             raise ValueError("Resuming from checkpoint, this might override latest.pth.tar!!")
         latest_path = latest_path if os.path.isfile(latest_path) else config.get('from_checkpoint', 0)
         print("Loading model from ", latest_path)
-        latest_checkpoint = torch.load(latest_path, map_location=device, weights_only=False) 
+        latest_checkpoint = torch.load(latest_path, map_location="cpu", weights_only=False) 
 
         if "model" in latest_checkpoint:
             model_ckp = {k.replace('_orig_mod.', ''):v for k,v in latest_checkpoint['model'].items()}
-            res = model.load_state_dict(model_ckp, strict=True)
-            print("Loading model weights", res)
+            load_model_state(model, model_ckp, strict=checkpoint_strict, label="model")
 
             model_ckp = {k.replace('_orig_mod.', ''):v for k,v in latest_checkpoint['ema'].items()}
-            res = ema.load_state_dict(model_ckp, strict=True)
-            print("Loading EMA model weights", res)
+            load_model_state(ema, model_ckp, strict=checkpoint_strict, label="EMA model")
         else:
             update_ema(ema, model, decay=0)  # Ensure EMA is initialized with synced weights
 
-        if "opt" in latest_checkpoint:
+        if load_training_state and "opt" in latest_checkpoint:
             opt_ckp = {k.replace('_orig_mod.', ''):v for k,v in latest_checkpoint['opt'].items()}
             opt.load_state_dict(opt_ckp)
             print("Loading optimizer params")
         
-        if "epoch" in latest_checkpoint:
+        if load_training_state and "epoch" in latest_checkpoint:
             start_epoch = latest_checkpoint['epoch'] + 1
         
-        if "train_steps" in latest_checkpoint:
+        if load_training_state and "train_steps" in latest_checkpoint:
             train_steps = latest_checkpoint["train_steps"]
         
-        if "scaler" in latest_checkpoint:
+        if load_training_state and "scaler" in latest_checkpoint:
             scaler.load_state_dict(latest_checkpoint["scaler"])
         
     # ~40% speedup but might leads to worse performance depending on pytorch version

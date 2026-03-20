@@ -95,14 +95,30 @@
 
 # Phase 1 — 데이터 파이프라인 구축 (여기서 승부 50% 결정됨)
 
+설명:
+
+* 이 단계의 목적은 "학습 때 텍스트 인코더를 돌리지 않고", 프레임마다 미리 계산된 text embedding을 바로 읽게 만드는 것이다.
+* 처음에 `1fps`를 쓴 이유는 Qwen caption 비용을 줄이기 위해서였다. 즉 `1fps`는 **caption 생성용 sparse sampling**이었다.
+* 그런데 논문 기준으로는 학습 time axis를 `1fps`로 바꾸면 안 된다. `len_traj_pred=64`의 의미가 완전히 달라지기 때문이다.
+* 그래서 현재 최종 방향은 이렇게 정리된다:
+  - caption은 `1fps sparse`로 생성
+  - embedding도 `1fps sparse`로 생성
+  - 학습은 raw RECON dense trajectory를 그대로 사용
+  - sparse text embedding을 raw dense frame axis로 broadcast/ffill 해서 붙임
+* 즉 지금 파이프라인의 핵심은 `cheap captioning + dense training dynamics 유지`다.
+
 진행 메모:
 
 * [x] 오프라인 파이프라인 스크립트 추가 완료
 * [x] 학습/추론 코드에 cached text embedding 경로 연결 완료
 * [x] raw RECON subset 기준 end-to-end smoke 실행 완료
 * [x] full dataset Qwen caption run 완료
-* [ ] full dataset clean + embedding + train smoke는 아직 미완료
-* [ ] 최종 aligned dataset 산출물 생성은 아직 미완료
+* [x] full dataset clean + embedding 완료
+* [x] raw RECON dense axis로 text embedding alignment 완료
+* [x] raw RECON + dense text cache + `len_traj_pred=64` smoke 완료
+* [x] raw RECON + dense text cache용 학습 config 추가 완료
+* [ ] 실제 text-conditioned 학습 run은 아직 시작 안 함
+* [ ] Phase 1 산출물 경로를 최종 정리하고 문서화하는 작업은 아직 남음
 
 ## 1.1 프레임 추출
 
@@ -144,14 +160,44 @@
 * [x] dataloader에서 바로 불러오도록 설계
 * [x] subset caption 결과로 embedding precompute 실행
 * [x] cached embedding 붙인 dataloader/model smoke test
-* [ ] full dataset cleaned caption 결과로 embedding precompute 실행
+* [x] full dataset cleaned caption 결과로 embedding precompute 실행
+* [x] `1fps sparse embedding -> raw dense embedding` 정렬 스크립트 구현
+* [x] raw RECON test dense text cache 생성 완료 (`2367` traj)
+* [x] raw RECON train dense text cache 생성 완료 (`9468` traj)
+* [x] raw RECON + dense text cache 기준 `len_traj_pred=64` smoke 완료
+
+## 현재 실제로 만들어진 것
+
+* `1fps caption merged JSONL`
+  - `.cache/phase1_qwen/recon_test_1fps/all.jsonl`
+  - `.cache/phase1_qwen/recon_train_1fps/all.jsonl`
+* `1fps cleaned caption JSONL`
+  - `.cache/phase1_qwen_clean/recon_test_1fps_clean.jsonl`
+  - `.cache/phase1_qwen_clean/recon_train_1fps_clean.jsonl`
+* `1fps sparse text embedding cache`
+  - `.cache/phase1_text_embeds/recon_test_1fps`
+  - `.cache/phase1_text_embeds/recon_train_1fps`
+* `raw dense text embedding cache`
+  - `.cache/phase1_text_embeds_dense/recon_test_raw`
+  - `.cache/phase1_text_embeds_dense/recon_train_raw`
+  - `.cache/phase1_text_embeds_dense/recon_all_raw_rel`
+* `raw+dense 학습 config`
+  - `config/nwm_cdit_s_recon_raw_text_dense.yaml`
 
 ## 산출물
 
-* [ ] frame + action + text_embedding aligned dataset
+* [x] frame + action + text_embedding aligned dataset의 실제 캐시 생성 완료
 * [x] raw RECON test split에 대해 1fps processed dataset export
 * [x] raw RECON train split에 대해 1fps processed dataset export
 * [x] raw RECON test/train full caption merged JSONL 생성
+* [x] raw RECON dense trajectory용 text embedding cache 생성
+* [ ] 최종 학습 run 결과물(checkpoint/log/eval)은 아직 없음
+
+## 다음에 바로 할 일
+
+* [ ] `config/nwm_cdit_s_recon_raw_text_dense.yaml`로 실제 학습 1회 시작
+* [ ] 학습 안정성 확인 후 `B/L/XL` 중 어떤 스케일로 갈지 결정
+* [ ] TODO와 diary에 "논문용 최종 데이터 경로"를 한 번 더 정리
 
 핵심: **학습 때 텍스트 인코더 절대 돌리지 마라 (속도 병목 터짐)**
 
