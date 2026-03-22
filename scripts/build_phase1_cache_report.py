@@ -18,17 +18,17 @@ from misc import load_traj_image
 
 DEFAULT_PATHS = {
     "test": {
-        "captions_raw": ".cache/phase1_qwen/recon_test_1fps/all.jsonl",
-        "captions_clean": ".cache/phase1_qwen_clean/recon_test_1fps_clean.jsonl",
-        "sparse_embeds": ".cache/phase1_text_embeds/recon_test_1fps",
-        "dense_embeds": ".cache/phase1_text_embeds_dense/recon_test_raw",
+        "captions_raw": "datasets/derived/phase1_qwen/recon_test_1fps/all.jsonl",
+        "captions_clean": "datasets/derived/phase1_qwen_clean/recon_test_1fps_clean.jsonl",
+        "sparse_embeds": "datasets/derived/phase1_text_embeds/recon_test_1fps",
+        "dense_embeds": "datasets/derived/phase1_text_embeds_dense/recon_test_raw",
         "image_root": "datasets/recon_1fps_test",
     },
     "train": {
-        "captions_raw": ".cache/phase1_qwen/recon_train_1fps/all.jsonl",
-        "captions_clean": ".cache/phase1_qwen_clean/recon_train_1fps_clean.jsonl",
-        "sparse_embeds": ".cache/phase1_text_embeds/recon_train_1fps",
-        "dense_embeds": ".cache/phase1_text_embeds_dense/recon_train_raw",
+        "captions_raw": "datasets/derived/phase1_qwen/recon_train_1fps/all.jsonl",
+        "captions_clean": "datasets/derived/phase1_qwen_clean/recon_train_1fps_clean.jsonl",
+        "sparse_embeds": "datasets/derived/phase1_text_embeds/recon_train_1fps",
+        "dense_embeds": "datasets/derived/phase1_text_embeds_dense/recon_train_raw",
         "image_root": "datasets/recon_1fps_train",
     },
 }

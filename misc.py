@@ -38,9 +38,10 @@ except ImportError:
 
 
 IMAGE_ASPECT_RATIO = (4 / 3)  # all images are centered cropped to a 4:3 aspect ratio in training
-DEFAULT_CHECKPOINT_ROOT = os.path.join("weights", "checkpoints")
+DEFAULT_WEIGHTS_ROOT = os.environ.get("NWM_WEIGHTS_DIR", "weights")
+DEFAULT_CHECKPOINT_ROOT = os.path.join(DEFAULT_WEIGHTS_ROOT, "checkpoints")
 DEFAULT_ARTIFACT_ROOT = "artifacts"
-DEFAULT_LOCAL_VAE_PATH = os.path.join("weights", "pretrained", "vae", "sd-vae-ft-ema")
+DEFAULT_LOCAL_VAE_PATH = os.path.join(DEFAULT_WEIGHTS_ROOT, "pretrained", "vae", "sd-vae-ft-ema")
 
 with open("config/data_config.yaml", "r") as f:
     data_config = yaml.safe_load(f)

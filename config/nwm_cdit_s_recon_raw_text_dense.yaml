@@ -26,7 +26,7 @@ checkpoint_strict: False
 load_training_state: False
 text_conditioning:
   enabled: True
-  embedding_root: .cache/phase1_text_embeds_dense/recon_all_raw_rel
+  embedding_root: datasets/derived/phase1_text_embeds_dense/recon_all_raw_rel
   condition_source: current
   text_dim: 0
 datasets:

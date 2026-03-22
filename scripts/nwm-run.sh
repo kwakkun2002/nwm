@@ -4,7 +4,8 @@ set -euo pipefail
 
 CONTAINER_NAME="${NWM_CONTAINER_NAME:-nwm_dev}"
 CONTAINER_WORKDIR="${NWM_CONTAINER_WORKDIR:-/workspace/nwm}"
-CACHE_ROOT="${NWM_CACHE_DIR:-${CONTAINER_WORKDIR}/.cache}"
+WEIGHTS_ROOT="${NWM_WEIGHTS_DIR:-${CONTAINER_WORKDIR}/weights}"
+CACHE_ROOT="${NWM_CACHE_DIR:-${WEIGHTS_ROOT}/cache}"
 
 if [ "$#" -eq 0 ]; then
   echo "Usage: $0 '<command>'"

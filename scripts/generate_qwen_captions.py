@@ -125,7 +125,9 @@ def generate_batch(processor, model, batch_records: List[dict], prompt: str, max
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model-name-or-path", type=str, default="/home/wklee/models/Qwen2-VL-7B-Instruct")
+    default_weights_root = os.environ.get("NWM_WEIGHTS_DIR", "weights")
+    default_qwen_path = os.path.join(default_weights_root, "pretrained", "Qwen2-VL-7B-Instruct")
+    parser.add_argument("--model-name-or-path", type=str, default=default_qwen_path)
     parser.add_argument("--input-root", type=str, default=None)
     parser.add_argument("--manifest", type=str, default=None)
     parser.add_argument("--data-root", type=str, default=None)

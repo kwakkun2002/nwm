@@ -70,7 +70,7 @@
   - rollout 4fps FID: `1s 63.40`, `2s 65.96`, `4s 72.98`, `8s 88.54`, `16s 92.41`
   - 평가 중 `cv2` 의존성으로 LPIPS가 죽는 문제를 `isolated_nwm_eval.py`에서 `PIL + numpy` 로더로 우회
   - rollout 생성 중 `batch_size=1`에서 `idxs.squeeze()`가 0-d tensor가 되는 버그를 `isolated_nwm_infer.py`에서 `idxs.reshape(-1)`로 수정
-  - 캐시 조치: `scripts/nwm-run.sh`가 레포 내부 `.cache`를 쓰도록 수정, 기존 AlexNet cache도 `.cache/torch/hub/checkpoints`로 복사
+  - 캐시 조치: `scripts/nwm-run.sh`가 레포 내부 `weights/cache`를 쓰도록 수정, 기존 AlexNet cache도 `weights/cache/torch/hub/checkpoints`로 복사
   - 운영 메모: 오래 살아 있던 `nwm_dev` 컨테이너에서 CUDA 인식이 깨져 rollout eval이 실패했고, `GPU 1`로 컨테이너 재생성 후 정상 완료
   - 꽤 빨리 끝남! 다만 rollout 예측 생성은 autoregressive + diffusion sampling 때문에 오래 걸림
 * [X] rollout (1s / 2s / 4s) evaluation 코드 확보
@@ -144,8 +144,8 @@
   - test split: `16 / 16` shards 완료, merged output 생성
   - train split: `64 / 64` shards 완료, merged output 생성
   - merged caption output:
-    - `/.cache/phase1_qwen/recon_test_1fps/all.jsonl`
-    - `/.cache/phase1_qwen/recon_train_1fps/all.jsonl`
+    - `/datasets/derived/phase1_qwen/recon_test_1fps/all.jsonl`
+    - `/datasets/derived/phase1_qwen/recon_train_1fps/all.jsonl`
 
 ## 1.3 텍스트 정제
 
@@ -169,18 +169,18 @@
 ## 현재 실제로 만들어진 것
 
 * `1fps caption merged JSONL`
-  - `.cache/phase1_qwen/recon_test_1fps/all.jsonl`
-  - `.cache/phase1_qwen/recon_train_1fps/all.jsonl`
+  - `datasets/derived/phase1_qwen/recon_test_1fps/all.jsonl`
+  - `datasets/derived/phase1_qwen/recon_train_1fps/all.jsonl`
 * `1fps cleaned caption JSONL`
-  - `.cache/phase1_qwen_clean/recon_test_1fps_clean.jsonl`
-  - `.cache/phase1_qwen_clean/recon_train_1fps_clean.jsonl`
+  - `datasets/derived/phase1_qwen_clean/recon_test_1fps_clean.jsonl`
+  - `datasets/derived/phase1_qwen_clean/recon_train_1fps_clean.jsonl`
 * `1fps sparse text embedding cache`
-  - `.cache/phase1_text_embeds/recon_test_1fps`
-  - `.cache/phase1_text_embeds/recon_train_1fps`
+  - `datasets/derived/phase1_text_embeds/recon_test_1fps`
+  - `datasets/derived/phase1_text_embeds/recon_train_1fps`
 * `raw dense text embedding cache`
-  - `.cache/phase1_text_embeds_dense/recon_test_raw`
-  - `.cache/phase1_text_embeds_dense/recon_train_raw`
-  - `.cache/phase1_text_embeds_dense/recon_all_raw_rel`
+  - `datasets/derived/phase1_text_embeds_dense/recon_test_raw`
+  - `datasets/derived/phase1_text_embeds_dense/recon_train_raw`
+  - `datasets/derived/phase1_text_embeds_dense/recon_all_raw_rel`
 * `raw+dense 학습 config`
   - `config/nwm_cdit_s_recon_raw_text_dense.yaml`
 

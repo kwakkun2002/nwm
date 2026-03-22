@@ -93,6 +93,8 @@ Note: torch compile can lead to ~40%  faster training speed. However, it might l
 To use a pretrained CDiT/XL model:
 - Download a pretrained model from [Hugging Face](https://huggingface.co/facebook/nwm)
 - Place the checkpoint in ./weights/checkpoints/nwm_cdit_xl
+- Keep local pretrained models such as VAE and Qwen under ./weights/pretrained
+- Keep library caches under ./weights/cache
 
 # Evaluation
 
