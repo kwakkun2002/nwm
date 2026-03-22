@@ -54,7 +54,7 @@ from distributed import init_distributed
 from models import CDiT_models
 from diffusion import create_diffusion
 from datasets import TrainingDataset
-from misc import transform, load_vae
+from misc import get_checkpoint_path, get_run_artifact_dir, get_run_checkpoint_dir, get_run_log_dir, transform, load_vae
 from text_pipeline import infer_text_embedding_dim
 
 #################################################################################
@@ -161,14 +161,18 @@ def main(args):
     checkpoint_strict = bool(config.get("checkpoint_strict", True))
     load_training_state = bool(config.get("load_training_state", True))
     
-    # Setup an experiment folder:
-    os.makedirs(config['results_dir'], exist_ok=True)  # Make results folder (holds all experiment subfolders)
-    experiment_dir = f"{config['results_dir']}/{config['run_name']}"  # Create an experiment folder
-    checkpoint_dir = f"{experiment_dir}/checkpoints"  # Stores saved model checkpoints
+    # Setup experiment directories with separate roots for logs, artifacts, and weights.
+    log_dir = get_run_log_dir(config)
+    artifact_dir = get_run_artifact_dir(config)
+    checkpoint_dir = get_run_checkpoint_dir(config)
     if rank == 0:
+        os.makedirs(log_dir, exist_ok=True)
+        os.makedirs(artifact_dir, exist_ok=True)
         os.makedirs(checkpoint_dir, exist_ok=True)
-        logger = create_logger(experiment_dir)
-        logger.info(f"Experiment directory created at {experiment_dir}")
+        logger = create_logger(log_dir)
+        logger.info(f"Log directory created at {log_dir}")
+        logger.info(f"Artifact directory created at {artifact_dir}")
+        logger.info(f"Checkpoint directory created at {checkpoint_dir}")
     else:
         logger = create_logger(None)
 
@@ -197,7 +201,7 @@ def main(args):
         scaler = torch.amp.GradScaler()
 
     # load existing checkpoint
-    latest_path = os.path.join(checkpoint_dir, "latest.pth.tar")
+    latest_path = get_checkpoint_path(config, "latest")
     print('Searching for model from ', checkpoint_dir)
     start_epoch = 0
     train_steps = 0
@@ -413,7 +417,7 @@ def main(args):
             
             if train_steps % args.eval_every == 0 and train_steps > 0:
                 eval_start_time = time()
-                save_dir = os.path.join(experiment_dir, str(train_steps))
+                save_dir = os.path.join(artifact_dir, str(train_steps))
                 sim_score = evaluate(
                     ema, tokenizer, diffusion, test_dataset, rank, config["batch_size"], config["num_workers"],
                     latent_size, device, save_dir, args.global_seed, bfloat_enable, num_cond,

@@ -38,9 +38,33 @@ except ImportError:
 
 
 IMAGE_ASPECT_RATIO = (4 / 3)  # all images are centered cropped to a 4:3 aspect ratio in training
+DEFAULT_CHECKPOINT_ROOT = os.path.join("weights", "checkpoints")
+DEFAULT_ARTIFACT_ROOT = "artifacts"
+DEFAULT_LOCAL_VAE_PATH = os.path.join("weights", "pretrained", "vae", "sd-vae-ft-ema")
 
 with open("config/data_config.yaml", "r") as f:
     data_config = yaml.safe_load(f)
+
+
+def get_run_log_dir(config: dict) -> str:
+    return os.path.join(config.get("results_dir", "logs"), config["run_name"])
+
+
+def get_run_artifact_dir(config: dict) -> str:
+    return os.path.join(config.get("artifact_dir", DEFAULT_ARTIFACT_ROOT), config["run_name"])
+
+
+def get_run_checkpoint_dir(config: dict) -> str:
+    return os.path.join(config.get("weights_dir", DEFAULT_CHECKPOINT_ROOT), config["run_name"])
+
+
+def get_checkpoint_path(config: dict, checkpoint_name: str) -> str:
+    checkpoint_dir = get_run_checkpoint_dir(config)
+    if checkpoint_name.endswith(".pth.tar"):
+        filename = checkpoint_name
+    else:
+        filename = f"{checkpoint_name}.pth.tar"
+    return os.path.join(checkpoint_dir, filename)
 
 
 def get_action_torch(diffusion_output, action_stats):
@@ -222,13 +246,13 @@ def load_traj_image(data_folder: str, trajectory_name: str, time: int) -> Image.
     )
 
 
-def resolve_vae_source(local_path: str = "logs/sd-vae-ft-ema", hf_name: str = "stabilityai/sd-vae-ft-ema") -> str:
+def resolve_vae_source(local_path: str = DEFAULT_LOCAL_VAE_PATH, hf_name: str = "stabilityai/sd-vae-ft-ema") -> str:
     if os.path.isdir(local_path):
         return local_path
     return hf_name
 
 
-def load_vae(device, local_path: str = "logs/sd-vae-ft-ema", hf_name: str = "stabilityai/sd-vae-ft-ema"):
+def load_vae(device, local_path: str = DEFAULT_LOCAL_VAE_PATH, hf_name: str = "stabilityai/sd-vae-ft-ema"):
     from diffusers.models import AutoencoderKL
 
     vae_source = resolve_vae_source(local_path=local_path, hf_name=hf_name)

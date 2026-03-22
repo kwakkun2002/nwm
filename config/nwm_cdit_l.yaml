@@ -2,6 +2,8 @@ run_name: nwm_cdit_l
 
 # training setup
 results_dir: logs
+weights_dir: weights/checkpoints
+artifact_dir: artifacts
 train: True
 batch_size: 16
 num_workers: 12
@@ -26,22 +28,22 @@ image_size: 224
 # image_size: 128
 datasets:
   recon:
-    data_folder: data/recon
+    data_folder: datasets/recon
     train: data_splits/recon/train/ # path to train folder with traj_names.txt
     test: data_splits/recon/test/ # path to test folder with traj_names.txt
     goals_per_obs: 4
   tartan_drive:
-    data_folder: data/tartan
+    data_folder: datasets/tartan_320
     train: data_splits/tartan_drive/train/
     test: data_splits/tartan_drive/test/
     goals_per_obs: 4
   sacson:
-    data_folder: data/sacson
+    data_folder: datasets/sacson_320
     train: data_splits/sacson/train
     test: data_splits/sacson/test
     goals_per_obs: 4
   scand:
-    data_folder: data/scand
+    data_folder: datasets/scand_320
     train: data_splits/scand/train
     test: data_splits/scand/test
     goals_per_obs: 4

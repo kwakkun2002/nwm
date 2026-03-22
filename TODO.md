@@ -16,9 +16,9 @@
 
 * [X] NWM smallest variant 코드 확보 및 실행
   - smallest = `config/nwm_cdit_s.yaml` (`CDiT-S/2`)
-  - local ckpt 확인: `logs/nwm_cdit_s/checkpoints/cdit_s_100000.pth.tar`
+  - local ckpt 확인: `weights/checkpoints/nwm_cdit_s/cdit_s_100000.pth.tar`
   - inference/eval 시 checkpoint arg는 기본값 `0100000` 대신 `--ckp cdit_s_100000` 사용
-  - 남은 blocker: RECON 데이터 다운로드/전처리, `eval_datasets.recon.data_folder` 로컬 절대경로 수정, 필요 시 VAE를 `logs/sd-vae-ft-ema`로 로컬 로드
+  - 남은 blocker: RECON 데이터 다운로드/전처리, `eval_datasets.recon.data_folder` 로컬 절대경로 수정, 필요 시 VAE를 `weights/pretrained/vae/sd-vae-ft-ema`로 로컬 로드
 * [X] RECON 데이터셋 다운로드 
   - direct dataset archive 다운로드 후 압축 해제 완료
   - 압축 해제 프로세스 종료: `exit code 0`
@@ -29,19 +29,19 @@
   - 확인 결과: 현재 워크스페이스의 RECON은 processed JPG 폴더가 아니라 raw `.hdf5`만 존재
   - 코드 조치: `datasets.py`가 raw RECON `.hdf5`를 직접 읽도록 확장
   - 코드 조치: `config/eval_config.yaml`의 `eval_datasets.recon.data_folder`를 `datasets/recon_raw/recon_release`로 변경
-  - 코드 조치: inference / training / planning에서 VAE를 로컬 `logs/sd-vae-ft-ema` 우선 로드하도록 수정
+  - 코드 조치: inference / training / planning에서 VAE를 로컬 `weights/pretrained/vae/sd-vae-ft-ema` 우선 로드하도록 수정
   - 코드 조치: `isolated_nwm_infer.py`에서 `dist.init_distributed()` 호출로 entrypoint 오류 수정
   - 코드 조치: `scripts/nwm-run.sh`가 비대화형 환경에서도 실행되도록 TTY 감지 추가
   - 컨테이너 상태: `nwm_dev` detached 실행 중, `./scripts/nwm-run.sh`로 컨테이너 내부 명령 실행 가능
   - 컨테이너 검증: `EvalDataset(recon)[0]` 로드 성공
   - 컨테이너 검증 결과: `loaded_shapes [(1,), (4, 3, 224, 224), (64, 3, 224, 224), (64, 3)]`
-  - 컨테이너 검증: `config/nwm_cdit_s.yaml` + `logs/nwm_cdit_s/checkpoints/cdit_s_100000.pth.tar`로 1-sample forward 성공
+  - 컨테이너 검증: `config/nwm_cdit_s.yaml` + `weights/checkpoints/nwm_cdit_s/cdit_s_100000.pth.tar`로 1-sample forward 성공
   - 컨테이너 검증 결과: `pred_shape (1, 3, 224, 224)`
   - 추가 검증: raw RECON `.hdf5` 기준 `EvalDataset(recon)` 길이 `500`, 첫 배치 shape `(1, 4, 3, 224, 224) / (1, 64, 3, 224, 224) / (1, 64, 3)` 확인
-  - 추가 검증: `logs/nwm_cdit_xl/checkpoints/cdit_xl_100000.pth.tar` + 로컬 VAE로 1-sample forward 성공, 샘플 출력 `/tmp/nwm_recon_smoke/recon_pred_t8.png`
+  - 추가 검증: `weights/checkpoints/nwm_cdit_xl/cdit_xl_100000.pth.tar` + 로컬 VAE로 1-sample forward 성공, 샘플 출력 `/tmp/nwm_recon_smoke/recon_pred_t8.png`
   - 환경 조치: running container 안 `torchaudio 2.11.0.dev...` -> `torchaudio 2.10.0` 재설치로 `torch 2.10.0`과 ABI 정합성 복구
   - 환경 조치: `Dockerfile` / `README.md`의 PyTorch stack을 `torch==2.10.0 torchvision==0.25.0 torchaudio==2.10.0`으로 고정
-  - 운영 조치: `logs/nwm_cdit_{s,b,l,xl}/checkpoints/0100000.pth.tar` symlink 추가, 코드 fallback 없이 기존 `--ckp 0100000` 규약 유지
+  - 운영 조치: `weights/checkpoints/nwm_cdit_{s,b,l,xl}/0100000.pth.tar` symlink 추가, 코드 fallback 없이 기존 `--ckp 0100000` 규약 유지
   - 현재 상태: `isolated_nwm_infer.py` import 및 `0100000.pth.tar` 로드 성공
   - 환경 조치: `Dockerfile`에 `CONDA_PREFIX` / `LD_LIBRARY_PATH=${CONDA_PREFIX}/lib:${LD_LIBRARY_PATH}` 추가
   - 운영 조치: `scripts/nwm-run.sh`가 컨테이너 내부 실행 전 `CONDA_PREFIX`, `PATH`, `LD_LIBRARY_PATH`를 명시적으로 export하도록 수정

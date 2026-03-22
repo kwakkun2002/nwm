@@ -41,7 +41,7 @@ from evo.core.metrics import PoseRelation
 from diffusion import create_diffusion
 from datasets import TrajectoryEvalDataset
 from isolated_nwm_infer import model_forward_wrapper
-from misc import calculate_delta_yaw, get_action_torch, save_planning_pred, log_viz_single, transform, unnormalize_data, load_vae
+from misc import calculate_delta_yaw, get_action_torch, get_checkpoint_path, save_planning_pred, log_viz_single, transform, unnormalize_data, load_vae
 from isolated_nwm_eval import save_metric_to_disk
 import distributed as dist
 from models import CDiT_models
@@ -222,7 +222,8 @@ class WM_Planning_Evaluator:
             text_dim=self.text_config["text_dim"] if self.text_config["enabled"] else 0,
         )
 
-        ckp = torch.load(f'{self.config["results_dir"]}/{self.config["run_name"]}/checkpoints/{args.ckp}.pth.tar', map_location='cpu', weights_only=False)
+        checkpoint_path = get_checkpoint_path(self.config, args.ckp)
+        ckp = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
         model.load_state_dict(ckp["ema"], strict=True)
         model.eval()
         model.to(self.device)

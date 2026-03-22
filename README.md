@@ -20,14 +20,14 @@ cd nwm
 To download and preprocess data, please follow the steps from [NoMaD](https://github.com/robodhruv/visualnav-transformer?tab=readme-ov-file#data-wrangling), specifically:
 - Download the datasets
 - Change the [preprocessing resolution](https://github.com/robodhruv/visualnav-transformer/blob/main/train/vint_train/data/data_utils.py#L13) from (160, 120) to (320, 240) for higher resolution 
-- run `process_bags.py` and `process_recon.py` to save each processed dataset to `path/to/nwm_repo/data/<dataset_name>`.
+- run `process_bags.py` and `process_recon.py` to save each processed dataset to `path/to/nwm_repo/datasets/<dataset_name>`.
 
 For [SACSon/HuRoN](https://sites.google.com/view/sacson-review/huron-dataset), we used a private version which contains higher resolution images. Please contact the dataset authors for access (we're unable to distribute).
 
 Finally, you should have the following structure:
 
 ```
-nwm/data
+nwm/datasets
 ├── <dataset_name>
 │   ├── <name_of_traj1>
 │   │   ├── 0.jpg
@@ -92,7 +92,7 @@ Note: torch compile can lead to ~40%  faster training speed. However, it might l
 ## Pretrained Models
 To use a pretrained CDiT/XL model:
 - Download a pretrained model from [Hugging Face](https://huggingface.co/facebook/nwm)
-- Place the checkpoint in ./logs/nwm_cdit_xl/checkpoints
+- Place the checkpoint in ./weights/checkpoints/nwm_cdit_xl
 
 # Evaluation
 

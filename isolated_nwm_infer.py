@@ -232,7 +232,8 @@ def main(args):
             in_channels=4,
             text_dim=text_config["text_dim"] if text_config["enabled"] else 0,
         )
-        ckp = torch.load(f'{config["results_dir"]}/{config["run_name"]}/checkpoints/{args.ckp}.pth.tar', map_location='cpu', weights_only=False)
+        checkpoint_path = misc.get_checkpoint_path(config, args.ckp)
+        ckp = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
         print(model.load_state_dict(ckp["ema"], strict=True))
         model.eval()
         model.to(device)

@@ -12,7 +12,7 @@ RECON 데이터셋 로딩과 1-sample inference를 빠르게 확인하는 스모
 
 3. 다른 샘플 / 다른 체크포인트로 확인
    python scripts/recon_smoke_test.py --sample-index 3
-   python scripts/recon_smoke_test.py --checkpoint logs/nwm_cdit_s/checkpoints/0100000.pth.tar
+   python scripts/recon_smoke_test.py --checkpoint weights/checkpoints/nwm_cdit_s/0100000.pth.tar
 """
 
 import argparse
@@ -125,7 +125,7 @@ def main():
             "  python scripts/recon_smoke_test.py --skip-forward\n"
             "  python scripts/recon_smoke_test.py --horizon-steps 8\n"
             "  python scripts/recon_smoke_test.py --sample-index 3\n"
-            "  python scripts/recon_smoke_test.py --checkpoint logs/nwm_cdit_s/checkpoints/0100000.pth.tar"
+            "  python scripts/recon_smoke_test.py --checkpoint weights/checkpoints/nwm_cdit_s/0100000.pth.tar"
         ),
         formatter_class=argparse.RawTextHelpFormatter,
     )
@@ -158,7 +158,7 @@ def main():
     )
     parser.add_argument(
         "--checkpoint",
-        default="logs/nwm_cdit_xl/checkpoints/0100000.pth.tar",
+        default="weights/checkpoints/nwm_cdit_xl/0100000.pth.tar",
         help="forward에 사용할 체크포인트 경로입니다. --skip-forward일 때는 사용하지 않습니다.",
     )
     parser.add_argument(

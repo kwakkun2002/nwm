@@ -2,6 +2,8 @@ run_name: wm_debug_bs_32_
 
 # training setup
 results_dir: logs
+weights_dir: weights/checkpoints
+artifact_dir: artifacts
 use_wandb: True # set to false if you don't want to log to wandb
 train: True
 batch_size: 4
@@ -33,7 +35,7 @@ text_conditioning:
   text_dim: 0
 datasets:
   recon:
-    data_folder: /checkpoint/amaia/video/amirbar/processed_datasets/recon
+    data_folder: datasets/recon
     train: data_splits/recon/train/ # path to train folder with traj_names.txt
     test: data_splits/recon/test/ # path to test folder with traj_names.txt
     goals_per_obs: 4 # how many goals are sampled per observation

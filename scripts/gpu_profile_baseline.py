@@ -74,12 +74,7 @@ def load_config(eval_config_path: str, model_config_path: str) -> dict:
 def resolve_checkpoint(config: dict, args) -> str:
     if args.checkpoint:
         return args.checkpoint
-    return os.path.join(
-        config["results_dir"],
-        config["run_name"],
-        "checkpoints",
-        f"{args.checkpoint_tag}.pth.tar",
-    )
+    return misc.get_checkpoint_path(config, args.checkpoint_tag)
 
 
 def build_eval_dataset(config: dict, dataset_name: str, eval_type: str) -> EvalDataset:
