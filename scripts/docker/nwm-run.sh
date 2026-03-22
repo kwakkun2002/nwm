@@ -15,8 +15,8 @@ fi
 
 if ! docker inspect "$CONTAINER_NAME" >/dev/null 2>&1; then
   echo "Container '$CONTAINER_NAME' does not exist."
-  echo "Create it first with: ./scripts/nwm-start.sh"
-  echo "Example for 2 GPUs: NWM_GPU_REQUEST='device=0,1' ./scripts/nwm-start.sh"
+  echo "Create it first with: ./scripts/docker/nwm-start.sh"
+  echo "Example for 2 GPUs: NWM_GPU_REQUEST='device=0,1' ./scripts/docker/nwm-start.sh"
   exit 1
 fi
 

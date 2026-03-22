@@ -5,14 +5,14 @@ RECON 데이터셋 로딩과 1-sample inference를 빠르게 확인하는 스모
 자주 쓰는 예시:
 
 1. 데이터셋 로딩만 확인
-   python scripts/recon_smoke_test.py --skip-forward
+   python scripts/recon/recon_smoke_test.py --skip-forward
 
 2. 기본 XL 체크포인트로 한 장 예측까지 확인
-   python scripts/recon_smoke_test.py --horizon-steps 8
+   python scripts/recon/recon_smoke_test.py --horizon-steps 8
 
 3. 다른 샘플 / 다른 체크포인트로 확인
-   python scripts/recon_smoke_test.py --sample-index 3
-   python scripts/recon_smoke_test.py --checkpoint weights/checkpoints/nwm_cdit_s/0100000.pth.tar
+   python scripts/recon/recon_smoke_test.py --sample-index 3
+   python scripts/recon/recon_smoke_test.py --checkpoint weights/checkpoints/nwm_cdit_s/0100000.pth.tar
 """
 
 import argparse
@@ -23,7 +23,7 @@ import torch
 import yaml
 from PIL import Image
 
-REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
@@ -122,10 +122,10 @@ def main():
         description="RECON 데이터셋 로딩과 1-sample inference를 확인하는 스모크 테스트.",
         epilog=(
             "예시:\n"
-            "  python scripts/recon_smoke_test.py --skip-forward\n"
-            "  python scripts/recon_smoke_test.py --horizon-steps 8\n"
-            "  python scripts/recon_smoke_test.py --sample-index 3\n"
-            "  python scripts/recon_smoke_test.py --checkpoint weights/checkpoints/nwm_cdit_s/0100000.pth.tar"
+            "  python scripts/recon/recon_smoke_test.py --skip-forward\n"
+            "  python scripts/recon/recon_smoke_test.py --horizon-steps 8\n"
+            "  python scripts/recon/recon_smoke_test.py --sample-index 3\n"
+            "  python scripts/recon/recon_smoke_test.py --checkpoint weights/checkpoints/nwm_cdit_s/0100000.pth.tar"
         ),
         formatter_class=argparse.RawTextHelpFormatter,
     )

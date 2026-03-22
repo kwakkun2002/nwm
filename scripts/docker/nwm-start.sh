@@ -26,7 +26,7 @@ if docker inspect "$CONTAINER_NAME" >/dev/null 2>&1; then
 
   echo "If you want to change visible GPUs, remove and recreate the container first:"
   echo "  docker rm -f $CONTAINER_NAME"
-  echo "  NWM_GPU_REQUEST='device=0,1' ./scripts/nwm-start.sh"
+  echo "  NWM_GPU_REQUEST='device=0,1' ./scripts/docker/nwm-start.sh"
   exit 0
 fi
 

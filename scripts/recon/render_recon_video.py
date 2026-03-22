@@ -2,9 +2,9 @@
 """Render RECON HDF5 session(s) to a video file.
 
 Usage:
-    python scripts/render_recon_video.py --input path/to/session_folder --output session.mp4
-    python scripts/render_recon_video.py --input file1.hdf5 file2.hdf5 --output out.mp4 --fps 10
-    python scripts/render_recon_video.py --input "datasets/recon_raw/recon_release/jackal_2019-08-02*"
+    python scripts/recon/render_recon_video.py --input path/to/session_folder --output session.mp4
+    python scripts/recon/render_recon_video.py --input file1.hdf5 file2.hdf5 --output out.mp4 --fps 10
+    python scripts/recon/render_recon_video.py --input "datasets/recon_raw/recon_release/jackal_2019-08-02*"
 """
 import argparse
 import glob

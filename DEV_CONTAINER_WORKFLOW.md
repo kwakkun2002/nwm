@@ -86,10 +86,10 @@ docker exec -it -w /workspace/nwm nwm_dev bash -lc "python train.py --config con
 You can also use the wrapper script in this repository:
 
 ```bash
-./scripts/nwm-start.sh
-NWM_GPU_REQUEST='device=0,1' ./scripts/nwm-start.sh
-./scripts/nwm-run.sh "python train.py --config config/nwm_cdit_xl.yaml"
-./scripts/nwm-run.sh "python isolated_nwm_eval.py --datasets recon ..."
+./scripts/docker/nwm-start.sh
+NWM_GPU_REQUEST='device=0,1' ./scripts/docker/nwm-start.sh
+./scripts/docker/nwm-run.sh "python train.py --config config/nwm_cdit_xl.yaml"
+./scripts/docker/nwm-run.sh "python isolated_nwm_eval.py --datasets recon ..."
 ```
 
 ## Jupyter Without Attaching to the Container
@@ -135,8 +135,8 @@ To reduce repeated typing, add one of these to your shell config.
 If you prefer a repository-local wrapper instead of shell config, use:
 
 ```bash
-chmod +x ./scripts/nwm-run.sh
-./scripts/nwm-run.sh "python train.py --config config/nwm_cdit_xl.yaml"
+chmod +x ./scripts/docker/nwm-run.sh
+./scripts/docker/nwm-run.sh "python train.py --config config/nwm_cdit_xl.yaml"
 ```
 
 The script:

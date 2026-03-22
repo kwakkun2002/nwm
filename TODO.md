@@ -31,8 +31,8 @@
   - 코드 조치: `config/eval_config.yaml`의 `eval_datasets.recon.data_folder`를 `datasets/recon_raw/recon_release`로 변경
   - 코드 조치: inference / training / planning에서 VAE를 로컬 `weights/pretrained/vae/sd-vae-ft-ema` 우선 로드하도록 수정
   - 코드 조치: `isolated_nwm_infer.py`에서 `dist.init_distributed()` 호출로 entrypoint 오류 수정
-  - 코드 조치: `scripts/nwm-run.sh`가 비대화형 환경에서도 실행되도록 TTY 감지 추가
-  - 컨테이너 상태: `nwm_dev` detached 실행 중, `./scripts/nwm-run.sh`로 컨테이너 내부 명령 실행 가능
+  - 코드 조치: `scripts/docker/nwm-run.sh`가 비대화형 환경에서도 실행되도록 TTY 감지 추가
+  - 컨테이너 상태: `nwm_dev` detached 실행 중, `./scripts/docker/nwm-run.sh`로 컨테이너 내부 명령 실행 가능
   - 컨테이너 검증: `EvalDataset(recon)[0]` 로드 성공
   - 컨테이너 검증 결과: `loaded_shapes [(1,), (4, 3, 224, 224), (64, 3, 224, 224), (64, 3)]`
   - 컨테이너 검증: `config/nwm_cdit_s.yaml` + `weights/checkpoints/nwm_cdit_s/cdit_s_100000.pth.tar`로 1-sample forward 성공
@@ -44,10 +44,10 @@
   - 운영 조치: `weights/checkpoints/nwm_cdit_{s,b,l,xl}/0100000.pth.tar` symlink 추가, 코드 fallback 없이 기존 `--ckp 0100000` 규약 유지
   - 현재 상태: `isolated_nwm_infer.py` import 및 `0100000.pth.tar` 로드 성공
   - 환경 조치: `Dockerfile`에 `CONDA_PREFIX` / `LD_LIBRARY_PATH=${CONDA_PREFIX}/lib:${LD_LIBRARY_PATH}` 추가
-  - 운영 조치: `scripts/nwm-run.sh`가 컨테이너 내부 실행 전 `CONDA_PREFIX`, `PATH`, `LD_LIBRARY_PATH`를 명시적으로 export하도록 수정
+  - 운영 조치: `scripts/docker/nwm-run.sh`가 컨테이너 내부 실행 전 `CONDA_PREFIX`, `PATH`, `LD_LIBRARY_PATH`를 명시적으로 export하도록 수정
   - 해결 결과: `torch` import 이후에도 `sqlite3` import 성공, `planning_eval.py` import 성공
-  - 운영 조치: `scripts/recon_smoke_test.py` 추가, RECON 로딩/1-sample forward를 프로젝트 내부 `artifacts/recon_smoke`에 저장하도록 정리
-  - 운영 조치: `scripts/nwm-start.sh` 추가, `NWM_GPU_REQUEST=all` 또는 `NWM_GPU_REQUEST='device=0,1'`로 컨테이너 GPU 가시성을 설정 가능하게 정리
+  - 운영 조치: `scripts/recon/recon_smoke_test.py` 추가, RECON 로딩/1-sample forward를 프로젝트 내부 `artifacts/recon_smoke`에 저장하도록 정리
+  - 운영 조치: `scripts/docker/nwm-start.sh` 추가, `NWM_GPU_REQUEST=all` 또는 `NWM_GPU_REQUEST='device=0,1'`로 컨테이너 GPU 가시성을 설정 가능하게 정리
   - 문서 조치: `DEV_CONTAINER_WORKFLOW.md`에 멀티 GPU 컨테이너 실행 예시 추가
   - 재현 메모: 현재 떠 있는 `nwm:cu126` 이미지에는 `h5py`가 없어서 컨테이너 내부에서 1회 설치함. 새 이미지에서는 `env.yaml` 반영 후 재빌드 필요
   - 운영 메모: 새 Python 라이브러리는 먼저 running container 안에 임시 설치하고, 반복 사용이 확정되면 `env.yaml`에 반영한 뒤 필요 시만 이미지 재빌드
@@ -70,7 +70,7 @@
   - rollout 4fps FID: `1s 63.40`, `2s 65.96`, `4s 72.98`, `8s 88.54`, `16s 92.41`
   - 평가 중 `cv2` 의존성으로 LPIPS가 죽는 문제를 `isolated_nwm_eval.py`에서 `PIL + numpy` 로더로 우회
   - rollout 생성 중 `batch_size=1`에서 `idxs.squeeze()`가 0-d tensor가 되는 버그를 `isolated_nwm_infer.py`에서 `idxs.reshape(-1)`로 수정
-  - 캐시 조치: `scripts/nwm-run.sh`가 레포 내부 `weights/cache`를 쓰도록 수정, 기존 AlexNet cache도 `weights/cache/torch/hub/checkpoints`로 복사
+  - 캐시 조치: `scripts/docker/nwm-run.sh`가 레포 내부 `weights/cache`를 쓰도록 수정, 기존 AlexNet cache도 `weights/cache/torch/hub/checkpoints`로 복사
   - 운영 메모: 오래 살아 있던 `nwm_dev` 컨테이너에서 CUDA 인식이 깨져 rollout eval이 실패했고, `GPU 1`로 컨테이너 재생성 후 정상 완료
   - 꽤 빨리 끝남! 다만 rollout 예측 생성은 autoregressive + diffusion sampling 때문에 오래 걸림
 * [X] rollout (1s / 2s / 4s) evaluation 코드 확보
@@ -135,7 +135,7 @@
 * [x] Qwen2-VL / LLaVA(사용X) inference pipeline 구축
 * [x] prompt 템플릿 설계 (scene-only / goal 포함 분리)
 * [x] batch caption generation (병렬화 필수)
-* [x] 도커에서 외부 모델 디렉터리 mount 가능하도록 `scripts/nwm-start.sh` 확장
+* [x] 도커에서 외부 모델 디렉터리 mount 가능하도록 `scripts/docker/nwm-start.sh` 확장
 * [x] `openai/clip-vit-base-patch32` HF cache 다운로드 완료
 * [x] raw RECON subset (`2 traj x 4 frames`) Qwen caption smoke 완료
 * [x] exported RECON test split full manifest 생성 완료 (`13193` records)

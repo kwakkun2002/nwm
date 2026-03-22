@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$REPO_ROOT"
 
 CUDA_DEVICE="${CUDA_DEVICE:-1}"
@@ -38,7 +38,7 @@ run_split() {
     fi
 
     echo "[$split] start shard $shard_index/$((num_shards-1))"
-    ./scripts/nwm-run.sh "CUDA_VISIBLE_DEVICES=$CUDA_DEVICE python scripts/generate_qwen_captions.py \
+    ./scripts/docker/nwm-run.sh "CUDA_VISIBLE_DEVICES=$CUDA_DEVICE python scripts/text/generate_qwen_captions.py \
       --manifest $manifest \
       --data-root $data_root \
       --output $shard_output \

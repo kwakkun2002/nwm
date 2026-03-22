@@ -7,10 +7,10 @@ Core training and evaluation entry points live at the repository root: `train.py
 Prefer the Docker workflow documented in `DEV_CONTAINER_WORKFLOW.md`.
 
 - `docker build -t nwm:cu126 .`: build the CUDA-enabled development image.
-- `./scripts/nwm-start.sh`: create or start the reusable `nwm_dev` container.
-- `./scripts/nwm-run.sh "python train.py --config config/nwm_cdit_xl.yaml"`: run training inside the container.
-- `./scripts/nwm-run.sh "python isolated_nwm_infer.py ..."`: run inference or rollout generation.
-- `./scripts/nwm-run.sh "python isolated_nwm_eval.py ..."`: compute LPIPS, DreamSim, and FID metrics.
+- `./scripts/docker/nwm-start.sh`: create or start the reusable `nwm_dev` container.
+- `./scripts/docker/nwm-run.sh "python train.py --config config/nwm_cdit_xl.yaml"`: run training inside the container.
+- `./scripts/docker/nwm-run.sh "python isolated_nwm_infer.py ..."`: run inference or rollout generation.
+- `./scripts/docker/nwm-run.sh "python isolated_nwm_eval.py ..."`: compute LPIPS, DreamSim, and FID metrics.
 - `micromamba create -n nwm -f env.yaml`: host-side fallback when Docker is not used.
 
 ## Coding Style & Naming Conventions
@@ -19,8 +19,8 @@ Use Python with 4-space indentation and keep imports, logging, and argument pars
 ## Testing Guidelines
 There is no formal `pytest` suite yet. Validate changes with targeted runtime checks:
 
-- `./scripts/nwm-run.sh "python scripts/recon_smoke_test.py --skip-forward"`: verify dataset loading.
-- `./scripts/nwm-run.sh "python scripts/recon_smoke_test.py --horizon-steps 8"`: verify one-sample forward inference.
+- `./scripts/docker/nwm-run.sh "python scripts/recon/recon_smoke_test.py --skip-forward"`: verify dataset loading.
+- `./scripts/docker/nwm-run.sh "python scripts/recon/recon_smoke_test.py --horizon-steps 8"`: verify one-sample forward inference.
 - Re-run the relevant training, inference, or evaluation command when touching model, dataset, or metric code.
 
 Document the dataset, config, checkpoint, and GPU assumptions used for validation.
