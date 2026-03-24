@@ -10,6 +10,7 @@ GPU_REQUEST="${NWM_GPU_REQUEST:-all}"
 PORT_MAPPING="${NWM_PORT_MAPPING:-8888:8888}"
 HOST_MODELS_DIR="${NWM_HOST_MODELS_DIR:-}"
 CONTAINER_MODELS_DIR="${NWM_CONTAINER_MODELS_DIR:-${CONTAINER_WEIGHTS_DIR}/pretrained}"
+SHM_SIZE="${NWM_SHM_SIZE:-}"
 DOCKER_GPU_REQUEST="$GPU_REQUEST"
 
 if [[ "$GPU_REQUEST" == device=* ]]; then
@@ -40,6 +41,11 @@ DOCKER_RUN_ARGS=(
   -p "$PORT_MAPPING"
   -v "$PWD":"$CONTAINER_WORKDIR"
 )
+
+if [ -n "$SHM_SIZE" ]; then
+  echo "Shared memory size: $SHM_SIZE"
+  DOCKER_RUN_ARGS+=(--shm-size "$SHM_SIZE")
+fi
 
 if [ -n "$HOST_MODELS_DIR" ]; then
   if [ ! -d "$HOST_MODELS_DIR" ]; then

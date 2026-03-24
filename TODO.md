@@ -183,6 +183,19 @@
   - `datasets/derived/phase1_text_embeds_dense/recon_all_raw_rel`
 * `raw+dense 학습 config`
   - `config/nwm_cdit_s_recon_raw_text_dense.yaml`
+  - `config/nwm_cdit_b_recon_raw_text_dense.yaml`
+
+## 논문용 최종 데이터 경로
+
+* `raw RECON`
+  - `datasets/recon_raw/recon_release`
+* `dense text cache`
+  - `datasets/derived/phase1_text_embeds_dense/recon_all_raw_rel`
+* `training config`
+  - `config/nwm_cdit_s_recon_raw_text_dense.yaml`
+  - `config/nwm_cdit_b_recon_raw_text_dense.yaml`
+* 경로 표기 원칙
+  - `/workspace/nwm/...` 대신 repo-relative 경로만 canonical로 사용
 
 ## 산출물
 
@@ -191,13 +204,59 @@
 * [x] raw RECON train split에 대해 1fps processed dataset export
 * [x] raw RECON test/train full caption merged JSONL 생성
 * [x] raw RECON dense trajectory용 text embedding cache 생성
-* [ ] 최종 학습 run 결과물(checkpoint/log/eval)은 아직 없음
+* [ ] 최종 학습 run 결과물은 상당 부분 확보
+  - checkpoint/log는 `30k`까지 확보
+  - RECON `time/rollout` eval은 확보
+  - planning eval 최종 JSON은 아직 없음
 
-## 다음에 바로 할 일
+## 오늘 정리 완료
 
-* [ ] `config/nwm_cdit_s_recon_raw_text_dense.yaml`로 실제 학습 1회 시작
-* [ ] 학습 안정성 확인 후 `B/L/XL` 중 어떤 스케일로 갈지 결정
-* [ ] TODO와 diary에 "논문용 최종 데이터 경로"를 한 번 더 정리
+* [x] `config/nwm_cdit_s_recon_raw_text_dense.yaml`로 실제 학습 1회 시작
+  - 실행 일시: `2026-03-22 19:39 KST`
+  - 컨테이너: `NWM_GPU_REQUEST='device=0'`, `NWM_SHM_SIZE='16g'`
+  - 실행 커맨드: `./scripts/docker/nwm-run.sh "python train.py --config config/nwm_cdit_s_recon_raw_text_dense.yaml --log-every 10 --ckpt-every 500 --eval-every 1000000"`
+  - 런 로그: `logs/nwm_cdit_s_recon_raw_text_dense/log.txt`
+  - stdout: `logs/nwm_cdit_s_recon_raw_text_dense/stdout_live_20260322_193908.log`
+* [x] 학습 안정성 확인 후 `B/L/XL` 중 어떤 스케일로 갈지 결정
+  - 현재 `S`는 step `30000` checkpoint까지 NaN/worker crash 없이 안정
+  - loss: 초반 `0.1396 -> 0.1496 -> 0.1231`, `30k` 시점 `0.1212`
+  - throughput: warmup 이후 약 `2.12 ~ 2.15 steps/s`
+  - GPU 0 메모리: 약 `19.7 GiB`
+  - 다음 스케일은 `B`
+  - 이유: 현재 text-conditioned RECON-only 조건을 유지한 동형 확장이고, 기존 `config/nwm_cdit_{b,l,xl}.yaml`는 데이터/텍스트 조건이 달라 직접 비교용이 아님
+  - 준비한 다음 config: `config/nwm_cdit_b_recon_raw_text_dense.yaml`
+* [x] `30k` 도달 후 프로세스 정지
+  - `0030000.pth.tar` 저장 확인 후 학습 종료
+  - 최종 checkpoint: `weights/checkpoints/nwm_cdit_s_recon_raw_text_dense/0030000.pth.tar`
+  - 추가 checkpoint: `0005000`, `0010000`, `0015000`, `0020000`, `0025000`, `0030000`, `latest`
+  - 현재 train/watcher 프로세스는 모두 종료됨
+* [x] TODO와 diary에 "논문용 최종 데이터 경로"를 한 번 더 정리
+* [x] `0030000` checkpoint 기준 RECON `time/rollout` eval 완료
+  - 예측 경로: `artifacts/eval_s_recon_raw_text_dense/nwm_cdit_s_recon_raw_text_dense_0030000`
+  - 결과 JSON:
+    - `artifacts/eval_s_recon_raw_text_dense/nwm_cdit_s_recon_raw_text_dense_0030000/recon_time.json`
+    - `artifacts/eval_s_recon_raw_text_dense/nwm_cdit_s_recon_raw_text_dense_0030000/recon_rollout_1fps.json`
+    - `artifacts/eval_s_recon_raw_text_dense/nwm_cdit_s_recon_raw_text_dense_0030000/recon_rollout_4fps.json`
+  - `time`:
+    - LPIPS `1s 0.3084`, `2s 0.3382`, `4s 0.3658`, `8s 0.4002`, `16s 0.4577`
+    - DreamSim `1s 0.1341`, `2s 0.1447`, `4s 0.1590`, `8s 0.1728`, `16s 0.2244`
+    - FID `1s 33.98`, `2s 33.80`, `4s 33.07`, `8s 31.99`, `16s 38.19`
+  - `rollout 1fps`:
+    - LPIPS `1s 0.3135`, `2s 0.3561`, `4s 0.3977`, `8s 0.4610`, `16s 0.5651`
+    - DreamSim `1s 0.1340`, `2s 0.1526`, `4s 0.1769`, `8s 0.2317`, `16s 0.3444`
+    - FID `1s 60.83`, `2s 65.76`, `4s 63.41`, `8s 74.66`, `16s 84.86`
+  - `rollout 4fps`:
+    - LPIPS `1s 0.3327`, `2s 0.3667`, `4s 0.4197`, `8s 0.4867`, `16s 0.5472`
+    - DreamSim `1s 0.1426`, `2s 0.1607`, `4s 0.1947`, `8s 0.2655`, `16s 0.3303`
+    - FID `1s 62.68`, `2s 63.45`, `4s 67.69`, `8s 76.93`, `16s 79.95`
+  - baseline `artifacts/lpips_time_recon_s/nwm_cdit_s` 대비 `time` 전 구간 개선, `rollout`도 대부분 개선
+* [ ] planning eval은 중간 상태만 확인하고 여기서 중단
+  - 실행 경로: `artifacts/plan_eval_s_recon_raw_text_dense/nwm_cdit_s_recon_raw_text_dense/recon/CEM_N10_K5_RS1_rep1_OPT15`
+  - partial 저장: `id_0` ~ `id_31`의 `preds_0.pth` 생성 확인
+  - live log 기준 초반 지표:
+    - batch 0: `recon_ate 1.6417`, `recon_rpe_trans 0.4050`, `recon_pos_diff_norm 2.4531`, `recon_yaw_diff_norm 1.2507`
+    - batch 1: `recon_ate 1.6728`, `recon_rpe_trans 0.4105`, `recon_pos_diff_norm 2.5456`, `recon_yaw_diff_norm 1.3408`
+  - 사용자 요청으로 중단했고 최종 JSON은 없음
 
 핵심: **학습 때 텍스트 인코더 절대 돌리지 마라 (속도 병목 터짐)**
 
