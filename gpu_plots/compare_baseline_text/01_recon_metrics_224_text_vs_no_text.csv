@@ -1,0 +1,91 @@
+eval_type,metric,horizon,series,value
+time,lpips,1s,No Text,0.3105521500110626
+time,lpips,1s,Text,0.3083740174770355
+time,lpips,2s,No Text,0.3415534496307373
+time,lpips,2s,Text,0.33819451928138733
+time,lpips,4s,No Text,0.36985841393470764
+time,lpips,4s,Text,0.3657650947570801
+time,lpips,8s,No Text,0.4030992090702057
+time,lpips,8s,Text,0.4001934230327606
+time,lpips,16s,No Text,0.46318289637565613
+time,lpips,16s,Text,0.4576801061630249
+time,dreamsim,1s,No Text,0.1389617621898651
+time,dreamsim,1s,Text,0.13405008614063263
+time,dreamsim,2s,No Text,0.14989791810512543
+time,dreamsim,2s,Text,0.14466948807239532
+time,dreamsim,4s,No Text,0.16149090230464935
+time,dreamsim,4s,Text,0.15901166200637817
+time,dreamsim,8s,No Text,0.17843344807624817
+time,dreamsim,8s,Text,0.1728106141090393
+time,dreamsim,16s,No Text,0.2286277711391449
+time,dreamsim,16s,Text,0.22435526549816132
+time,fid,1s,No Text,35.08497619628906
+time,fid,1s,Text,33.9825439453125
+time,fid,2s,No Text,34.448089599609375
+time,fid,2s,Text,33.79632568359375
+time,fid,4s,No Text,33.993408203125
+time,fid,4s,Text,33.07463073730469
+time,fid,8s,No Text,33.46461486816406
+time,fid,8s,Text,31.98541259765625
+time,fid,16s,No Text,40.388671875
+time,fid,16s,Text,38.1861572265625
+rollout_1fps,lpips,1s,No Text,0.31722015142440796
+rollout_1fps,lpips,1s,Text,0.3135342001914978
+rollout_1fps,lpips,2s,No Text,0.3501470983028412
+rollout_1fps,lpips,2s,Text,0.3560549020767212
+rollout_1fps,lpips,4s,No Text,0.41461068391799927
+rollout_1fps,lpips,4s,Text,0.3977449834346771
+rollout_1fps,lpips,8s,No Text,0.4964306354522705
+rollout_1fps,lpips,8s,Text,0.461014986038208
+rollout_1fps,lpips,16s,No Text,0.5929937362670898
+rollout_1fps,lpips,16s,Text,0.5650916695594788
+rollout_1fps,dreamsim,1s,No Text,0.14136549830436707
+rollout_1fps,dreamsim,1s,Text,0.1340228021144867
+rollout_1fps,dreamsim,2s,No Text,0.15256962180137634
+rollout_1fps,dreamsim,2s,Text,0.15262174606323242
+rollout_1fps,dreamsim,4s,No Text,0.20337322354316711
+rollout_1fps,dreamsim,4s,Text,0.17686454951763153
+rollout_1fps,dreamsim,8s,No Text,0.3105534315109253
+rollout_1fps,dreamsim,8s,Text,0.2317276895046234
+rollout_1fps,dreamsim,16s,No Text,0.46291297674179077
+rollout_1fps,dreamsim,16s,Text,0.344368577003479
+rollout_1fps,fid,1s,No Text,60.69419860839844
+rollout_1fps,fid,1s,Text,60.825164794921875
+rollout_1fps,fid,2s,No Text,65.6424560546875
+rollout_1fps,fid,2s,Text,65.76266479492188
+rollout_1fps,fid,4s,No Text,70.72064208984375
+rollout_1fps,fid,4s,Text,63.41212463378906
+rollout_1fps,fid,8s,No Text,102.75233459472656
+rollout_1fps,fid,8s,Text,74.66439819335938
+rollout_1fps,fid,16s,No Text,141.48873901367188
+rollout_1fps,fid,16s,Text,84.85649108886719
+rollout_4fps,lpips,1s,No Text,0.34009799361228943
+rollout_4fps,lpips,1s,Text,0.3326908051967621
+rollout_4fps,lpips,2s,No Text,0.3825368583202362
+rollout_4fps,lpips,2s,Text,0.36673933267593384
+rollout_4fps,lpips,4s,No Text,0.44468948245048523
+rollout_4fps,lpips,4s,Text,0.4197324216365814
+rollout_4fps,lpips,8s,No Text,0.511471152305603
+rollout_4fps,lpips,8s,Text,0.48674914240837097
+rollout_4fps,lpips,16s,No Text,0.5714607834815979
+rollout_4fps,lpips,16s,Text,0.5471949577331543
+rollout_4fps,dreamsim,1s,No Text,0.1458229422569275
+rollout_4fps,dreamsim,1s,Text,0.14264686405658722
+rollout_4fps,dreamsim,2s,No Text,0.17066922783851624
+rollout_4fps,dreamsim,2s,Text,0.16066968441009521
+rollout_4fps,dreamsim,4s,No Text,0.21276962757110596
+rollout_4fps,dreamsim,4s,Text,0.19472336769104004
+rollout_4fps,dreamsim,8s,No Text,0.2880101203918457
+rollout_4fps,dreamsim,8s,Text,0.26554498076438904
+rollout_4fps,dreamsim,16s,No Text,0.3618578314781189
+rollout_4fps,dreamsim,16s,Text,0.3303108811378479
+rollout_4fps,fid,1s,No Text,63.39776611328125
+rollout_4fps,fid,1s,Text,62.676483154296875
+rollout_4fps,fid,2s,No Text,65.96034240722656
+rollout_4fps,fid,2s,Text,63.44952392578125
+rollout_4fps,fid,4s,No Text,72.97512817382812
+rollout_4fps,fid,4s,Text,67.69422912597656
+rollout_4fps,fid,8s,No Text,88.53762817382812
+rollout_4fps,fid,8s,Text,76.93057250976562
+rollout_4fps,fid,16s,No Text,92.41156005859375
+rollout_4fps,fid,16s,Text,79.94723510742188

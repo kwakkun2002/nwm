@@ -208,6 +208,15 @@
   - checkpoint/log는 `30k`까지 확보
   - RECON `time/rollout` eval은 확보
   - planning eval 최종 JSON은 아직 없음
+* [x] `224 baseline no-text` vs `224 text-conditioned` 비교 그래프 생성
+  - 스크립트: `scripts/presentation/plot_baseline_text_comparison.py`
+  - 산출물: `gpu_plots/compare_baseline_text/01_recon_metrics_224_text_vs_no_text.png`
+  - 주의: 이 그림은 저장된 JSON을 정확히 시각화한 것이지만 공정한 text ablation은 아님
+    - baseline은 멀티데이터셋 `nwm_cdit_s`
+    - text 쪽은 `nwm_cdit_s`에서 시작해 `raw RECON`으로 추가 학습한 `nwm_cdit_s_recon_raw_text_dense`
+* [ ] 공정한 `224 text vs no-text` 비교용 control 확보
+  - 필요한 것: `224 no-text RECON-only` run/eval
+  - 조건: `datasets/recon_raw/recon_release`, 동일 split, 동일 `len_traj_pred=64`, 동일 checkpoint warm-start, text only on/off 차이만 남기기
 
 ## 오늘 정리 완료
 
