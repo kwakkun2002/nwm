@@ -384,19 +384,23 @@
 
 ## 2.1 최소 변경 버전 (무조건 먼저)
 
-* [ ] text → projection layer 추가
-* [ ] 기존 conditioning vector에 단순 concat or sum
+* [x] text → projection layer 추가
+* [x] 기존 conditioning vector에 단순 concat or sum
+  - 현재 구현은 `sum` 방식
+  - 상태: `datasets.py` -> `models.py` -> `train.py` / `isolated_nwm_infer.py` / `planning_eval.py` 경로까지 연결 완료
 
 ## 2.2 안정성 장치
 
 * [ ] projection layer zero init
 * [ ] text dropout (p=0.3~0.5)
 * [ ] 일부 샘플 text 제거
+  - 메모: 현재 `text_proj`는 zero init이 아니라 normal init이고, text dropout / text masking은 아직 없음
 
 ## 2.3 gated fusion (2차)
 
 * [ ] gating scalar or MLP 추가
 * [ ] text influence 조절
+  - 메모: 현재는 gating 없이 conditioning vector에 text projection을 직접 더하는 최소 구현만 있음
 
 ## 구조 목표
 
