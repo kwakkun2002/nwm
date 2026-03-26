@@ -67,6 +67,7 @@ def save_image(output_file, img, unnormalize_img):
 def get_dataset_eval(config, dataset_name, eval_type, predefined_index=True):
     data_config = config["eval_datasets"][dataset_name]    
     text_config = get_text_conditioning_config(config)
+    image_transform = misc.build_transform(config["image_size"])
     if predefined_index:
         predefined_index = f"data_splits/{dataset_name}/test/{eval_type}.pkl"
     else:
@@ -84,7 +85,7 @@ def get_dataset_eval(config, dataset_name, eval_type, predefined_index=True):
                 traj_stride=config["traj_stride"], 
                 context_size=config["eval_context_size"],
                 normalize=config["normalize"],
-                transform=misc.transform,
+                transform=image_transform,
                 goals_per_obs=4,
                 predefined_index=predefined_index,
                 traj_names='traj_names.txt',

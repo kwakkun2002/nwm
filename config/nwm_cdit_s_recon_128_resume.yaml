@@ -1,0 +1,39 @@
+run_name: nwm_cdit_s_recon_128
+
+# training setup
+results_dir: logs
+weights_dir: weights/checkpoints
+artifact_dir: artifacts
+train: True
+batch_size: 16
+num_workers: 12
+model: CDiT-S/2
+lr: 8e-5
+from_checkpoint: 0
+
+normalize: True
+grad_clip_val: 10.0
+context_size: 4
+
+distance:
+  min_dist_cat: -64
+  max_dist_cat: 64
+
+len_traj_pred: 64
+
+image_size: 128
+checkpoint_strict: True
+checkpoint_ignore_shape_mismatch: False
+checkpoint_ignore_keys: []
+load_training_state: True
+text_conditioning:
+  enabled: False
+  embedding_root: null
+  condition_source: current
+  text_dim: 0
+datasets:
+  recon:
+    data_folder: datasets/recon_raw/recon_release
+    train: data_splits/recon/train/
+    test: data_splits/recon/test/
+    goals_per_obs: 4

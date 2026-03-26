@@ -41,7 +41,7 @@ from evo.core.metrics import PoseRelation
 from diffusion import create_diffusion
 from datasets import TrajectoryEvalDataset
 from isolated_nwm_infer import model_forward_wrapper
-from misc import calculate_delta_yaw, get_action_torch, get_checkpoint_path, save_planning_pred, log_viz_single, transform, unnormalize_data, load_vae
+from misc import build_transform, calculate_delta_yaw, get_action_torch, get_checkpoint_path, save_planning_pred, log_viz_single, unnormalize_data, load_vae
 from isolated_nwm_eval import save_metric_to_disk
 import distributed as dist
 from models import CDiT_models
@@ -132,6 +132,7 @@ def plot_batch_final(init_imgs, pred_imgs, goal_imgs, idxs, losses, save_path="f
 def get_dataset_eval(config, dataset_name, predefined_index=True):
     data_config = config["eval_datasets"][dataset_name]
     text_config = get_text_conditioning_config(config)
+    image_transform = build_transform(config["image_size"])
     if predefined_index:
         predefined_index = f"data_splits/{dataset_name}/test/navigation_eval.pkl"
     else:
@@ -148,7 +149,7 @@ def get_dataset_eval(config, dataset_name, predefined_index=True):
                 traj_stride=config["traj_stride"], 
                 context_size=config["trajectory_eval_context_size"],
                 normalize=config["normalize"],
-                transform=transform,
+                transform=image_transform,
                 predefined_index=predefined_index,
                 traj_names="rollout_traj_names.txt",
                 text_embedding_root=text_config["embedding_root"] if text_config["enabled"] else None,

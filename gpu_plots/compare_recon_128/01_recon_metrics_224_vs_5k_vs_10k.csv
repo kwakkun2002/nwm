@@ -1,0 +1,136 @@
+eval_type,metric,horizon,series,value
+time,lpips,1s,224 baseline,0.3105521500110626
+time,lpips,1s,128 @ 5k,0.6230966448783875
+time,lpips,1s,128 @ 10k,0.5388498306274414
+time,lpips,2s,224 baseline,0.3415534496307373
+time,lpips,2s,128 @ 5k,0.6229805946350098
+time,lpips,2s,128 @ 10k,0.5449889898300171
+time,lpips,4s,224 baseline,0.36985841393470764
+time,lpips,4s,128 @ 5k,0.6212854981422424
+time,lpips,4s,128 @ 10k,0.5441193580627441
+time,lpips,8s,224 baseline,0.4030992090702057
+time,lpips,8s,128 @ 5k,0.622977077960968
+time,lpips,8s,128 @ 10k,0.5415053367614746
+time,lpips,16s,224 baseline,0.46318289637565613
+time,lpips,16s,128 @ 5k,0.624152660369873
+time,lpips,16s,128 @ 10k,0.5562974214553833
+time,dreamsim,1s,224 baseline,0.1389617621898651
+time,dreamsim,1s,128 @ 5k,0.6918321251869202
+time,dreamsim,1s,128 @ 10k,0.5334616899490356
+time,dreamsim,2s,224 baseline,0.14989791810512543
+time,dreamsim,2s,128 @ 5k,0.6961749792098999
+time,dreamsim,2s,128 @ 10k,0.5359175205230713
+time,dreamsim,4s,224 baseline,0.16149090230464935
+time,dreamsim,4s,128 @ 5k,0.7007882595062256
+time,dreamsim,4s,128 @ 10k,0.5241581797599792
+time,dreamsim,8s,224 baseline,0.17843344807624817
+time,dreamsim,8s,128 @ 5k,0.7057257890701294
+time,dreamsim,8s,128 @ 10k,0.5191803574562073
+time,dreamsim,16s,224 baseline,0.2286277711391449
+time,dreamsim,16s,128 @ 5k,0.707247257232666
+time,dreamsim,16s,128 @ 10k,0.5378034114837646
+time,fid,1s,224 baseline,35.08497619628906
+time,fid,1s,128 @ 5k,242.054443359375
+time,fid,1s,128 @ 10k,161.81390380859375
+time,fid,2s,224 baseline,34.448089599609375
+time,fid,2s,128 @ 5k,243.5553741455078
+time,fid,2s,128 @ 10k,156.58303833007812
+time,fid,4s,224 baseline,33.993408203125
+time,fid,4s,128 @ 5k,244.5536651611328
+time,fid,4s,128 @ 10k,147.41693115234375
+time,fid,8s,224 baseline,33.46461486816406
+time,fid,8s,128 @ 5k,251.09532165527344
+time,fid,8s,128 @ 10k,148.16046142578125
+time,fid,16s,224 baseline,40.388671875
+time,fid,16s,128 @ 5k,251.20236206054688
+time,fid,16s,128 @ 10k,145.0506591796875
+rollout_1fps,lpips,1s,224 baseline,0.31722015142440796
+rollout_1fps,lpips,1s,128 @ 5k,0.6263445615768433
+rollout_1fps,lpips,1s,128 @ 10k,0.535275399684906
+rollout_1fps,lpips,2s,224 baseline,0.3501470983028412
+rollout_1fps,lpips,2s,128 @ 5k,0.6263229250907898
+rollout_1fps,lpips,2s,128 @ 10k,0.559988796710968
+rollout_1fps,lpips,4s,224 baseline,0.41461068391799927
+rollout_1fps,lpips,4s,128 @ 5k,0.6351350545883179
+rollout_1fps,lpips,4s,128 @ 10k,0.5894198417663574
+rollout_1fps,lpips,8s,224 baseline,0.4964306354522705
+rollout_1fps,lpips,8s,128 @ 5k,0.6433505415916443
+rollout_1fps,lpips,8s,128 @ 10k,0.6018684506416321
+rollout_1fps,lpips,16s,224 baseline,0.5929937362670898
+rollout_1fps,lpips,16s,128 @ 5k,0.6319549083709717
+rollout_1fps,lpips,16s,128 @ 10k,0.6121599674224854
+rollout_1fps,dreamsim,1s,224 baseline,0.14136549830436707
+rollout_1fps,dreamsim,1s,128 @ 5k,0.6912140250205994
+rollout_1fps,dreamsim,1s,128 @ 10k,0.5362221002578735
+rollout_1fps,dreamsim,2s,224 baseline,0.15256962180137634
+rollout_1fps,dreamsim,2s,128 @ 5k,0.6894930601119995
+rollout_1fps,dreamsim,2s,128 @ 10k,0.5540354251861572
+rollout_1fps,dreamsim,4s,224 baseline,0.20337322354316711
+rollout_1fps,dreamsim,4s,128 @ 5k,0.6889427900314331
+rollout_1fps,dreamsim,4s,128 @ 10k,0.5967884063720703
+rollout_1fps,dreamsim,8s,224 baseline,0.3105534315109253
+rollout_1fps,dreamsim,8s,128 @ 5k,0.6874784231185913
+rollout_1fps,dreamsim,8s,128 @ 10k,0.6249334812164307
+rollout_1fps,dreamsim,16s,224 baseline,0.46291297674179077
+rollout_1fps,dreamsim,16s,128 @ 5k,0.6889254450798035
+rollout_1fps,dreamsim,16s,128 @ 10k,0.6424770951271057
+rollout_1fps,fid,1s,224 baseline,60.69419860839844
+rollout_1fps,fid,1s,128 @ 5k,250.5493927001953
+rollout_1fps,fid,1s,128 @ 10k,176.36737060546875
+rollout_1fps,fid,2s,224 baseline,65.6424560546875
+rollout_1fps,fid,2s,128 @ 5k,248.41802978515625
+rollout_1fps,fid,2s,128 @ 10k,190.2496795654297
+rollout_1fps,fid,4s,224 baseline,70.72064208984375
+rollout_1fps,fid,4s,128 @ 5k,249.85244750976562
+rollout_1fps,fid,4s,128 @ 10k,201.29495239257812
+rollout_1fps,fid,8s,224 baseline,102.75233459472656
+rollout_1fps,fid,8s,128 @ 5k,240.89060974121094
+rollout_1fps,fid,8s,128 @ 10k,216.360595703125
+rollout_1fps,fid,16s,224 baseline,141.48873901367188
+rollout_1fps,fid,16s,128 @ 5k,244.4273223876953
+rollout_1fps,fid,16s,128 @ 10k,212.15304565429688
+rollout_4fps,lpips,1s,224 baseline,0.34009799361228943
+rollout_4fps,lpips,1s,128 @ 5k,0.6396769881248474
+rollout_4fps,lpips,1s,128 @ 10k,0.5884285569190979
+rollout_4fps,lpips,2s,224 baseline,0.3825368583202362
+rollout_4fps,lpips,2s,128 @ 5k,0.6496326923370361
+rollout_4fps,lpips,2s,128 @ 10k,0.6045489311218262
+rollout_4fps,lpips,4s,224 baseline,0.44468948245048523
+rollout_4fps,lpips,4s,128 @ 5k,0.6516168117523193
+rollout_4fps,lpips,4s,128 @ 10k,0.6092376708984375
+rollout_4fps,lpips,8s,224 baseline,0.511471152305603
+rollout_4fps,lpips,8s,128 @ 5k,0.6488663554191589
+rollout_4fps,lpips,8s,128 @ 10k,0.6080269813537598
+rollout_4fps,lpips,16s,224 baseline,0.5714607834815979
+rollout_4fps,lpips,16s,128 @ 5k,0.6474769115447998
+rollout_4fps,lpips,16s,128 @ 10k,0.6043548583984375
+rollout_4fps,dreamsim,1s,224 baseline,0.1458229422569275
+rollout_4fps,dreamsim,1s,128 @ 5k,0.6798429489135742
+rollout_4fps,dreamsim,1s,128 @ 10k,0.5982694029808044
+rollout_4fps,dreamsim,2s,224 baseline,0.17066922783851624
+rollout_4fps,dreamsim,2s,128 @ 5k,0.6837918162345886
+rollout_4fps,dreamsim,2s,128 @ 10k,0.629684329032898
+rollout_4fps,dreamsim,4s,224 baseline,0.21276962757110596
+rollout_4fps,dreamsim,4s,128 @ 5k,0.683807373046875
+rollout_4fps,dreamsim,4s,128 @ 10k,0.6181927919387817
+rollout_4fps,dreamsim,8s,224 baseline,0.2880101203918457
+rollout_4fps,dreamsim,8s,128 @ 5k,0.6893215179443359
+rollout_4fps,dreamsim,8s,128 @ 10k,0.635193943977356
+rollout_4fps,dreamsim,16s,224 baseline,0.3618578314781189
+rollout_4fps,dreamsim,16s,128 @ 5k,0.685259997844696
+rollout_4fps,dreamsim,16s,128 @ 10k,0.6450048089027405
+rollout_4fps,fid,1s,224 baseline,63.39776611328125
+rollout_4fps,fid,1s,128 @ 5k,245.03732299804688
+rollout_4fps,fid,1s,128 @ 10k,205.1361846923828
+rollout_4fps,fid,2s,224 baseline,65.96034240722656
+rollout_4fps,fid,2s,128 @ 5k,242.5570526123047
+rollout_4fps,fid,2s,128 @ 10k,211.4585418701172
+rollout_4fps,fid,4s,224 baseline,72.97512817382812
+rollout_4fps,fid,4s,128 @ 5k,240.78970336914062
+rollout_4fps,fid,4s,128 @ 10k,209.79757690429688
+rollout_4fps,fid,8s,224 baseline,88.53762817382812
+rollout_4fps,fid,8s,128 @ 5k,242.82373046875
+rollout_4fps,fid,8s,128 @ 10k,215.35894775390625
+rollout_4fps,fid,16s,224 baseline,92.41156005859375
+rollout_4fps,fid,16s,128 @ 5k,233.28431701660156
+rollout_4fps,fid,16s,128 @ 10k,209.54708862304688

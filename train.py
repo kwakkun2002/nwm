@@ -43,6 +43,7 @@ import logging
 import os
 import matplotlib.pyplot as plt 
 import yaml
+import math
 
 
 import torch.distributed as dist
@@ -54,7 +55,7 @@ from distributed import init_distributed
 from models import CDiT_models
 from diffusion import create_diffusion
 from datasets import TrainingDataset
-from misc import get_checkpoint_path, get_run_artifact_dir, get_run_checkpoint_dir, get_run_log_dir, transform, load_vae
+from misc import build_transform, get_checkpoint_path, get_run_artifact_dir, get_run_checkpoint_dir, get_run_log_dir, load_vae
 from text_pipeline import infer_text_embedding_dim
 
 #################################################################################
@@ -134,6 +135,87 @@ def load_model_state(module, state_dict, strict: bool, label: str):
             print(f"{label} unexpected keys ({len(unexpected)}): {unexpected[:8]}")
     return result
 
+
+def interpolate_pos_embed_tensor(source_tensor: torch.Tensor, target_shape) -> torch.Tensor:
+    if source_tensor.ndim != 3 or len(target_shape) != 3:
+        raise ValueError("pos_embed interpolation expects 3D tensors")
+
+    source_frames, source_patches, hidden = source_tensor.shape
+    target_frames, target_patches, target_hidden = target_shape
+    if source_frames != target_frames or hidden != target_hidden:
+        raise ValueError(
+            f"Cannot interpolate pos_embed from {tuple(source_tensor.shape)} to {tuple(target_shape)}"
+        )
+
+    source_hw = int(math.isqrt(source_patches))
+    target_hw = int(math.isqrt(target_patches))
+    if source_hw * source_hw != source_patches or target_hw * target_hw != target_patches:
+        raise ValueError(
+            f"pos_embed patch counts must be perfect squares, got {source_patches} -> {target_patches}"
+        )
+
+    pos_embed = source_tensor.reshape(source_frames, source_hw, source_hw, hidden).permute(0, 3, 1, 2)
+    pos_embed = torch.nn.functional.interpolate(
+        pos_embed,
+        size=(target_hw, target_hw),
+        mode="bicubic",
+        align_corners=False,
+    )
+    return pos_embed.permute(0, 2, 3, 1).reshape(target_frames, target_patches, hidden)
+
+
+def prepare_checkpoint_state_dict(
+    module,
+    state_dict,
+    *,
+    label: str,
+    ignore_keys=(),
+    ignore_shape_mismatch: bool = False,
+    interpolate_pos_embed: bool = False,
+):
+    target_state = module.state_dict()
+    prepared_state = {}
+    skipped_keys = []
+    skipped_mismatches = []
+    interpolated_keys = []
+
+    for raw_name, value in state_dict.items():
+        name = raw_name.replace('_orig_mod.', '')
+        if any(name == key or name.startswith(f"{key}.") for key in ignore_keys):
+            skipped_keys.append(name)
+            continue
+
+        target_value = target_state.get(name)
+        if target_value is None:
+            prepared_state[name] = value
+            continue
+
+        if value.shape == target_value.shape:
+            prepared_state[name] = value
+            continue
+
+        if interpolate_pos_embed and name == "pos_embed":
+            prepared_state[name] = interpolate_pos_embed_tensor(value, target_value.shape)
+            interpolated_keys.append((name, tuple(value.shape), tuple(target_value.shape)))
+            continue
+
+        if ignore_shape_mismatch:
+            skipped_mismatches.append((name, tuple(value.shape), tuple(target_value.shape)))
+            continue
+
+        prepared_state[name] = value
+
+    if skipped_keys:
+        print(f"{label} skipped keys ({len(skipped_keys)}): {skipped_keys[:8]}")
+    if skipped_mismatches:
+        preview = [f"{name}: {src} -> {dst}" for name, src, dst in skipped_mismatches[:8]]
+        print(f"{label} skipped shape mismatches ({len(skipped_mismatches)}): {preview}")
+    if interpolated_keys:
+        preview = [f"{name}: {src} -> {dst}" for name, src, dst in interpolated_keys[:8]]
+        print(f"{label} interpolated keys ({len(interpolated_keys)}): {preview}")
+
+    return prepared_state
+
 #################################################################################
 #                                  Training Loop                                #
 #################################################################################
@@ -160,6 +242,10 @@ def main(args):
     text_config = get_text_conditioning_config(config)
     checkpoint_strict = bool(config.get("checkpoint_strict", True))
     load_training_state = bool(config.get("load_training_state", True))
+    checkpoint_ignore_keys = tuple(config.get("checkpoint_ignore_keys", []))
+    checkpoint_ignore_shape_mismatch = bool(config.get("checkpoint_ignore_shape_mismatch", False))
+    checkpoint_interpolate_pos_embed = bool(config.get("checkpoint_interpolate_pos_embed", False))
+    image_transform = build_transform(config["image_size"])
     
     # Setup experiment directories with separate roots for logs, artifacts, and weights.
     log_dir = get_run_log_dir(config)
@@ -213,10 +299,24 @@ def main(args):
         latest_checkpoint = torch.load(latest_path, map_location="cpu", weights_only=False) 
 
         if "model" in latest_checkpoint:
-            model_ckp = {k.replace('_orig_mod.', ''):v for k,v in latest_checkpoint['model'].items()}
+            model_ckp = prepare_checkpoint_state_dict(
+                model,
+                latest_checkpoint["model"],
+                label="model",
+                ignore_keys=checkpoint_ignore_keys,
+                ignore_shape_mismatch=checkpoint_ignore_shape_mismatch,
+                interpolate_pos_embed=checkpoint_interpolate_pos_embed,
+            )
             load_model_state(model, model_ckp, strict=checkpoint_strict, label="model")
 
-            model_ckp = {k.replace('_orig_mod.', ''):v for k,v in latest_checkpoint['ema'].items()}
+            model_ckp = prepare_checkpoint_state_dict(
+                ema,
+                latest_checkpoint["ema"],
+                label="EMA model",
+                ignore_keys=checkpoint_ignore_keys,
+                ignore_shape_mismatch=checkpoint_ignore_shape_mismatch,
+                interpolate_pos_embed=checkpoint_interpolate_pos_embed,
+            )
             load_model_state(ema, model_ckp, strict=checkpoint_strict, label="EMA model")
         else:
             update_ema(ema, model, decay=0)  # Ensure EMA is initialized with synced weights
@@ -277,7 +377,7 @@ def main(args):
                         context_size=config["context_size"],
                         normalize=config["normalize"],
                         goals_per_obs=goals_per_obs,
-                        transform=transform,
+                        transform=image_transform,
                         predefined_index=None,
                         traj_stride=1,
                         text_embedding_root=text_config["embedding_root"] if text_config["enabled"] else None,

@@ -257,6 +257,115 @@
     - batch 0: `recon_ate 1.6417`, `recon_rpe_trans 0.4050`, `recon_pos_diff_norm 2.4531`, `recon_yaw_diff_norm 1.2507`
     - batch 1: `recon_ate 1.6728`, `recon_rpe_trans 0.4105`, `recon_pos_diff_norm 2.5456`, `recon_yaw_diff_norm 1.3408`
   - 사용자 요청으로 중단했고 최종 JSON은 없음
+* [x] `128x128` low-resolution baseline warm-start 경로 추가
+  - 목적: 기존 `224` baseline `nwm_cdit_s`를 `128` 입력용으로 적응시켜 해상도 축소 baseline 확보
+  - 코드 조치: `misc.py`에 `build_transform(image_size)` 추가
+  - 코드 조치: `train.py`, `isolated_nwm_infer.py`, `planning_eval.py`, `scripts/recon/recon_smoke_test.py` 등에서 `config["image_size"]` 기반 transform 사용
+  - 코드 조치: `train.py`에 checkpoint warm-start helper 추가
+    - `checkpoint_ignore_keys`
+    - `checkpoint_ignore_shape_mismatch`
+    - `checkpoint_interpolate_pos_embed`
+  - 새 config:
+    - `config/nwm_cdit_s_recon_128.yaml`
+    - `config/nwm_cdit_s_recon_128_resume.yaml`
+  - warm-start source checkpoint: `weights/checkpoints/nwm_cdit_s/0100000.pth.tar`
+  - 초기 정책: `pos_embed`는 제외하고 나머지 weight 재사용
+  - smoke 확인: `obs_shape (4, 3, 128, 128)`, `pred_shape (64, 3, 128, 128)`, `delta_shape (64, 3)`
+* [x] `128` baseline `0005000` checkpoint 기준 RECON `time/rollout` eval 완료
+  - checkpoint: `weights/checkpoints/nwm_cdit_s_recon_128/0005000.pth.tar`
+  - GT 재사용: `artifacts/eval_s_recon_128/gt_latest`
+  - 예측 경로: `artifacts/eval_s_recon_128/nwm_cdit_s_recon_128_0005000`
+  - 결과 JSON:
+    - `artifacts/eval_s_recon_128/nwm_cdit_s_recon_128_0005000/recon_time.json`
+    - `artifacts/eval_s_recon_128/nwm_cdit_s_recon_128_0005000/recon_rollout_1fps.json`
+    - `artifacts/eval_s_recon_128/nwm_cdit_s_recon_128_0005000/recon_rollout_4fps.json`
+  - `time`:
+    - LPIPS `1s 0.6231`, `2s 0.6230`, `4s 0.6213`, `8s 0.6230`, `16s 0.6242`
+    - DreamSim `1s 0.6918`, `2s 0.6962`, `4s 0.7008`, `8s 0.7057`, `16s 0.7072`
+    - FID `1s 242.05`, `2s 243.56`, `4s 244.55`, `8s 251.10`, `16s 251.20`
+  - `rollout 1fps`:
+    - LPIPS `1s 0.6263`, `2s 0.6263`, `4s 0.6351`, `8s 0.6434`, `16s 0.6320`
+    - DreamSim `1s 0.6912`, `2s 0.6895`, `4s 0.6889`, `8s 0.6875`, `16s 0.6889`
+    - FID `1s 250.55`, `2s 248.42`, `4s 249.85`, `8s 240.89`, `16s 244.43`
+  - `rollout 4fps`:
+    - LPIPS `1s 0.6397`, `2s 0.6496`, `4s 0.6516`, `8s 0.6489`, `16s 0.6475`
+    - DreamSim `1s 0.6798`, `2s 0.6838`, `4s 0.6838`, `8s 0.6893`, `16s 0.6853`
+    - FID `1s 245.04`, `2s 242.56`, `4s 240.79`, `8s 242.82`, `16s 233.28`
+  - 비교:
+    - `~550 step latest` 대비 `time 15/15`, `rollout 1fps 12/15`, `rollout 4fps 10/15` 지표 개선
+    - 기존 `224` baseline `artifacts/lpips_time_recon_s/nwm_cdit_s` 대비는 여전히 `45/45` 지표 전부 열세
+* [x] `128` baseline `0010000` checkpoint 저장 후 학습 일단 정지
+  - resume config: `config/nwm_cdit_s_recon_128_resume.yaml`
+  - `2026-03-26 04:51:05`에 `step=0010000` 도달
+  - 저장 확인: `weights/checkpoints/nwm_cdit_s_recon_128/0010000.pth.tar`
+  - 저장 후 잠깐 더 진행되어 마지막 확인 로그는 `step=0010540`
+  - 사용자 요청 기준이 `10k`라 컨테이너 내부 train 프로세스는 여기서 정지
+* [x] `128` baseline `0010000` checkpoint 기준 RECON `time/rollout` eval
+  - checkpoint: `weights/checkpoints/nwm_cdit_s_recon_128/0010000.pth.tar`
+  - GT 재사용: `artifacts/eval_s_recon_128/gt_latest`
+  - 예측 출력: `artifacts/eval_s_recon_128/nwm_cdit_s_recon_128_0010000`
+  - 결과 JSON:
+    - `artifacts/eval_s_recon_128/nwm_cdit_s_recon_128_0010000/recon_time.json`
+    - `artifacts/eval_s_recon_128/nwm_cdit_s_recon_128_0010000/recon_rollout_1fps.json`
+    - `artifacts/eval_s_recon_128/nwm_cdit_s_recon_128_0010000/recon_rollout_4fps.json`
+  - `time`:
+    - LPIPS `1s 0.5388`, `2s 0.5450`, `4s 0.5441`, `8s 0.5415`, `16s 0.5563`
+    - DreamSim `1s 0.5335`, `2s 0.5359`, `4s 0.5242`, `8s 0.5192`, `16s 0.5378`
+    - FID `1s 161.81`, `2s 156.58`, `4s 147.42`, `8s 148.16`, `16s 145.05`
+  - `rollout 1fps`:
+    - LPIPS `1s 0.5353`, `2s 0.5600`, `4s 0.5894`, `8s 0.6019`, `16s 0.6122`
+    - DreamSim `1s 0.5362`, `2s 0.5540`, `4s 0.5968`, `8s 0.6249`, `16s 0.6425`
+    - FID `1s 176.37`, `2s 190.25`, `4s 201.29`, `8s 216.36`, `16s 212.15`
+  - `rollout 4fps`:
+    - LPIPS `1s 0.5884`, `2s 0.6045`, `4s 0.6092`, `8s 0.6080`, `16s 0.6044`
+    - DreamSim `1s 0.5983`, `2s 0.6297`, `4s 0.6182`, `8s 0.6352`, `16s 0.6450`
+    - FID `1s 205.14`, `2s 211.46`, `4s 209.80`, `8s 215.36`, `16s 209.55`
+  - 비교:
+    - `0005000` 대비 `time 15/15`, `rollout 1fps 15/15`, `rollout 4fps 15/15` 지표 전부 개선
+    - 기존 `224` baseline `artifacts/lpips_time_recon_s/nwm_cdit_s` 대비는 여전히 `45/45` 지표 전부 열세
+* [x] `128 + text` 학습 run 시작 및 `0030000` checkpoint 확보
+  - config:
+    - `config/nwm_cdit_s_recon_128_text_dense.yaml`
+    - `config/nwm_cdit_s_recon_128_text_dense_resume.yaml`
+  - warm-start source:
+    - `weights/checkpoints/nwm_cdit_s_recon_128/0010000.pth.tar`
+  - 로딩 시 missing key:
+    - `text_proj.weight`
+    - `text_proj.bias`
+  - 의미:
+    - `128 baseline` 본체는 재사용하고 text projection만 새로 초기화
+  - 학습 진행:
+    - text smoke test 통과 (`text_shape (4, 512)`, latent `16x16`)
+    - `0030000.pth.tar` 저장 확인
+    - 실제 중단 시점 로그는 `step=0030320`
+  - checkpoint 경로:
+    - `weights/checkpoints/nwm_cdit_s_recon_128_text_dense/0030000.pth.tar`
+* [x] `128 + text` `0030000` checkpoint 기준 RECON `time/rollout` eval
+  - checkpoint:
+    - `weights/checkpoints/nwm_cdit_s_recon_128_text_dense/0030000.pth.tar`
+  - GT 재사용:
+    - `artifacts/eval_s_recon_128/gt_latest`
+  - 예측 출력:
+    - `artifacts/eval_s_recon_128_text_dense/nwm_cdit_s_recon_128_text_dense_0030000`
+  - 결과 JSON:
+    - `artifacts/eval_s_recon_128_text_dense/nwm_cdit_s_recon_128_text_dense_0030000/recon_time.json`
+    - `artifacts/eval_s_recon_128_text_dense/nwm_cdit_s_recon_128_text_dense_0030000/recon_rollout_1fps.json`
+    - `artifacts/eval_s_recon_128_text_dense/nwm_cdit_s_recon_128_text_dense_0030000/recon_rollout_4fps.json`
+  - `time`:
+    - LPIPS `1s 0.2466`, `2s 0.2695`, `4s 0.2924`, `8s 0.3274`, `16s 0.3873`
+    - DreamSim `1s 0.1710`, `2s 0.1797`, `4s 0.1887`, `8s 0.2064`, `16s 0.2495`
+    - FID `1s 32.77`, `2s 32.37`, `4s 33.42`, `8s 31.17`, `16s 36.69`
+  - `rollout 1fps`:
+    - LPIPS `1s 0.2477`, `2s 0.2754`, `4s 0.3272`, `8s 0.3915`, `16s 0.4711`
+    - DreamSim `1s 0.1699`, `2s 0.1793`, `4s 0.2046`, `8s 0.2460`, `16s 0.3354`
+    - FID `1s 59.11`, `2s 60.23`, `4s 60.75`, `8s 64.34`, `16s 75.81`
+  - `rollout 4fps`:
+    - LPIPS `1s 0.2655`, `2s 0.2971`, `4s 0.3453`, `8s 0.4140`, `16s 0.4717`
+    - DreamSim `1s 0.1767`, `2s 0.1933`, `4s 0.2124`, `8s 0.2684`, `16s 0.3306`
+    - FID `1s 59.24`, `2s 61.02`, `4s 62.64`, `8s 69.23`, `16s 72.90`
+  - 비교:
+    - `128 no-text 0010000` 대비 `time 15/15`, `rollout 1fps 15/15`, `rollout 4fps 15/15` 지표 전부 개선
+    - 기존 `224` baseline `artifacts/lpips_time_recon_s/nwm_cdit_s` 대비 `time 10/15`, `rollout 1fps 12/15`, `rollout 4fps 13/15` 지표 개선
 
 핵심: **학습 때 텍스트 인코더 절대 돌리지 마라 (속도 병목 터짐)**
 

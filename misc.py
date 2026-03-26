@@ -342,12 +342,21 @@ class CenterCropAR:
             img = TF.center_crop(img, (int(w / self.ar), w))
         return img
 
-transform = transforms.Compose([
-    CenterCropAR(),
-    transforms.Resize((224, 224)),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=True),
-])
+def build_transform(image_size):
+    if isinstance(image_size, int):
+        resize_size = (image_size, image_size)
+    else:
+        resize_size = tuple(image_size)
+
+    return transforms.Compose([
+        CenterCropAR(),
+        transforms.Resize(resize_size),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=True),
+    ])
+
+
+transform = build_transform(224)
 
 unnormalize = transforms.Normalize(
     mean=[-0.5 / 0.5, -0.5 / 0.5, -0.5 / 0.5],

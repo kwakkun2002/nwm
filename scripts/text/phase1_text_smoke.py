@@ -12,7 +12,7 @@ if REPO_ROOT not in sys.path:
 
 from datasets import TrainingDataset
 from diffusion import create_diffusion
-from misc import load_vae, transform
+from misc import build_transform, load_vae
 from models import CDiT_models
 from text_pipeline import infer_text_embedding_dim
 
@@ -65,7 +65,7 @@ def main():
         len_traj_pred=len_traj_pred,
         traj_stride=1,
         context_size=context_size,
-        transform=transform,
+        transform=build_transform(config["image_size"]),
         normalize=config["normalize"],
         goals_per_obs=goals_per_obs,
         text_embedding_root=embedding_root,

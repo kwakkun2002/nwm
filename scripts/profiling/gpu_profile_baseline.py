@@ -80,6 +80,7 @@ def resolve_checkpoint(config: dict, args) -> str:
 def build_eval_dataset(config: dict, dataset_name: str, eval_type: str) -> EvalDataset:
     dataset_config = config["eval_datasets"][dataset_name]
     predefined_index = os.path.join("data_splits", dataset_name, "test", f"{eval_type}.pkl")
+    image_transform = misc.build_transform(config["image_size"])
     return EvalDataset(
         data_folder=dataset_config["data_folder"],
         data_split_folder=dataset_config["test"],
@@ -91,7 +92,7 @@ def build_eval_dataset(config: dict, dataset_name: str, eval_type: str) -> EvalD
         traj_stride=config["traj_stride"],
         context_size=config["eval_context_size"],
         normalize=config["normalize"],
-        transform=misc.transform,
+        transform=image_transform,
         goals_per_obs=dataset_config.get("goals_per_obs", 4),
         predefined_index=predefined_index,
         traj_names="traj_names.txt",
