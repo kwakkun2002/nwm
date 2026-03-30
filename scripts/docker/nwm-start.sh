@@ -6,11 +6,37 @@ CONTAINER_NAME="${NWM_CONTAINER_NAME:-nwm_dev}"
 CONTAINER_WORKDIR="${NWM_CONTAINER_WORKDIR:-/workspace/nwm}"
 CONTAINER_WEIGHTS_DIR="${NWM_WEIGHTS_DIR:-${CONTAINER_WORKDIR}/weights}"
 IMAGE_NAME="${NWM_IMAGE_NAME:-nwm:cu126}"
-GPU_REQUEST="${NWM_GPU_REQUEST:-all}"
+DEFAULT_GPU_NAME_PATTERN="${NWM_DEFAULT_GPU_NAME_PATTERN:-NVIDIA RTX 5000 Ada Generation}"
+GPU_REQUEST="${NWM_GPU_REQUEST:-}"
 PORT_MAPPING="${NWM_PORT_MAPPING:-8888:8888}"
 HOST_MODELS_DIR="${NWM_HOST_MODELS_DIR:-}"
 CONTAINER_MODELS_DIR="${NWM_CONTAINER_MODELS_DIR:-${CONTAINER_WEIGHTS_DIR}/pretrained}"
 SHM_SIZE="${NWM_SHM_SIZE:-}"
+
+detect_default_gpu_request() {
+  local gpu_index
+
+  if ! command -v nvidia-smi >/dev/null 2>&1; then
+    echo "all"
+    return
+  fi
+
+  gpu_index="$(
+    nvidia-smi --query-gpu=index,name --format=csv,noheader 2>/dev/null \
+      | awk -F', ' -v pattern="$DEFAULT_GPU_NAME_PATTERN" '$2 == pattern {print $1; exit}'
+  )"
+
+  if [[ -n "$gpu_index" ]]; then
+    echo "device=${gpu_index}"
+  else
+    echo "all"
+  fi
+}
+
+if [[ -z "$GPU_REQUEST" ]]; then
+  GPU_REQUEST="$(detect_default_gpu_request)"
+fi
+
 DOCKER_GPU_REQUEST="$GPU_REQUEST"
 
 if [[ "$GPU_REQUEST" == device=* ]]; then
@@ -27,12 +53,15 @@ if docker inspect "$CONTAINER_NAME" >/dev/null 2>&1; then
 
   echo "If you want to change visible GPUs, remove and recreate the container first:"
   echo "  docker rm -f $CONTAINER_NAME"
-  echo "  NWM_GPU_REQUEST='device=0,1' ./scripts/docker/nwm-start.sh"
+  echo "  NWM_GPU_REQUEST='device=1' ./scripts/docker/nwm-start.sh"
   exit 0
 fi
 
 echo "Creating container '$CONTAINER_NAME' from image '$IMAGE_NAME'..."
 echo "GPU request: $GPU_REQUEST"
+if [[ -z "${NWM_GPU_REQUEST:-}" && "$GPU_REQUEST" == device=* ]]; then
+  echo "Auto-selected GPU by name: $DEFAULT_GPU_NAME_PATTERN"
+fi
 
 DOCKER_RUN_ARGS=(
   -d

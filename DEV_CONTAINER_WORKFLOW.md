@@ -49,6 +49,8 @@ For a reusable named container:
 docker run -it --name nwm_dev --gpus all -p 8888:8888 -v "$PWD":/workspace/nwm nwm:cu126
 ```
 
+In this repository, the wrapper script `./scripts/docker/nwm-start.sh` now defaults to the `NVIDIA RTX 5000 Ada Generation` GPU when that model is present on the host. This avoids consuming the RTX PRO 6000 by default. You can still override the GPU selection explicitly with `NWM_GPU_REQUEST`.
+
 If you want to pin a subset of GPUs, use Docker's device selector:
 
 ```bash
@@ -87,6 +89,7 @@ You can also use the wrapper script in this repository:
 
 ```bash
 ./scripts/docker/nwm-start.sh
+NWM_GPU_REQUEST='device=1' ./scripts/docker/nwm-start.sh
 NWM_GPU_REQUEST='device=0,1' ./scripts/docker/nwm-start.sh
 ./scripts/docker/nwm-run.sh "python train.py --config config/nwm_cdit_xl.yaml"
 ./scripts/docker/nwm-run.sh "python isolated_nwm_eval.py --datasets recon ..."
@@ -142,7 +145,8 @@ chmod +x ./scripts/docker/nwm-run.sh
 The script:
 
 - `nwm-start.sh` creates `nwm_dev` if it does not exist, or starts it if it is stopped
-- `nwm-start.sh` supports `NWM_GPU_REQUEST=all` and `NWM_GPU_REQUEST='device=0,1'`
+- `nwm-start.sh` defaults to the `NVIDIA RTX 5000 Ada Generation` GPU when available
+- `nwm-start.sh` supports `NWM_GPU_REQUEST=all`, `NWM_GPU_REQUEST='device=1'`, and `NWM_GPU_REQUEST='device=0,1'`
 - Uses `nwm_dev` by default
 - Starts the container automatically if it exists but is stopped
 - Runs commands in `/workspace/nwm`
