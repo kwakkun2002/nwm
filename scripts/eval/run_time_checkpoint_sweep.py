@@ -7,19 +7,19 @@ from pathlib import Path
 
 EXPERIMENTS = {
     "nwm_cdit_s_recon_128": {
-        "config": Path("config/nwm_cdit_s_recon_128.yaml"),
+        "config": Path("configs/experiment/nwm_cdit_s_recon_128.yaml"),
         "checkpoint_dir": Path("weights/checkpoints/nwm_cdit_s_recon_128"),
         "output_root": Path("artifacts/eval_s_recon_128"),
         "gt_dir": Path("artifacts/eval_s_recon_128/gt_latest"),
     },
     "nwm_cdit_s_recon_128_text_dense": {
-        "config": Path("config/nwm_cdit_s_recon_128_text_dense.yaml"),
+        "config": Path("configs/experiment/nwm_cdit_s_recon_128_text_dense.yaml"),
         "checkpoint_dir": Path("weights/checkpoints/nwm_cdit_s_recon_128_text_dense"),
         "output_root": Path("artifacts/eval_s_recon_128_text_dense"),
         "gt_dir": Path("artifacts/eval_s_recon_128/gt_latest"),
     },
     "nwm_cdit_s_recon_raw_text_dense": {
-        "config": Path("config/nwm_cdit_s_recon_raw_text_dense.yaml"),
+        "config": Path("configs/experiment/nwm_cdit_s_recon_raw_text_dense.yaml"),
         "checkpoint_dir": Path("weights/checkpoints/nwm_cdit_s_recon_raw_text_dense"),
         "output_root": Path("artifacts/eval_s_recon_raw_text_dense"),
         "gt_dir": Path("artifacts/lpips_time_recon_s/gt"),
@@ -69,7 +69,7 @@ def maybe_generate_gt(exp_name: str, exp_cfg: dict, args: argparse.Namespace, dr
     run_command(
         [
             "python",
-            "isolated_nwm_infer.py",
+            "scripts/infer.py",
             "--exp",
             str(exp_cfg["config"]),
             "--datasets",
@@ -150,7 +150,7 @@ def main() -> None:
             run_command(
                 [
                     "python",
-                    "isolated_nwm_infer.py",
+                    "scripts/infer.py",
                     "--exp",
                     str(exp_cfg["config"]),
                     "--ckp",
@@ -171,7 +171,7 @@ def main() -> None:
             run_command(
                 [
                     "python",
-                    "isolated_nwm_eval.py",
+                    "scripts/evaluate.py",
                     "--datasets",
                     args.dataset,
                     "--batch_size",

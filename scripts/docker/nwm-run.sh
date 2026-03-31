@@ -9,7 +9,7 @@ CACHE_ROOT="${NWM_CACHE_DIR:-${WEIGHTS_ROOT}/cache}"
 
 if [ "$#" -eq 0 ]; then
   echo "Usage: $0 '<command>'"
-  echo "Example: $0 'python train.py --config config/nwm_cdit_xl.yaml'"
+  echo "Example: $0 'python scripts/train.py --config configs/experiment/nwm_cdit_xl.yaml'"
   exit 1
 fi
 

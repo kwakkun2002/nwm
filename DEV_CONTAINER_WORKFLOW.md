@@ -74,15 +74,15 @@ docker rm -f nwm_dev
 Instead of attaching to the container and typing manually, execute commands directly from the host:
 
 ```bash
-docker exec -it -w /workspace/nwm nwm_dev python train.py --config config/nwm_cdit_xl.yaml
-docker exec -it -w /workspace/nwm nwm_dev python isolated_nwm_infer.py ...
-docker exec -it -w /workspace/nwm nwm_dev python isolated_nwm_eval.py ...
+docker exec -it -w /workspace/nwm nwm_dev python scripts/train.py --config configs/experiment/nwm_cdit_xl.yaml
+docker exec -it -w /workspace/nwm nwm_dev python scripts/infer.py ...
+docker exec -it -w /workspace/nwm nwm_dev python scripts/evaluate.py ...
 ```
 
 You can also run a shell command string:
 
 ```bash
-docker exec -it -w /workspace/nwm nwm_dev bash -lc "python train.py --config config/nwm_cdit_xl.yaml"
+docker exec -it -w /workspace/nwm nwm_dev bash -lc "python scripts/train.py --config configs/experiment/nwm_cdit_xl.yaml"
 ```
 
 You can also use the wrapper script in this repository:
@@ -91,8 +91,8 @@ You can also use the wrapper script in this repository:
 ./scripts/docker/nwm-start.sh
 NWM_GPU_REQUEST='device=1' ./scripts/docker/nwm-start.sh
 NWM_GPU_REQUEST='device=0,1' ./scripts/docker/nwm-start.sh
-./scripts/docker/nwm-run.sh "python train.py --config config/nwm_cdit_xl.yaml"
-./scripts/docker/nwm-run.sh "python isolated_nwm_eval.py --datasets recon ..."
+./scripts/docker/nwm-run.sh "python scripts/train.py --config configs/experiment/nwm_cdit_xl.yaml"
+./scripts/docker/nwm-run.sh "python scripts/evaluate.py --datasets recon ..."
 ```
 
 ## Jupyter Without Attaching to the Container
@@ -139,7 +139,7 @@ If you prefer a repository-local wrapper instead of shell config, use:
 
 ```bash
 chmod +x ./scripts/docker/nwm-run.sh
-./scripts/docker/nwm-run.sh "python train.py --config config/nwm_cdit_xl.yaml"
+./scripts/docker/nwm-run.sh "python scripts/train.py --config configs/experiment/nwm_cdit_xl.yaml"
 ```
 
 The script:
@@ -161,7 +161,7 @@ alias nwm-exec='docker exec -it -w /workspace/nwm nwm_dev'
 Usage:
 
 ```bash
-nwm-exec python train.py --config config/nwm_cdit_xl.yaml
+nwm-exec python scripts/train.py --config configs/experiment/nwm_cdit_xl.yaml
 nwm-exec bash
 ```
 
@@ -176,8 +176,8 @@ function nwm-run() {
 Usage:
 
 ```bash
-nwm-run "python train.py --config config/nwm_cdit_xl.yaml"
-nwm-run "python isolated_nwm_eval.py --datasets recon ..."
+nwm-run "python scripts/train.py --config configs/experiment/nwm_cdit_xl.yaml"
+nwm-run "python scripts/evaluate.py --datasets recon ..."
 nwm-run "jupyter notebook --ip 0.0.0.0 --port 8888 --no-browser --allow-root"
 ```
 
@@ -192,7 +192,7 @@ Edit files on the host with your editor and AI tools.
 Run commands in the container:
 
 ```bash
-docker exec -it -w /workspace/nwm nwm_dev python train.py --config config/nwm_cdit_xl.yaml
+docker exec -it -w /workspace/nwm nwm_dev python scripts/train.py --config configs/experiment/nwm_cdit_xl.yaml
 ```
 
 When needed, start notebook services from the host:

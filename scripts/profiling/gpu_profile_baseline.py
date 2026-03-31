@@ -29,19 +29,21 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__fi
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
-import misc
-from datasets import EvalDataset
-from diffusion import create_diffusion
-from isolated_nwm_infer import model_forward_wrapper
-from models import CDiT_models
+from src.core.io.paths import get_checkpoint_path
+from src.data.datasets.eval_dataset import EvalDataset
+from src.data.transforms.image import build_transform
+from src.diffusion import create_diffusion
+from src.evaluation.inference.rollout import model_forward_wrapper
+from src.models.backbones.cdit import CDiT_models
+from src.models.checkpoints.vae import load_vae
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Measure latency, VRAM, and FLOPs baselines for NWM inference."
     )
-    parser.add_argument("--eval-config", default="config/eval_config.yaml")
-    parser.add_argument("--model-config", default="config/nwm_cdit_xl.yaml")
+    parser.add_argument("--eval-config", default="configs/evaluation/eval_config.yaml")
+    parser.add_argument("--model-config", default="configs/experiment/nwm_cdit_xl.yaml")
     parser.add_argument("--dataset", default="recon")
     parser.add_argument("--eval-type", default="time", choices=["time", "rollout"])
     parser.add_argument("--sample-index", type=int, default=0)
@@ -74,13 +76,13 @@ def load_config(eval_config_path: str, model_config_path: str) -> dict:
 def resolve_checkpoint(config: dict, args) -> str:
     if args.checkpoint:
         return args.checkpoint
-    return misc.get_checkpoint_path(config, args.checkpoint_tag)
+    return get_checkpoint_path(config, args.checkpoint_tag)
 
 
 def build_eval_dataset(config: dict, dataset_name: str, eval_type: str) -> EvalDataset:
     dataset_config = config["eval_datasets"][dataset_name]
-    predefined_index = os.path.join("data_splits", dataset_name, "test", f"{eval_type}.pkl")
-    image_transform = misc.build_transform(config["image_size"])
+    predefined_index = os.path.join("data", "splits", dataset_name, "test", f"{eval_type}.pkl")
+    image_transform = build_transform(config["image_size"])
     return EvalDataset(
         data_folder=dataset_config["data_folder"],
         data_split_folder=dataset_config["test"],
@@ -114,7 +116,7 @@ def build_models(config: dict, checkpoint_path: str, device: torch.device, diffu
     flops_model = model
     timing_model = torch.compile(model) if use_compile else model
     diffusion = create_diffusion(str(diffusion_steps))
-    vae = misc.load_vae(device)
+    vae = load_vae(device)
     return (timing_model, diffusion, vae), (flops_model, diffusion, vae), latent_size, num_cond
 
 

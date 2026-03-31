@@ -74,17 +74,17 @@ torchrun \
   --node-rank=${CURR_NODE_RANK} \
   --rdzv-backend=c10d \
   --rdzv-endpoint=${HOST_NODE_ADDR}:29500 \
-  train.py --config config/nwm_cdit_xl.yaml --ckpt-every 2000 --eval-every 10000 --bfloat16 1 --epochs 300 --torch-compile 0
+  scripts/train.py --config configs/experiment/nwm_cdit_xl.yaml --ckpt-every 2000 --eval-every 10000 --bfloat16 1 --epochs 300 --torch-compile 0
 ```
 
 Or using submitit and slurm (8 machines of 8 gpus):
 ```bash
-python submitit_train_cw.py --nodes 8 --partition <partition_name> --qos <qos> --config config/nwm_cdit_xl.yaml --ckpt-every 2000 --eval-every 10000 --bfloat16 1 --epochs 300  --torch-compile 0
+python scripts/submitit_train.py --nodes 8 --partition <partition_name> --qos <qos> --config configs/experiment/nwm_cdit_xl.yaml --ckpt-every 2000 --eval-every 10000 --bfloat16 1 --epochs 300  --torch-compile 0
 ```
 
 Or locally on one GPU for debug:
 ```bash
-python train.py --config config/nwm_cdit_xl.yaml --ckpt-every 2000 --eval-every 10000 --bfloat16 1 --epochs 300  --torch-compile 0
+python scripts/train.py --config configs/experiment/nwm_cdit_xl.yaml --ckpt-every 2000 --eval-every 10000 --bfloat16 1 --epochs 300  --torch-compile 0
 ```
 
 Note: torch compile can lead to ~40%  faster training speed. However, it might lead to instabilities and inconsistent behvaior across different pytorch versions. Use carefuly.
@@ -106,8 +106,8 @@ directory to save evaluation results:
 ### 1. Prepare ground truth frames for evaluation (one-time)
 
 ```bash
-python isolated_nwm_infer.py \
-    --exp config/nwm_cdit_xl.yaml \
+python scripts/infer.py \
+    --exp configs/experiment/nwm_cdit_xl.yaml \
     --datasets recon,scand,sacson,tartan_drive \
     --batch_size 96 \
     --num_workers 12 \
@@ -118,8 +118,8 @@ python isolated_nwm_infer.py \
 ### 2. Predict future state given action
 
 ```bash    
-python isolated_nwm_infer.py \
-    --exp config/nwm_cdit_xl.yaml \
+python scripts/infer.py \
+    --exp configs/experiment/nwm_cdit_xl.yaml \
     --ckp 0100000 \
     --datasets <dataset_name> \
     --batch_size 64 \
@@ -130,7 +130,7 @@ python isolated_nwm_infer.py \
 ### 3. Report metrics compared to GT (LPIPS, DreamSim, FID)
 
 ```bash    
-python isolated_nwm_eval.py \
+python scripts/evaluate.py \
     --datasets <dataset_name> \
     --gt_dir ${RESULTS_FOLDER}/gt \
     --exp_dir ${RESULTS_FOLDER}/nwm_cdit_xl \
@@ -143,8 +143,8 @@ Results are saved in ${RESULTS_FOLDER}/nwm_cdit_xl/<dataset_name>
 ### 1. Prepare ground truth frames for evaluation (one-time)
 
 ```bash
-python isolated_nwm_infer.py \
-    --exp config/nwm_cdit_xl.yaml \
+python scripts/infer.py \
+    --exp configs/experiment/nwm_cdit_xl.yaml \
     --datasets recon,scand,sacson,tartan_drive \
     --batch_size 96 \
     --num_workers 12 \
@@ -155,8 +155,8 @@ python isolated_nwm_infer.py \
 ```
 ### 2. Simulate a GT trajectory using NWM
 ```bash
-python isolated_nwm_infer.py \
-    --exp config/nwm_cdit_xl.yaml \
+python scripts/infer.py \
+    --exp configs/experiment/nwm_cdit_xl.yaml \
     --ckp 0100000 \
     --datasets <dataset_name> \
     --batch_size 64 \
@@ -168,7 +168,7 @@ python isolated_nwm_infer.py \
 
 ### 3. Report metrics compared to GT trajectories (LPIPS, DreamSim, FID)
 ```bash
-    python isolated_nwm_eval.py \
+    python scripts/evaluate.py \
         --datasets recon \
         --gt_dir ${RESULTS_FOLDER}/gt \
         --exp_dir ${RESULTS_FOLDER}/nwm_cdit_xl \
@@ -180,8 +180,8 @@ Results are saved in ${RESULTS_FOLDER}/nwm_cdit_xl/<dataset_name>
 
 Using 1-step Cross Entropy Method planning on 8 gpus (sampling 120 trajectories):
 ```bash
-torchrun --nproc-per-node=8 planning_eval.py \
-    --exp config/nwm_cdit_xl.yaml   \
+torchrun --nproc-per-node=8 scripts/plan_eval.py \
+    --exp configs/experiment/nwm_cdit_xl.yaml   \
     --datasets recon   \
     --rollout_stride 1   \
     --batch_size 1   \
