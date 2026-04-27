@@ -3,7 +3,7 @@ run_name: wm_debug_bs_32_
 # training setup
 results_dir: logs
 weights_dir: weights/checkpoints
-artifact_dir: artifacts
+artifact_dir: artifacts/bulk/train
 use_wandb: True # set to false if you don't want to log to wandb
 train: True
 batch_size: 4

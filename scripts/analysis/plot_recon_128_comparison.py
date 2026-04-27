@@ -30,20 +30,20 @@ SERIES = [
     (
         "224 baseline",
         "#3b7f4a",
-        Path("artifacts/lpips_time_recon_s/nwm_cdit_s"),
+        Path("artifacts/summaries/eval/lpips_time_recon_s/nwm_cdit_s"),
     ),
     (
         "128 @ 5k",
         "#d28c1d",
-        Path("artifacts/eval_s_recon_128/nwm_cdit_s_recon_128_0005000"),
+        Path("artifacts/summaries/eval/eval_s_recon_128/nwm_cdit_s_recon_128_0005000"),
     ),
     (
         "128 @ 10k",
         "#2f5aa8",
-        Path("artifacts/eval_s_recon_128/nwm_cdit_s_recon_128_0010000"),
+        Path("artifacts/summaries/eval/eval_s_recon_128/nwm_cdit_s_recon_128_0010000"),
     ),
 ]
-OUT_DIR = Path("gpu_plots/compare_recon_128")
+OUT_DIR = Path("artifacts/profiling/compare_recon_128")
 PNG_PATH = OUT_DIR / "01_recon_metrics_224_vs_5k_vs_10k.png"
 CSV_PATH = OUT_DIR / "01_recon_metrics_224_vs_5k_vs_10k.csv"
 

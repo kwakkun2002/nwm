@@ -260,7 +260,7 @@ def render_bar_chart(title: str, source_label: str, rows: list[dict], output_pat
 
 
 def default_jobs(repo_root: Path):
-    base = repo_root / "artifacts" / "lpips_time_recon_s" / "nwm_cdit_s"
+    base = repo_root / "artifacts" / "summaries" / "eval" / "lpips_time_recon_s" / "nwm_cdit_s"
     out = repo_root / "presentation" / "images"
     return [
         (

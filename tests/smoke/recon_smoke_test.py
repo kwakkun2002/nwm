@@ -176,7 +176,7 @@ def main():
     )
     parser.add_argument(
         "--output-dir",
-        default="artifacts/recon_smoke",
+        default="artifacts/smoke/recon",
         help="예측 이미지를 저장할 프로젝트 내부 경로입니다.",
     )
     parser.add_argument(

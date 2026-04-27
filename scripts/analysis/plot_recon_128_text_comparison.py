@@ -30,15 +30,15 @@ SERIES = [
     (
         "No Text",
         "#4c6a92",
-        Path("artifacts/eval_s_recon_128/b64/nwm_cdit_s_recon_128_0030000"),
+        Path("artifacts/summaries/eval/eval_s_recon_128/b64/nwm_cdit_s_recon_128_0030000"),
     ),
     (
         "Text",
         "#c46a2e",
-        Path("artifacts/eval_s_recon_128_text_dense/nwm_cdit_s_recon_128_text_dense_0030000"),
+        Path("artifacts/summaries/eval/eval_s_recon_128_text_dense/nwm_cdit_s_recon_128_text_dense_0030000"),
     ),
 ]
-OUT_DIR = Path("gpu_plots/compare_recon_128_text")
+OUT_DIR = Path("artifacts/profiling/compare_recon_128_text")
 PNG_PATH = OUT_DIR / "01_recon_metrics_128_text_vs_no_text_30k.png"
 CSV_PATH = OUT_DIR / "01_recon_metrics_128_text_vs_no_text_30k.csv"
 

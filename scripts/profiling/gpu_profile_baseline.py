@@ -61,7 +61,7 @@ def parse_args():
     parser.add_argument("--diffusion-steps", type=int, default=250)
     parser.add_argument("--disable-compile", action="store_true")
     parser.add_argument("--skip-flops", action="store_true")
-    parser.add_argument("--output-dir", default="artifacts/gpu_profile_baseline")
+    parser.add_argument("--output-dir", default="artifacts/profiling/raw/gpu_profile_baseline")
     return parser.parse_args()
 
 

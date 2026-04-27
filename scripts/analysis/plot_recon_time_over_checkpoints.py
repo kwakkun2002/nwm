@@ -35,17 +35,17 @@ SERIES = [
     {
         "label": "128 No Text",
         "checkpoint_root": Path("weights/checkpoints/nwm_cdit_s_recon_128"),
-        "artifact_root": Path("artifacts/eval_s_recon_128"),
+        "artifact_root": Path("artifacts/summaries/eval/eval_s_recon_128"),
     },
     {
         "label": "128 Text Dense",
         "checkpoint_root": Path("weights/checkpoints/nwm_cdit_s_recon_128_text_dense"),
-        "artifact_root": Path("artifacts/eval_s_recon_128_text_dense"),
+        "artifact_root": Path("artifacts/summaries/eval/eval_s_recon_128_text_dense"),
     },
     {
         "label": "Raw Text Dense",
         "checkpoint_root": Path("weights/checkpoints/nwm_cdit_s_recon_raw_text_dense"),
-        "artifact_root": Path("artifacts/eval_s_recon_raw_text_dense"),
+        "artifact_root": Path("artifacts/summaries/eval/eval_s_recon_raw_text_dense"),
     },
 ]
 
@@ -289,7 +289,7 @@ def plot(rows: list[dict], output_path: Path) -> None:
 
 
 def default_paths(repo_root: Path) -> tuple[Path, Path]:
-    output_dir = repo_root / "gpu_plots" / "recon_time_over_checkpoints"
+    output_dir = repo_root / "artifacts" / "profiling" / "recon_time_over_checkpoints"
     return (
         output_dir / "01_recon_time_over_checkpoints.csv",
         output_dir / "01_recon_time_over_checkpoints.png",

@@ -3,7 +3,7 @@ run_name: nwm_cdit_b
 # training setup
 results_dir: logs
 weights_dir: weights/checkpoints
-artifact_dir: artifacts
+artifact_dir: artifacts/bulk/train
 train: True
 batch_size: 16
 num_workers: 12

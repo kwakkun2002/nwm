@@ -14,9 +14,9 @@ TEST_SHARDS="${TEST_SHARDS:-16}"
 TRAIN_SHARDS="${TRAIN_SHARDS:-64}"
 TEST_DATA_ROOT="${TEST_DATA_ROOT:-/workspace/nwm/datasets/recon_1fps_test}"
 TRAIN_DATA_ROOT="${TRAIN_DATA_ROOT:-/workspace/nwm/datasets/recon_1fps_train}"
-TEST_MANIFEST="${TEST_MANIFEST:-/workspace/nwm/artifacts/phase1/recon_test_1fps_manifest.jsonl}"
-TRAIN_MANIFEST="${TRAIN_MANIFEST:-/workspace/nwm/artifacts/phase1/recon_train_1fps_manifest.jsonl}"
-OUTPUT_ROOT="${OUTPUT_ROOT:-/workspace/nwm/artifacts/phase1/qwen}"
+TEST_MANIFEST="${TEST_MANIFEST:-/workspace/nwm/artifacts/summaries/preprocess/phase1/recon_test_1fps_manifest.jsonl}"
+TRAIN_MANIFEST="${TRAIN_MANIFEST:-/workspace/nwm/artifacts/summaries/preprocess/phase1/recon_train_1fps_manifest.jsonl}"
+OUTPUT_ROOT="${OUTPUT_ROOT:-/workspace/nwm/artifacts/bulk/preprocess/phase1/qwen}"
 
 run_split() {
   local split="$1"

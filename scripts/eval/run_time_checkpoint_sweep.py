@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import json
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -9,20 +10,20 @@ EXPERIMENTS = {
     "nwm_cdit_s_recon_128": {
         "config": Path("configs/experiment/nwm_cdit_s_recon_128.yaml"),
         "checkpoint_dir": Path("weights/checkpoints/nwm_cdit_s_recon_128"),
-        "output_root": Path("artifacts/eval_s_recon_128"),
-        "gt_dir": Path("artifacts/eval_s_recon_128/gt_latest"),
+        "suite": "eval_s_recon_128",
+        "gt_suite": "eval_s_recon_128",
     },
     "nwm_cdit_s_recon_128_text_dense": {
         "config": Path("configs/experiment/nwm_cdit_s_recon_128_text_dense.yaml"),
         "checkpoint_dir": Path("weights/checkpoints/nwm_cdit_s_recon_128_text_dense"),
-        "output_root": Path("artifacts/eval_s_recon_128_text_dense"),
-        "gt_dir": Path("artifacts/eval_s_recon_128/gt_latest"),
+        "suite": "eval_s_recon_128_text_dense",
+        "gt_suite": "eval_s_recon_128",
     },
     "nwm_cdit_s_recon_raw_text_dense": {
         "config": Path("configs/experiment/nwm_cdit_s_recon_raw_text_dense.yaml"),
         "checkpoint_dir": Path("weights/checkpoints/nwm_cdit_s_recon_raw_text_dense"),
-        "output_root": Path("artifacts/eval_s_recon_raw_text_dense"),
-        "gt_dir": Path("artifacts/lpips_time_recon_s/gt"),
+        "suite": "eval_s_recon_raw_text_dense",
+        "gt_suite": "lpips_time_recon_s",
     },
 }
 
@@ -57,15 +58,21 @@ def output_dir_for_checkpoint(output_root: Path, exp_name: str, checkpoint_name:
     return output_root / f"{exp_name}_{checkpoint_stem}"
 
 
-def maybe_generate_gt(exp_name: str, exp_cfg: dict, args: argparse.Namespace, dry_run: bool) -> None:
-    gt_dir = exp_cfg["gt_dir"]
+def copy_metric_summary(metric_json_path: Path, summary_json_path: Path, dry_run: bool) -> None:
+    print("+", "copy", str(metric_json_path), str(summary_json_path))
+    if dry_run:
+        return
+    summary_json_path.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(metric_json_path, summary_json_path)
+
+
+def maybe_generate_gt(exp_name: str, exp_cfg: dict, args: argparse.Namespace, output_root: Path, gt_dir: Path, dry_run: bool) -> None:
     if gt_dir.exists():
         return
 
-    output_root = exp_cfg["output_root"]
-    output_root.mkdir(parents=True, exist_ok=True)
-
     print(f"[{exp_name}] GT directory is missing. Generating time GT at {output_root} ...")
+    if not dry_run:
+        output_root.mkdir(parents=True, exist_ok=True)
     run_command(
         [
             "python",
@@ -103,11 +110,16 @@ def main() -> None:
     parser.add_argument("--skip_existing", type=int, default=1)
     parser.add_argument("--include_latest", type=int, default=1)
     parser.add_argument("--dry_run", type=int, default=0)
+    parser.add_argument("--artifact_root", type=Path, default=Path("artifacts"))
+    parser.add_argument("--bulk_root", type=Path, default=None)
+    parser.add_argument("--summary_root", type=Path, default=None)
     args = parser.parse_args()
 
     dry_run = bool(args.dry_run)
     skip_existing = bool(args.skip_existing)
     include_latest = bool(args.include_latest)
+    bulk_root = args.bulk_root or (args.artifact_root / "bulk" / "eval")
+    summary_root = args.summary_root or (args.artifact_root / "summaries" / "eval")
 
     selected_experiments = [item.strip() for item in args.experiments.split(",") if item.strip()]
 
@@ -117,7 +129,11 @@ def main() -> None:
             raise ValueError(f"Unknown experiment: {exp_name}")
 
         exp_cfg = EXPERIMENTS[exp_name]
-        maybe_generate_gt(exp_name, exp_cfg, args, dry_run=dry_run)
+        output_root = bulk_root / exp_cfg["suite"]
+        summary_exp_root = summary_root / exp_cfg["suite"]
+        gt_output_root = bulk_root / exp_cfg["gt_suite"]
+        gt_dir = bulk_root / exp_cfg["gt_suite"] / "gt"
+        gt_ready = gt_dir.exists()
 
         checkpoint_paths = build_checkpoint_list(exp_cfg["checkpoint_dir"], include_latest=include_latest)
         checkpoint_steps = load_checkpoint_steps(checkpoint_paths) if not dry_run else {}
@@ -125,12 +141,13 @@ def main() -> None:
         for checkpoint_path in checkpoint_paths:
             checkpoint_name = checkpoint_path.name
             checkpoint_stem = checkpoint_name.replace(".pth.tar", "")
-            exp_output_dir = output_dir_for_checkpoint(exp_cfg["output_root"], exp_name, checkpoint_name)
+            exp_output_dir = output_dir_for_checkpoint(output_root, exp_name, checkpoint_name)
             metric_json_path = exp_output_dir / f"{args.dataset}_time.json"
+            summary_json_path = output_dir_for_checkpoint(summary_exp_root, exp_name, checkpoint_name) / f"{args.dataset}_time.json"
             train_steps = checkpoint_steps.get(checkpoint_name)
 
-            if skip_existing and metric_json_path.exists():
-                print(f"[{exp_name}] Skipping existing result: {metric_json_path}")
+            if skip_existing and (summary_json_path.exists() or metric_json_path.exists()):
+                print(f"[{exp_name}] Skipping existing result: {summary_json_path}")
                 summary_rows.append(
                     {
                         "experiment": exp_name,
@@ -138,13 +155,17 @@ def main() -> None:
                         "checkpoint_label": checkpoint_stem,
                         "train_steps": train_steps,
                         "output_dir": str(exp_output_dir),
-                        "metric_json": str(metric_json_path),
+                        "metric_json": str(summary_json_path),
                         "status": "existing",
                     }
                 )
                 continue
 
-            exp_cfg["output_root"].mkdir(parents=True, exist_ok=True)
+            if not dry_run:
+                output_root.mkdir(parents=True, exist_ok=True)
+            if not gt_ready:
+                maybe_generate_gt(exp_name, exp_cfg, args, gt_output_root, gt_dir, dry_run=dry_run)
+                gt_ready = True
 
             print(f"[{exp_name}] Running time inference/eval for {checkpoint_name} ...")
             run_command(
@@ -164,7 +185,7 @@ def main() -> None:
                     "--eval_type",
                     "time",
                     "--output_dir",
-                    str(exp_cfg["output_root"]),
+                    str(output_root),
                 ],
                 dry_run=dry_run,
             )
@@ -177,7 +198,7 @@ def main() -> None:
                     "--batch_size",
                     str(args.eval_batch_size),
                     "--gt_dir",
-                    str(exp_cfg["gt_dir"]),
+                    str(gt_dir),
                     "--exp_dir",
                     str(exp_output_dir),
                     "--eval_types",
@@ -185,6 +206,7 @@ def main() -> None:
                 ],
                 dry_run=dry_run,
             )
+            copy_metric_summary(metric_json_path, summary_json_path, dry_run=dry_run)
 
             summary_rows.append(
                 {
@@ -193,15 +215,18 @@ def main() -> None:
                     "checkpoint_label": checkpoint_stem,
                     "train_steps": train_steps,
                     "output_dir": str(exp_output_dir),
-                    "metric_json": str(metric_json_path),
+                    "metric_json": str(summary_json_path),
                     "status": "ran",
                 }
             )
 
-    summary_path = Path("artifacts/time_checkpoint_sweep_manifest.json")
-    summary_path.parent.mkdir(parents=True, exist_ok=True)
-    summary_path.write_text(json.dumps(summary_rows, indent=2))
-    print(f"Wrote manifest to {summary_path}")
+    summary_path = summary_root / "time_checkpoint_sweep_manifest.json"
+    if not dry_run:
+        summary_path.parent.mkdir(parents=True, exist_ok=True)
+        summary_path.write_text(json.dumps(summary_rows, indent=2))
+        print(f"Wrote manifest to {summary_path}")
+    else:
+        print(f"Would write manifest to {summary_path}")
 
 
 if __name__ == "__main__":

@@ -431,7 +431,7 @@ def build_html(summary_rows, cards, sample_npz):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--output-dir", type=str, default="artifacts/phase1_cache_report")
+    parser.add_argument("--output-dir", type=str, default="artifacts/summaries/preprocess/phase1_cache_report")
     parser.add_argument("--sample-trajectories-per-split", type=int, default=4)
     parser.add_argument("--sample-frames-per-trajectory", type=int, default=4)
     parser.add_argument("--sample-npz", type=int, default=128)

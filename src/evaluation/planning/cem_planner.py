@@ -44,7 +44,7 @@ from src.data.datasets.trajectory_eval_dataset import TrajectoryEvalDataset
 from src.evaluation.inference.rollout import model_forward_wrapper
 from src.data.transforms.image import build_transform
 from src.data.transforms.action import calculate_delta_yaw, get_action_torch, unnormalize_data
-from src.core.io.paths import get_checkpoint_path
+from src.core.io.paths import DEFAULT_PLANNING_ARTIFACT_ROOT, get_checkpoint_path
 from src.core.io.serialization import save_planning_pred
 from src.analysis.plotting.trajectory_viz import log_viz_single
 from src.models.checkpoints.vae import load_vae
@@ -181,6 +181,8 @@ class WM_Planning_Evaluator:
         
         # logging directory
         if self.args.save_preds:
+            if self.args.output_dir is None:
+                self.args.output_dir = os.path.join(DEFAULT_PLANNING_ARTIFACT_ROOT, "manual")
             exp_name = os.path.basename(self.args.exp).split('.')[0]
             self.args.save_output_dir = os.path.join(self.args.output_dir, exp_name)
             os.makedirs(self.args.save_output_dir, exist_ok=True)
@@ -190,6 +192,9 @@ class WM_Planning_Evaluator:
         self.datasets = {}
         for dataset_name in self.dataset_names:
             dataset_val = get_dataset_eval(self.config, dataset_name, predefined_index=True)
+            if self.args.max_eval_samples is not None:
+                max_eval_samples = min(self.args.max_eval_samples, len(dataset_val))
+                dataset_val = torch.utils.data.Subset(dataset_val, range(max_eval_samples))
             
             if len(dataset_val) % num_tasks != 0:
                 print('Warning: Enabling distributed evaluation with an eval dataset not divisible by process number. '
@@ -480,6 +485,7 @@ def build_parser():
     parser.add_argument("--topk", type=int, default=5, help="top k samples to take mean and var for CEM")
     parser.add_argument("--opt_steps", type=int, default=15, help="num iterations for CEM")
     parser.add_argument("--num_repeat_eval", type=int, default=1, help="number of evals for one action")
+    parser.add_argument("--max_eval_samples", type=int, default=None, help="limit planning eval samples for smoke tests")
     parser.add_argument("--plot", action="store_true", default=False)
     return parser
 

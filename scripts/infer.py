@@ -30,7 +30,7 @@ import argparse
 import numpy as np
 
 from src.diffusion import create_diffusion
-from src.core.io.paths import get_checkpoint_path
+from src.core.io.paths import DEFAULT_EVAL_ARTIFACT_ROOT, get_checkpoint_path
 from src.models.checkpoints.vae import load_vae
 import src.core.env.distributed as dist
 from src.models.backbones.cdit import CDiT_models
@@ -47,6 +47,8 @@ def main(args):
     num_tasks = dist.get_world_size()
     global_rank = dist.get_rank()
     exp_eval = args.exp
+    if args.output_dir is None:
+        args.output_dir = os.path.join(DEFAULT_EVAL_ARTIFACT_ROOT, "manual")
 
     # model & config setup
     if args.gt:

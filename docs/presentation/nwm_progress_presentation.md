@@ -61,9 +61,9 @@
 - RECON `time` eval 완료
 - RECON `rollout 1fps / 4fps` eval 완료
 - baseline 결과 JSON 확보:
-  - `artifacts/lpips_time_recon_s/nwm_cdit_s/recon_time.json`
-  - `artifacts/lpips_time_recon_s/nwm_cdit_s/recon_rollout_1fps.json`
-  - `artifacts/lpips_time_recon_s/nwm_cdit_s/recon_rollout_4fps.json`
+  - `artifacts/summaries/eval/lpips_time_recon_s/nwm_cdit_s/recon_time.json`
+  - `artifacts/summaries/eval/lpips_time_recon_s/nwm_cdit_s/recon_rollout_1fps.json`
+  - `artifacts/summaries/eval/lpips_time_recon_s/nwm_cdit_s/recon_rollout_4fps.json`
 
 이미지 경로: `./images/slide04_phase0_env_baseline.png`
 권장 이미지: raw RECON 샘플, smoke output, Docker/eval 흐름을 합친 환경 안정화 요약 그림
@@ -157,8 +157,8 @@
 
 대상 비교:
 
-- baseline: `artifacts/lpips_time_recon_s/nwm_cdit_s/recon_time.json`
-- ours: `artifacts/eval_s_recon_raw_text_dense/nwm_cdit_s_recon_raw_text_dense_0030000/recon_time.json`
+- baseline: `artifacts/summaries/eval/lpips_time_recon_s/nwm_cdit_s/recon_time.json`
+- ours: `artifacts/summaries/eval/eval_s_recon_raw_text_dense/nwm_cdit_s_recon_raw_text_dense_0030000/recon_time.json`
 
 | Horizon | Metric | Baseline | Ours | 변화 |
 | --- | --- | --- | --- | --- |
