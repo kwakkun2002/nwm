@@ -10,15 +10,38 @@
 
 ---
 
+# 현재 상태 스냅샷
+
+기준일: `2026-05-26`
+
+* 작업 시작 시 상태: `main...origin/main`, local change 없음
+* 환경/데이터: raw RECON, Qwen caption, cleaned caption, CLIP embedding, dense text cache까지 구축 완료
+* 모델 결합: cached text embedding을 `CDiT` conditioning에 더하는 최소 text-conditioned 경로 구현 완료
+* 224 실험:
+  - no-text baseline `nwm_cdit_s` time/rollout metric 확보
+  - text-conditioned `nwm_cdit_s_recon_raw_text_dense` `0030000` time/rollout metric 확보
+  - planning JSON도 확보했으나 text가 planning에서 명확히 우세하다고 말하기는 어려움
+* 128 실험:
+  - no-text `nwm_cdit_s_recon_128` checkpoint는 `0055000`까지 확보
+  - text `nwm_cdit_s_recon_128_text_dense` checkpoint는 `0030000`까지 확보
+  - `0030000` 기준 text는 image metric에서 대체로 우세하지만, no-text가 `0055000`까지 더 학습되어 공정 비교는 아직 재정렬 필요
+* 현재 가장 중요한 다음 작업:
+  - `128 no-text`와 `128 text`의 checkpoint/step/eval 조건을 맞춘 공정 비교 세트 완성
+  - planning eval을 repeat/seed 기준으로 다시 정리
+  - TODO/발표/제안서 수치를 실제 artifact 경로와 동기화
+
+---
+
 # Phase 0 — 환경 & 베이스라인 고정 (이거 안 하면 다 무너짐)
 
 ## TODO
 
 * [X] NWM smallest variant 코드 확보 및 실행
-  - smallest = `config/nwm_cdit_s.yaml` (`CDiT-S/2`)
+  - smallest = `configs/experiment/nwm_cdit_s.yaml` (`CDiT-S/2`)
   - local ckpt 확인: `weights/checkpoints/nwm_cdit_s/cdit_s_100000.pth.tar`
-  - inference/eval 시 checkpoint arg는 기본값 `0100000` 대신 `--ckp cdit_s_100000` 사용
-  - 남은 blocker: RECON 데이터 다운로드/전처리, `eval_datasets.recon.data_folder` 로컬 절대경로 수정, 필요 시 VAE를 `weights/pretrained/vae/sd-vae-ft-ema`로 로컬 로드
+  - `weights/checkpoints/nwm_cdit_{s,b,l,xl}/0100000.pth.tar` symlink 추가 완료
+  - 현재는 기존 `--ckp 0100000` 규약으로 실행 가능
+  - 초기 blocker였던 RECON 다운로드/전처리, 로컬 VAE 경로, eval data path는 해결 완료
 * [X] RECON 데이터셋 다운로드 
   - direct dataset archive 다운로드 후 압축 해제 완료
   - 압축 해제 프로세스 종료: `exit code 0`
@@ -28,14 +51,14 @@
 * [X] RECON 데이터셋 로딩 + inference pipeline 확인
   - 확인 결과: 현재 워크스페이스의 RECON은 processed JPG 폴더가 아니라 raw `.hdf5`만 존재
   - 코드 조치: `datasets.py`가 raw RECON `.hdf5`를 직접 읽도록 확장
-  - 코드 조치: `config/eval_config.yaml`의 `eval_datasets.recon.data_folder`를 `datasets/recon_raw/recon_release`로 변경
+  - 코드 조치: `configs/evaluation/eval_config.yaml`의 `eval_datasets.recon.data_folder`를 `datasets/recon_raw/recon_release`로 변경
   - 코드 조치: inference / training / planning에서 VAE를 로컬 `weights/pretrained/vae/sd-vae-ft-ema` 우선 로드하도록 수정
   - 코드 조치: `isolated_nwm_infer.py`에서 `dist.init_distributed()` 호출로 entrypoint 오류 수정
   - 코드 조치: `scripts/docker/nwm-run.sh`가 비대화형 환경에서도 실행되도록 TTY 감지 추가
   - 컨테이너 상태: `nwm_dev` detached 실행 중, `./scripts/docker/nwm-run.sh`로 컨테이너 내부 명령 실행 가능
   - 컨테이너 검증: `EvalDataset(recon)[0]` 로드 성공
   - 컨테이너 검증 결과: `loaded_shapes [(1,), (4, 3, 224, 224), (64, 3, 224, 224), (64, 3)]`
-  - 컨테이너 검증: `config/nwm_cdit_s.yaml` + `weights/checkpoints/nwm_cdit_s/cdit_s_100000.pth.tar`로 1-sample forward 성공
+  - 컨테이너 검증: `configs/experiment/nwm_cdit_s.yaml` + `weights/checkpoints/nwm_cdit_s/cdit_s_100000.pth.tar`로 1-sample forward 성공
   - 컨테이너 검증 결과: `pred_shape (1, 3, 224, 224)`
   - 추가 검증: raw RECON `.hdf5` 기준 `EvalDataset(recon)` 길이 `500`, 첫 배치 shape `(1, 4, 3, 224, 224) / (1, 64, 3, 224, 224) / (1, 64, 3)` 확인
   - 추가 검증: `weights/checkpoints/nwm_cdit_xl/cdit_xl_100000.pth.tar` + 로컬 VAE로 1-sample forward 성공, 샘플 출력 `/tmp/nwm_recon_smoke/recon_pred_t8.png`
@@ -52,10 +75,11 @@
   - 재현 메모: 현재 떠 있는 `nwm:cu126` 이미지에는 `h5py`가 없어서 컨테이너 내부에서 1회 설치함. 새 이미지에서는 `env.yaml` 반영 후 재빌드 필요
   - 운영 메모: 새 Python 라이브러리는 먼저 running container 안에 임시 설치하고, 반복 사용이 확정되면 `env.yaml`에 반영한 뒤 필요 시만 이미지 재빌드
 * [X] baseline metric 재현 (LPIPS / DreamSim / FID)
-  - 범위: `RECON + config/nwm_cdit_s.yaml + 0100000 + time/rollout eval`
+  - 범위: `RECON + configs/experiment/nwm_cdit_s.yaml + 0100000 + time/rollout eval`
   - GT PNG `2500`장 생성 완료: `artifacts/lpips_time_recon_s/gt/recon/time`
   - 예측 PNG `2500`장 생성 완료: `artifacts/lpips_time_recon_s/nwm_cdit_s/recon/time`
   - 결과 JSON: `artifacts/lpips_time_recon_s/nwm_cdit_s/recon_time.json`
+  - 현재 보존 경로: `artifacts/summaries/eval/lpips_time_recon_s/nwm_cdit_s/recon_time.json`
   - LPIPS: `1s 0.3106`, `2s 0.3416`, `4s 0.3699`, `8s 0.4031`, `16s 0.4632`
   - DreamSim: `1s 0.1390`, `2s 0.1499`, `4s 0.1615`, `8s 0.1784`, `16s 0.2286`
   - FID: `1s 35.0850`, `2s 34.4481`, `4s 33.9934`, `8s 33.4646`, `16s 40.3887`
@@ -83,6 +107,7 @@
   - FLOPs baseline (`torch.profiler`, `single-step`, `torch.compile off`): `6435.0 GFLOPs` (`6.44 TFLOPs`)
   - rollout total FLOPs (`rollout_fps=1`, `16` frames, derived): `102960.2 GFLOPs` (`102.96 TFLOPs`) = `16 x` single-step FLOPs
   - 결과 파일: `artifacts/gpu_profile_baseline/nwm_cdit_s_recon_sample0_bs1_diff250_single.json`, `artifacts/gpu_profile_baseline/nwm_cdit_s_recon_sample0_bs1_diff250_single_step.csv`, `artifacts/gpu_profile_baseline/nwm_cdit_s_recon_sample0_bs1_diff250_rollout.json`, `artifacts/gpu_profile_baseline/nwm_cdit_s_recon_sample0_bs1_diff250_rollout.csv`
+  - 현재 보존 경로: `artifacts/profiling/raw/gpu_profile_baseline/`
 
 ## 산출물
 
@@ -117,8 +142,9 @@
 * [x] raw RECON dense axis로 text embedding alignment 완료
 * [x] raw RECON + dense text cache + `len_traj_pred=64` smoke 완료
 * [x] raw RECON + dense text cache용 학습 config 추가 완료
-* [ ] 실제 text-conditioned 학습 run은 아직 시작 안 함
-* [ ] Phase 1 산출물 경로를 최종 정리하고 문서화하는 작업은 아직 남음
+* [x] 실제 text-conditioned 학습 run 시작 및 `0030000` checkpoint/eval 확보
+* [x] Phase 1 산출물 경로 1차 문서화 완료
+* [ ] Phase 1 산출물 경로를 발표/논문 표와 최종 동기화
 
 ## 1.1 프레임 추출
 
@@ -182,8 +208,8 @@
   - `datasets/derived/phase1_text_embeds_dense/recon_train_raw`
   - `datasets/derived/phase1_text_embeds_dense/recon_all_raw_rel`
 * `raw+dense 학습 config`
-  - `config/nwm_cdit_s_recon_raw_text_dense.yaml`
-  - `config/nwm_cdit_b_recon_raw_text_dense.yaml`
+  - `configs/experiment/nwm_cdit_s_recon_raw_text_dense.yaml`
+  - `configs/experiment/nwm_cdit_b_recon_raw_text_dense.yaml`
 
 ## 논문용 최종 데이터 경로
 
@@ -192,8 +218,8 @@
 * `dense text cache`
   - `datasets/derived/phase1_text_embeds_dense/recon_all_raw_rel`
 * `training config`
-  - `config/nwm_cdit_s_recon_raw_text_dense.yaml`
-  - `config/nwm_cdit_b_recon_raw_text_dense.yaml`
+  - `configs/experiment/nwm_cdit_s_recon_raw_text_dense.yaml`
+  - `configs/experiment/nwm_cdit_b_recon_raw_text_dense.yaml`
 * 경로 표기 원칙
   - `/workspace/nwm/...` 대신 repo-relative 경로만 canonical로 사용
 
@@ -204,26 +230,28 @@
 * [x] raw RECON train split에 대해 1fps processed dataset export
 * [x] raw RECON test/train full caption merged JSONL 생성
 * [x] raw RECON dense trajectory용 text embedding cache 생성
-* [ ] 최종 학습 run 결과물은 상당 부분 확보
+* [x] 224 text-conditioned 학습/eval 결과물 확보
   - checkpoint/log는 `30k`까지 확보
   - RECON `time/rollout` eval은 확보
-  - planning eval 최종 JSON은 아직 없음
+  - planning eval 최종 JSON도 `artifacts/bulk/planning/recon224_s_text_dense_0030000_full_n32/...`에 확보
+  - 단, planning 수치는 no-text 대비 우세하지 않아 repeat/seed 재평가 필요
 * [x] `224 baseline no-text` vs `224 text-conditioned` 비교 그래프 생성
-  - 스크립트: `scripts/presentation/plot_baseline_text_comparison.py`
-  - 산출물: `gpu_plots/compare_baseline_text/01_recon_metrics_224_text_vs_no_text.png`
+  - 스크립트: `scripts/analysis/plot_baseline_text_comparison.py`
+  - 산출물: `artifacts/profiling/compare_baseline_text/01_recon_metrics_224_text_vs_no_text.png`
   - 주의: 이 그림은 저장된 JSON을 정확히 시각화한 것이지만 공정한 text ablation은 아님
     - baseline은 멀티데이터셋 `nwm_cdit_s`
     - text 쪽은 `nwm_cdit_s`에서 시작해 `raw RECON`으로 추가 학습한 `nwm_cdit_s_recon_raw_text_dense`
 * [ ] 공정한 `224 text vs no-text` 비교용 control 확보
   - 필요한 것: `224 no-text RECON-only` run/eval
   - 조건: `datasets/recon_raw/recon_release`, 동일 split, 동일 `len_traj_pred=64`, 동일 checkpoint warm-start, text only on/off 차이만 남기기
+  - 현재 대안: 224 original baseline과 224 text fine-tune 비교는 가능하지만, 엄밀한 ablation으로 쓰기에는 약함
 
 ## 오늘 정리 완료
 
-* [x] `config/nwm_cdit_s_recon_raw_text_dense.yaml`로 실제 학습 1회 시작
+* [x] `configs/experiment/nwm_cdit_s_recon_raw_text_dense.yaml`로 실제 학습 1회 시작
   - 실행 일시: `2026-03-22 19:39 KST`
   - 컨테이너: `NWM_GPU_REQUEST='device=0'`, `NWM_SHM_SIZE='16g'`
-  - 실행 커맨드: `./scripts/docker/nwm-run.sh "python train.py --config config/nwm_cdit_s_recon_raw_text_dense.yaml --log-every 10 --ckpt-every 500 --eval-every 1000000"`
+  - 실행 커맨드: `./scripts/docker/nwm-run.sh "python scripts/train.py --config configs/experiment/nwm_cdit_s_recon_raw_text_dense.yaml --log-every 10 --ckpt-every 500 --eval-every 1000000"`
   - 런 로그: `logs/nwm_cdit_s_recon_raw_text_dense/log.txt`
   - stdout: `logs/nwm_cdit_s_recon_raw_text_dense/stdout_live_20260322_193908.log`
 * [x] 학습 안정성 확인 후 `B/L/XL` 중 어떤 스케일로 갈지 결정
@@ -232,8 +260,8 @@
   - throughput: warmup 이후 약 `2.12 ~ 2.15 steps/s`
   - GPU 0 메모리: 약 `19.7 GiB`
   - 다음 스케일은 `B`
-  - 이유: 현재 text-conditioned RECON-only 조건을 유지한 동형 확장이고, 기존 `config/nwm_cdit_{b,l,xl}.yaml`는 데이터/텍스트 조건이 달라 직접 비교용이 아님
-  - 준비한 다음 config: `config/nwm_cdit_b_recon_raw_text_dense.yaml`
+  - 이유: 현재 text-conditioned RECON-only 조건을 유지한 동형 확장이고, 기존 `configs/experiment/nwm_cdit_{b,l,xl}.yaml`는 데이터/텍스트 조건이 달라 직접 비교용이 아님
+  - 준비한 다음 config: `configs/experiment/nwm_cdit_b_recon_raw_text_dense.yaml`
 * [x] `30k` 도달 후 프로세스 정지
   - `0030000.pth.tar` 저장 확인 후 학습 종료
   - 최종 checkpoint: `weights/checkpoints/nwm_cdit_s_recon_raw_text_dense/0030000.pth.tar`
@@ -259,13 +287,13 @@
     - DreamSim `1s 0.1426`, `2s 0.1607`, `4s 0.1947`, `8s 0.2655`, `16s 0.3303`
     - FID `1s 62.68`, `2s 63.45`, `4s 67.69`, `8s 76.93`, `16s 79.95`
   - baseline `artifacts/lpips_time_recon_s/nwm_cdit_s` 대비 `time` 전 구간 개선, `rollout`도 대부분 개선
-* [ ] planning eval은 중간 상태만 확인하고 여기서 중단
-  - 실행 경로: `artifacts/plan_eval_s_recon_raw_text_dense/nwm_cdit_s_recon_raw_text_dense/recon/CEM_N10_K5_RS1_rep1_OPT15`
-  - partial 저장: `id_0` ~ `id_31`의 `preds_0.pth` 생성 확인
-  - live log 기준 초반 지표:
-    - batch 0: `recon_ate 1.6417`, `recon_rpe_trans 0.4050`, `recon_pos_diff_norm 2.4531`, `recon_yaw_diff_norm 1.2507`
-    - batch 1: `recon_ate 1.6728`, `recon_rpe_trans 0.4105`, `recon_pos_diff_norm 2.5456`, `recon_yaw_diff_norm 1.3408`
-  - 사용자 요청으로 중단했고 최종 JSON은 없음
+* [x] planning eval 최종 JSON 확보
+  - 224 no-text: `artifacts/bulk/planning/recon224_s_notext_0100000_full_n32/nwm_cdit_s/recon_CEM_N32_K5_RS1_rep1_OPT1.json`
+    - `recon_ate 1.1689`, `recon_rpe_trans 0.3574`, `recon_pos_diff_norm 1.7585`, `recon_yaw_diff_norm 0.3274`
+  - 224 text: `artifacts/bulk/planning/recon224_s_text_dense_0030000_full_n32/nwm_cdit_s_recon_raw_text_dense/recon_CEM_N32_K5_RS1_rep1_OPT1.json`
+    - `recon_ate 1.2480`, `recon_rpe_trans 0.3713`, `recon_pos_diff_norm 1.8797`, `recon_yaw_diff_norm 0.3759`
+  - 해석: image metric은 text가 개선되지만, planning metric은 현재 단일 run 기준 no-text가 더 좋음
+  - 남은 일: 동일 setting으로 repeat/seed를 늘려 planning 결론을 확정
 * [x] `128x128` low-resolution baseline warm-start 경로 추가
   - 목적: 기존 `224` baseline `nwm_cdit_s`를 `128` 입력용으로 적응시켜 해상도 축소 baseline 확보
   - 코드 조치: `misc.py`에 `build_transform(image_size)` 추가
@@ -275,8 +303,8 @@
     - `checkpoint_ignore_shape_mismatch`
     - `checkpoint_interpolate_pos_embed`
   - 새 config:
-    - `config/nwm_cdit_s_recon_128.yaml`
-    - `config/nwm_cdit_s_recon_128_resume.yaml`
+    - `configs/experiment/nwm_cdit_s_recon_128.yaml`
+    - `configs/experiment/nwm_cdit_s_recon_128_resume.yaml`
   - warm-start source checkpoint: `weights/checkpoints/nwm_cdit_s/0100000.pth.tar`
   - 초기 정책: `pos_embed`는 제외하고 나머지 weight 재사용
   - smoke 확인: `obs_shape (4, 3, 128, 128)`, `pred_shape (64, 3, 128, 128)`, `delta_shape (64, 3)`
@@ -304,7 +332,7 @@
     - `~550 step latest` 대비 `time 15/15`, `rollout 1fps 12/15`, `rollout 4fps 10/15` 지표 개선
     - 기존 `224` baseline `artifacts/lpips_time_recon_s/nwm_cdit_s` 대비는 여전히 `45/45` 지표 전부 열세
 * [x] `128` baseline `0010000` checkpoint 저장 후 학습 일단 정지
-  - resume config: `config/nwm_cdit_s_recon_128_resume.yaml`
+  - resume config: `configs/experiment/nwm_cdit_s_recon_128_resume.yaml`
   - `2026-03-26 04:51:05`에 `step=0010000` 도달
   - 저장 확인: `weights/checkpoints/nwm_cdit_s_recon_128/0010000.pth.tar`
   - 저장 후 잠깐 더 진행되어 마지막 확인 로그는 `step=0010540`
@@ -332,10 +360,25 @@
   - 비교:
     - `0005000` 대비 `time 15/15`, `rollout 1fps 15/15`, `rollout 4fps 15/15` 지표 전부 개선
     - 기존 `224` baseline `artifacts/lpips_time_recon_s/nwm_cdit_s` 대비는 여전히 `45/45` 지표 전부 열세
+* [x] `128` baseline no-text 추가 학습 및 checkpoint sweep 확보
+  - checkpoint: `weights/checkpoints/nwm_cdit_s_recon_128/0015000` ~ `0055000`, `latest`
+  - 마지막 확인 로그: `logs/nwm_cdit_s_recon_128/log.txt` 기준 `step=0057540`
+  - time eval summary:
+    - `artifacts/summaries/eval/eval_s_recon_128/nwm_cdit_s_recon_128_0015000/recon_time.json`
+    - `artifacts/summaries/eval/eval_s_recon_128/nwm_cdit_s_recon_128_0020000/recon_time.json`
+    - `artifacts/summaries/eval/eval_s_recon_128/nwm_cdit_s_recon_128_0025000/recon_time.json`
+    - `artifacts/summaries/eval/eval_s_recon_128/nwm_cdit_s_recon_128_0030000/recon_time.json`
+    - `artifacts/summaries/eval/eval_s_recon_128/nwm_cdit_s_recon_128_0035000/recon_time.json`
+    - `artifacts/summaries/eval/eval_s_recon_128/nwm_cdit_s_recon_128_0040000/recon_time.json`
+    - `artifacts/summaries/eval/eval_s_recon_128/nwm_cdit_s_recon_128_0045000/recon_time.json`
+    - `artifacts/summaries/eval/eval_s_recon_128/nwm_cdit_s_recon_128_0050000/recon_time.json`
+    - `artifacts/summaries/eval/eval_s_recon_128/nwm_cdit_s_recon_128_0055000/recon_time.json`
+  - plot: `artifacts/profiling/recon_time_over_checkpoints/01_recon_time_over_checkpoints.png`
+  - 남은 일: `0055000` 기준 rollout eval을 text와 같은 protocol로 정리
 * [x] `128 + text` 학습 run 시작 및 `0030000` checkpoint 확보
   - config:
-    - `config/nwm_cdit_s_recon_128_text_dense.yaml`
-    - `config/nwm_cdit_s_recon_128_text_dense_resume.yaml`
+    - `configs/experiment/nwm_cdit_s_recon_128_text_dense.yaml`
+    - `configs/experiment/nwm_cdit_s_recon_128_text_dense_resume.yaml`
   - warm-start source:
     - `weights/checkpoints/nwm_cdit_s_recon_128/0010000.pth.tar`
   - 로딩 시 missing key:
@@ -375,6 +418,17 @@
   - 비교:
     - `128 no-text 0010000` 대비 `time 15/15`, `rollout 1fps 15/15`, `rollout 4fps 15/15` 지표 전부 개선
     - 기존 `224` baseline `artifacts/lpips_time_recon_s/nwm_cdit_s` 대비 `time 10/15`, `rollout 1fps 12/15`, `rollout 4fps 13/15` 지표 개선
+  - 현재 caveat:
+    - `128 no-text`는 이후 `0055000`까지 더 학습되어 있음
+    - 공정한 text 효과를 말하려면 `128 text`도 같은 step까지 학습하거나, 양쪽 모두 `0030000` checkpoint 기준으로 비교해야 함
+* [x] `128` planning JSON 확보
+  - 128 no-text `0030000`: `artifacts/bulk/planning/recon128_s_notext_0030000_full_n32/nwm_cdit_s_recon_128/recon_CEM_N32_K5_RS1_rep1_OPT1.json`
+    - `recon_ate 1.2801`, `recon_rpe_trans 0.3785`, `recon_pos_diff_norm 1.9892`, `recon_yaw_diff_norm 0.3748`
+  - 128 text `0030000`: `artifacts/bulk/planning/recon128_s_text_dense_0030000_full_n32/nwm_cdit_s_recon_128_text_dense/recon_CEM_N32_K5_RS1_rep1_OPT1.json`
+    - `recon_ate 1.3408`, `recon_rpe_trans 0.3785`, `recon_pos_diff_norm 2.0168`, `recon_yaw_diff_norm 0.3061`
+  - 128 no-text `0055000`: `artifacts/bulk/planning/recon128_s_0055000/nwm_cdit_s_recon_128/recon_CEM_N32_K5_RS1_rep1_OPT1.json`
+    - `recon_ate 1.4922`, `recon_rpe_trans 0.4158`, `recon_pos_diff_norm 2.3959`, `recon_yaw_diff_norm 0.6101`
+  - 해석: planning은 현재 noisy하고 설정별 변동이 커서 단일 JSON만으로 결론 내리면 위험함
 
 핵심: **학습 때 텍스트 인코더 절대 돌리지 마라 (속도 병목 터짐)**
 
@@ -416,19 +470,33 @@ cond = f(image, action, timestep, text)
 
 ## 실험
 
-* [ ] Base NWM
-* [ ] + Scene text
+* [x] Base NWM
+  - 224 original baseline: `nwm_cdit_s`
+  - 128 RECON-only baseline: `nwm_cdit_s_recon_128`
+* [x] + Scene text
+  - 현재 dense cache는 Qwen scene caption 기반
+  - 224 text: `nwm_cdit_s_recon_raw_text_dense`
+  - 128 text: `nwm_cdit_s_recon_128_text_dense`
 * [ ] + Goal text
+  - goal-conditioned caption/embedding source는 아직 별도 실험 없음
 * [ ] + Scene+Goal
+  - scene-only 효과를 공정 비교로 먼저 고정한 뒤 진행
 
 ## 평가
 
-* [ ] LPIPS / PSNR / DreamSim
-* [ ] rollout stability (1s / 2s / 4s)
+* [x] LPIPS / DreamSim / FID
+  - 224 no-text/text, 128 no-text/text의 time/rollout metric 확보
+  - PSNR은 현재 주요 metric 세트에 없음
+* [x] rollout stability (1s / 2s / 4s)
+  - `rollout_1fps`, `rollout_4fps` metric 확보
+* [ ] planning stability
+  - JSON은 확보했지만 text 개선 결론은 아직 불확실
 
 ## 판단 기준
 
-* 텍스트가 **조금이라도 의미 있게 도움 되냐**
+* image metric에서는 텍스트가 도움 되는 신호가 확인됨
+* planning metric에서는 아직 결론 보류
+* 다음 판단 기준은 **같은 checkpoint/step/seed 조건에서 text가 일관되게 도움 되냐**
 
 여기서 효과 없으면 방향 바꿔야 한다 (냉정하게)
 
@@ -438,17 +506,22 @@ cond = f(image, action, timestep, text)
 
 ## TODO
 
-* [ ] 해상도 단계별 실험
-
-  * high → 128 → 112 → 64
-* [ ] 각 단계에서
-
-  * no-text vs text 비교
+* [x] high/224 → 128 1차 실험
+  - 224 no-text/text metric 확보
+  - 128 no-text/text metric 확보
+* [ ] `128` 공정 비교 재정렬
+  - 옵션 A: `128 text`를 `0055000`까지 추가 학습 후 no-text `0055000`과 비교
+  - 옵션 B: `128 no-text`와 `128 text` 모두 `0030000` 기준으로 time/rollout/planning 표를 고정
+* [ ] 다음 해상도 실험
+  - `112`
+  - `64`
+* [ ] 각 단계에서 no-text vs text 비교
 
 ## 분석
 
 * [ ] degradation slope 계산
 * [ ] text가 손실 얼마나 줄이는지 정량화
+* [ ] `128 text`가 `224 no-text`와 어느 horizon/metric에서 비슷하거나 이기는지 표로 정리
 
 ## 목표
 
@@ -464,6 +537,7 @@ cond = f(image, action, timestep, text)
 
 * [ ] GO Stanford 데이터셋 evaluation
 * [ ] unseen scene rollout 테스트
+* [ ] RECON in-domain에서 먼저 repeat/seed 안정성 확인
 
 ## 분석
 
@@ -481,6 +555,8 @@ cond = f(image, action, timestep, text)
 ---
 
 # Phase 6 — Online Lightweight Text Pipeline
+
+현재 상태: offline Qwen caption + cached CLIP embedding은 완료. Online/lightweight semantic extractor는 아직 시작 전.
 
 ## 6.1 YOLO 기반 (우선)
 
@@ -504,6 +580,8 @@ cond = f(image, action, timestep, text)
 
 # Phase 7 — End-to-End 시스템 평가
 
+현재 상태: NWM 단독 GPU profiling은 있음. Online text extractor까지 포함한 total system latency는 아직 없음.
+
 ## TODO
 
 * [ ] 전체 pipeline latency 측정
@@ -511,13 +589,15 @@ cond = f(image, action, timestep, text)
   * image → text → NWM → output
 * [ ] FPS 측정
 * [ ] VRAM usage 기록
+* [ ] 128 no-text vs 128 text의 NWM-only latency/VRAM도 같은 protocol로 측정
 
 ## 비교군
 
-* [ ] high-res NWM
-* [ ] low-res no-text
+* [x] high-res NWM profiling 일부 확보
+* [x] low-res no-text model/eval 일부 확보
 * [ ] low-res + YOLO text
 * [ ] low-res + Moondream
+* [ ] low-res + cached text embedding의 NWM-only overhead
 
 ## 핵심 질문
 
@@ -533,6 +613,8 @@ cond = f(image, action, timestep, text)
 
 * [ ] text source 비교 (VLM vs YOLO vs template)
 * [ ] fusion 방식 비교
+  - baseline: 현재 `sum(text_proj(text), cond)`
+  - 다음 후보: zero-init text projection, gated fusion
 * [ ] text noise robustness
 * [ ] wrong tag injection 실험
 * [ ] text dropout 효과
@@ -543,9 +625,16 @@ cond = f(image, action, timestep, text)
 
 ## 필수 그래프
 
+* [x] 224/128 text/no-text metric 비교 그래프 1차 생성
+  - `artifacts/profiling/compare_recon_all_variants/01_recon_metrics_224_128_text_vs_no_text.png`
+* [x] 128 checkpoint sweep graph 생성
+  - `artifacts/profiling/recon_time_over_checkpoints/01_recon_time_over_checkpoints.png`
 * [ ] resolution vs performance curve
+  - 112/64 추가 후 완성
 * [ ] latency vs performance tradeoff
+  - online text extractor 포함 후 완성
 * [ ] rollout degradation graph
+  - 현재 JSON은 있으나 논문용 plot으로 재정리 필요
 * [ ] OOD failure case visualization
 
 ## 핵심 주장 정리
@@ -557,10 +646,15 @@ cond = f(image, action, timestep, text)
 
 # 최종 Deliverable (논문/발표 기준)
 
-* [ ] pipeline diagram (필수)
-* [ ] architecture diagram (baseline vs ours)
+* [x] pipeline diagram 초안
+  - `docs/proposal_assets/nwm_text_conditioning_mechanism.png`
+* [x] architecture/result proposal asset 초안
+  - `docs/proposal_assets/nwm_eval_results.png`
+* [ ] architecture diagram (baseline vs ours) 최종본
 * [ ] quantitative table (in-domain / OOD)
+  - in-domain 초안 가능, OOD 없음
 * [ ] efficiency table (latency / VRAM)
+  - NWM-only profiling은 있음, total system 기준은 없음
 * [ ] qualitative visualization (rollout 비교)
 
 ---
@@ -607,7 +701,7 @@ cond = f(image, action, timestep, text)
 
 # 한 줄 액션 플랜
 
-> **“Baseline 재현 → 텍스트 데이터 구축 → 최소 결합 → PoC 검증 → 해상도 축소 → OOD → 시스템 평가”**
+> **“공정 비교 재정렬 → planning repeat → 112/64 확장 → lightweight text → OOD → 시스템 평가”**
 
 이 순서 절대 바꾸지 마라.
 
@@ -615,16 +709,14 @@ cond = f(image, action, timestep, text)
 
 # 다음 단계 추천 (너 기준으로 현실적인 루트)
 
-1. 이번 주
-   → Phase 0 + Phase 1 일부
+1. 지금 바로
+   → `128 no-text` vs `128 text`의 checkpoint/eval 조건 맞추기
 
-2. 다음 주
-   → PoC 결과 확보
+2. 그 다음
+   → planning repeat/seed 늘려서 결론 확정
 
 3. 그 다음
-   → resolution scaling
+   → `112`, `64` 해상도 확장 및 resolution scaling curve 작성
 
-
-원하면
-바로 **코드 구조 (PyTorch + dataloader + conditioning injection)**까지 설계해줄게
-이건 진짜 중요하다.
+4. 이후
+   → YOLO 기반 lightweight text pipeline과 total latency 평가
