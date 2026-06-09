@@ -25,7 +25,7 @@ import torch
 import argparse
 import numpy as np
 
-import src.core.env.distributed as dist
+from src.evaluation.metrics.logger import MetricLogger
 from src.evaluation.metrics.perceptual import get_loss_fn, evaluate, save_metric_to_disk
 
 
@@ -48,7 +48,7 @@ def main(args):
         if 'rollout' in args.eval_types:
             for rollout_fps in args.rollout_fps_values:
                 try:
-                    metric_logger = dist.MetricLogger(delimiter="  ")
+                    metric_logger = MetricLogger(delimiter="  ")
                     print("Evaluating rollout", rollout_fps, dataset_name)
                     # Rollout (LPIPS, DreamSim, FID)
                     eval_name = f'rollout_{rollout_fps}fps'
@@ -65,7 +65,7 @@ def main(args):
 
         if 'time' in args.eval_types:
             try:
-                metric_logger = dist.MetricLogger(delimiter="  ")
+                metric_logger = MetricLogger(delimiter="  ")
                 print("Evaluating time", dataset_name)
                 eval_name = 'time'
                 gt_dataset_time_dir = os.path.join(gt_dataset_dir, eval_name)

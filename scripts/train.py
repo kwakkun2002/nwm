@@ -38,32 +38,76 @@ torch.backends.cudnn.allow_tf32 = True
 
 import matplotlib
 matplotlib.use('Agg')
+from collections import OrderedDict
 from copy import deepcopy
 from time import time
 import argparse
+import logging
 import matplotlib.pyplot as plt
-import yaml
 
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data import DataLoader, ConcatDataset
 from torch.utils.data.distributed import DistributedSampler
 
+from src.config import load_experiment_config
 from src.core.env.distributed import init_distributed
 from src.models.backbones.cdit import CDiT_models
 from src.diffusion import create_diffusion
 from src.data.datasets.train_dataset import TrainingDataset
-from src.core.io.paths import get_checkpoint_path, get_run_artifact_dir, get_run_checkpoint_dir, get_run_log_dir
+from src.core.paths import get_checkpoint_path, get_run_artifact_dir, get_run_checkpoint_dir, get_run_log_dir
 from src.data.transforms.image import build_transform
 from src.models.checkpoints.vae import load_vae
 from src.features.text.pipeline import get_text_conditioning_config
-from src.training.optim.ema import update_ema, requires_grad
 from src.models.checkpoints.loader import load_model_state, prepare_checkpoint_state_dict
-from src.core.logging.logger import create_logger
 
 #################################################################################
 #                             Training Helper Functions                         #
 #################################################################################
+
+def create_logger(logging_dir):
+    if dist.get_rank() == 0:
+        logging.basicConfig(
+            level=logging.INFO,
+            format='[\033[34m%(asctime)s\033[0m] %(message)s',
+            datefmt='%Y-%m-%d %H:%M:%S',
+            handlers=[logging.StreamHandler(), logging.FileHandler(f"{logging_dir}/log.txt")]
+        )
+        return logging.getLogger(__name__)
+
+    logger = logging.getLogger(__name__)
+    logger.addHandler(logging.NullHandler())
+    return logger
+
+
+@torch.no_grad()
+def update_ema(ema_model, model, decay=0.9999):
+    ema_params = OrderedDict(ema_model.named_parameters())
+    model_params = OrderedDict(model.named_parameters())
+
+    for name, param in model_params.items():
+        name = name.replace('_orig_mod.', '')
+        ema_params[name].mul_(decay).add_(param.data, alpha=1 - decay)
+
+
+def requires_grad(model, flag=True):
+    for param in model.parameters():
+        param.requires_grad = flag
+
+
+def configured_checkpoint_path(config):
+    checkpoint_path = config.get("from_checkpoint")
+    if checkpoint_path in (None, False, 0, "0", ""):
+        return None
+    return checkpoint_path
+
+
+def resolve_training_checkpoint(config):
+    latest_path = get_checkpoint_path(config, "latest")
+    if os.path.isfile(latest_path):
+        return latest_path, True
+    return configured_checkpoint_path(config), False
+
 
 def cleanup():
     """
@@ -87,13 +131,7 @@ def main(args):
     seed = args.global_seed * dist.get_world_size() + rank
     torch.manual_seed(seed)
     print(f"Starting rank={rank}, seed={seed}, world_size={dist.get_world_size()}.")
-    with open("configs/evaluation/eval_config.yaml", "r") as f:
-        default_config = yaml.safe_load(f)
-    config = default_config
-    
-    with open(args.config, "r") as f:
-        user_config = yaml.safe_load(f)
-    config.update(user_config)
+    config = load_experiment_config(args.config)
     text_config = get_text_conditioning_config(config)
     checkpoint_strict = bool(config.get("checkpoint_strict", True))
     load_training_state = bool(config.get("load_training_state", True))
@@ -141,53 +179,56 @@ def main(args):
     if bfloat_enable:
         scaler = torch.amp.GradScaler()
 
-    # load existing checkpoint
-    latest_path = get_checkpoint_path(config, "latest")
+    # Prefer exact run resume from latest.pth.tar; otherwise warm-start from config.
+    checkpoint_path, resume_training = resolve_training_checkpoint(config)
     print('Searching for model from ', checkpoint_dir)
     start_epoch = 0
     train_steps = 0
-    if os.path.isfile(latest_path) or config.get('from_checkpoint', 0):
-        if os.path.isfile(latest_path) and config.get('from_checkpoint', 0):
-            raise ValueError("Resuming from checkpoint, this might override latest.pth.tar!!")
-        latest_path = latest_path if os.path.isfile(latest_path) else config.get('from_checkpoint', 0)
-        print("Loading model from ", latest_path)
-        latest_checkpoint = torch.load(latest_path, map_location="cpu", weights_only=False) 
+    if checkpoint_path:
+        checkpoint_mode = "latest training checkpoint" if resume_training else "configured warm-start checkpoint"
+        print(f"Loading {checkpoint_mode} from {checkpoint_path}")
+        latest_checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
+        model_strict = True if resume_training else checkpoint_strict
+        model_ignore_keys = () if resume_training else checkpoint_ignore_keys
+        model_ignore_shape_mismatch = False if resume_training else checkpoint_ignore_shape_mismatch
+        model_interpolate_pos_embed = False if resume_training else checkpoint_interpolate_pos_embed
+        should_load_training_state = resume_training or load_training_state
 
         if "model" in latest_checkpoint:
             model_ckp = prepare_checkpoint_state_dict(
                 model,
                 latest_checkpoint["model"],
                 label="model",
-                ignore_keys=checkpoint_ignore_keys,
-                ignore_shape_mismatch=checkpoint_ignore_shape_mismatch,
-                interpolate_pos_embed=checkpoint_interpolate_pos_embed,
+                ignore_keys=model_ignore_keys,
+                ignore_shape_mismatch=model_ignore_shape_mismatch,
+                interpolate_pos_embed=model_interpolate_pos_embed,
             )
-            load_model_state(model, model_ckp, strict=checkpoint_strict, label="model")
+            load_model_state(model, model_ckp, strict=model_strict, label="model")
 
             model_ckp = prepare_checkpoint_state_dict(
                 ema,
                 latest_checkpoint["ema"],
                 label="EMA model",
-                ignore_keys=checkpoint_ignore_keys,
-                ignore_shape_mismatch=checkpoint_ignore_shape_mismatch,
-                interpolate_pos_embed=checkpoint_interpolate_pos_embed,
+                ignore_keys=model_ignore_keys,
+                ignore_shape_mismatch=model_ignore_shape_mismatch,
+                interpolate_pos_embed=model_interpolate_pos_embed,
             )
-            load_model_state(ema, model_ckp, strict=checkpoint_strict, label="EMA model")
+            load_model_state(ema, model_ckp, strict=model_strict, label="EMA model")
         else:
             update_ema(ema, model, decay=0)  # Ensure EMA is initialized with synced weights
 
-        if load_training_state and "opt" in latest_checkpoint:
+        if should_load_training_state and "opt" in latest_checkpoint:
             opt_ckp = {k.replace('_orig_mod.', ''):v for k,v in latest_checkpoint['opt'].items()}
             opt.load_state_dict(opt_ckp)
             print("Loading optimizer params")
         
-        if load_training_state and "epoch" in latest_checkpoint:
+        if should_load_training_state and "epoch" in latest_checkpoint:
             start_epoch = latest_checkpoint['epoch'] + 1
         
-        if load_training_state and "train_steps" in latest_checkpoint:
+        if should_load_training_state and "train_steps" in latest_checkpoint:
             train_steps = latest_checkpoint["train_steps"]
         
-        if load_training_state and "scaler" in latest_checkpoint:
+        if should_load_training_state and bfloat_enable and "scaler" in latest_checkpoint:
             scaler.load_state_dict(latest_checkpoint["scaler"])
         
     # ~40% speedup but might leads to worse performance depending on pytorch version
@@ -389,7 +430,7 @@ def main(args):
     cleanup()
 
 
-@torch.no_grad
+@torch.no_grad()
 def evaluate(model, vae, diffusion, test_dataloaders, rank, batch_size, num_workers, latent_size, device, save_dir, seed, bfloat_enable, num_cond):
     sampler = DistributedSampler(
         test_dataloaders,

@@ -5,8 +5,17 @@ __pycache__/
 .pytest_cache/
 
 datasets/
-data/
+data/*
+!data/splits/
+!data/splits/**
+data/splits/**/dataset_dist_*.pkl
 logs/
+artifacts/
+models/
+weights/
+.cache/
 gpu_plots/
 
 *.ipynb
+*.pdf
+*.mp4

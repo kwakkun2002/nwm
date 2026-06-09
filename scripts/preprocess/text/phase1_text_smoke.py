@@ -4,23 +4,18 @@ import os
 import sys
 
 import torch
-import yaml
 
-REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
+from src.config import load_experiment_config
 from src.data.datasets.train_dataset import TrainingDataset
 from src.data.transforms.image import build_transform
 from src.diffusion import create_diffusion
 from src.features.text.pipeline import infer_text_embedding_dim
 from src.models.backbones.cdit import CDiT_models
 from src.models.checkpoints.vae import load_vae
-
-
-def load_config(config_path: str):
-    with open(config_path, "r", encoding="utf-8") as f:
-        return yaml.safe_load(f)
 
 
 def main():
@@ -40,7 +35,7 @@ def main():
     torch.backends.cuda.matmul.allow_tf32 = True
     torch.backends.cudnn.allow_tf32 = True
 
-    config = load_config(args.config)
+    config = load_experiment_config(args.config)
     distance_cfg = config.get("distance", {})
     dataset_cfg = config["datasets"][args.dataset_name]
     data_folder = args.data_folder if args.data_folder is not None else dataset_cfg["data_folder"]

@@ -9,7 +9,8 @@ import torch
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from src.data.transforms.action import get_action_torch, get_delta_np, normalize_data
-from src.evaluation.planning.cem_planner import ACTION_STATS_TORCH, WM_Planning_Evaluator, build_parser
+from src.evaluation.planning.actions import ACTION_STATS_TORCH
+from src.evaluation.planning.cem_planner import WM_Planning_Evaluator, build_parser
 from src.evaluation.planning.navigation_ranker import (
     DEFAULT_DINO_WEIGHTS,
     DinoFeatureExtractor,

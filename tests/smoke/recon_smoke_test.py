@@ -20,15 +20,15 @@ import os
 import sys
 
 import torch
-import yaml
 from PIL import Image
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
-from src.data.datasets.eval_dataset import EvalDataset
-from src.data.transforms.image import build_transform, unnormalize
+from src.config import load_experiment_config
+from src.data.datasets.factory import build_eval_dataset
+from src.data.transforms.image import unnormalize
 from src.diffusion import create_diffusion
 from src.evaluation.inference.rollout import model_forward_wrapper
 from src.models.backbones.cdit import CDiT_models
@@ -36,33 +36,7 @@ from src.models.checkpoints.vae import load_vae
 
 
 def load_config(eval_config_path, model_config_path):
-    with open(eval_config_path, "r") as f:
-        config = yaml.safe_load(f)
-    with open(model_config_path, "r") as f:
-        config.update(yaml.safe_load(f))
-    return config
-
-
-def build_eval_dataset(config, dataset_name, eval_type):
-    dataset_config = config["eval_datasets"][dataset_name]
-    predefined_index = os.path.join("data", "splits", dataset_name, "test", f"{eval_type}.pkl")
-    image_transform = build_transform(config["image_size"])
-    return EvalDataset(
-        data_folder=dataset_config["data_folder"],
-        data_split_folder=dataset_config["test"],
-        dataset_name=dataset_name,
-        image_size=config["image_size"],
-        min_dist_cat=config["eval_distance"]["eval_min_dist_cat"],
-        max_dist_cat=config["eval_distance"]["eval_max_dist_cat"],
-        len_traj_pred=config["eval_len_traj_pred"],
-        traj_stride=config["traj_stride"],
-        context_size=config["eval_context_size"],
-        normalize=config["normalize"],
-        transform=image_transform,
-        goals_per_obs=dataset_config.get("goals_per_obs", 4),
-        predefined_index=predefined_index,
-        traj_names="traj_names.txt",
-    )
+    return load_experiment_config(model_config_path, default_config_path=eval_config_path)
 
 
 def save_tensor_image(image_tensor, output_path):
@@ -192,7 +166,11 @@ def main():
     config = load_config(args.eval_config, args.model_config)
     dataset = build_eval_dataset(config, args.dataset, args.eval_type)
 
-    idx, obs, pred, delta = dataset[args.sample_index]
+    sample = dataset[args.sample_index]
+    if len(sample) == 5:
+        idx, obs, pred, delta, _ = sample
+    else:
+        idx, obs, pred, delta = sample
     print("dataset_len =", len(dataset))
     print("sample_idx =", int(idx.item()))
     print("obs_shape =", tuple(obs.shape))

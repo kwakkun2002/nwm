@@ -69,7 +69,7 @@
   - 환경 조치: `Dockerfile`에 `CONDA_PREFIX` / `LD_LIBRARY_PATH=${CONDA_PREFIX}/lib:${LD_LIBRARY_PATH}` 추가
   - 운영 조치: `scripts/docker/nwm-run.sh`가 컨테이너 내부 실행 전 `CONDA_PREFIX`, `PATH`, `LD_LIBRARY_PATH`를 명시적으로 export하도록 수정
   - 해결 결과: `torch` import 이후에도 `sqlite3` import 성공, `planning_eval.py` import 성공
-  - 운영 조치: `scripts/recon/recon_smoke_test.py` 추가, RECON 로딩/1-sample forward를 프로젝트 내부 `artifacts/recon_smoke`에 저장하도록 정리
+  - 운영 조치: `tests/smoke/recon_smoke_test.py` 추가, RECON 로딩/1-sample forward를 프로젝트 내부 `artifacts/smoke/recon`에 저장하도록 정리
   - 운영 조치: `scripts/docker/nwm-start.sh` 추가, `NWM_GPU_REQUEST=all` 또는 `NWM_GPU_REQUEST='device=0,1'`로 컨테이너 GPU 가시성을 설정 가능하게 정리
   - 문서 조치: `DEV_CONTAINER_WORKFLOW.md`에 멀티 GPU 컨테이너 실행 예시 추가
   - 재현 메모: 현재 떠 있는 `nwm:cu126` 이미지에는 `h5py`가 없어서 컨테이너 내부에서 1회 설치함. 새 이미지에서는 `env.yaml` 반영 후 재빌드 필요
@@ -297,14 +297,14 @@
 * [x] `128x128` low-resolution baseline warm-start 경로 추가
   - 목적: 기존 `224` baseline `nwm_cdit_s`를 `128` 입력용으로 적응시켜 해상도 축소 baseline 확보
   - 코드 조치: `misc.py`에 `build_transform(image_size)` 추가
-  - 코드 조치: `train.py`, `isolated_nwm_infer.py`, `planning_eval.py`, `scripts/recon/recon_smoke_test.py` 등에서 `config["image_size"]` 기반 transform 사용
+  - 코드 조치: `train.py`, inference/planning 경로, `tests/smoke/recon_smoke_test.py` 등에서 `config["image_size"]` 기반 transform 사용
   - 코드 조치: `train.py`에 checkpoint warm-start helper 추가
     - `checkpoint_ignore_keys`
     - `checkpoint_ignore_shape_mismatch`
     - `checkpoint_interpolate_pos_embed`
   - 새 config:
     - `configs/experiment/nwm_cdit_s_recon_128.yaml`
-    - `configs/experiment/nwm_cdit_s_recon_128_resume.yaml`
+  - resume은 별도 config 없이 같은 config에서 `latest.pth.tar`를 우선 로드
   - warm-start source checkpoint: `weights/checkpoints/nwm_cdit_s/0100000.pth.tar`
   - 초기 정책: `pos_embed`는 제외하고 나머지 weight 재사용
   - smoke 확인: `obs_shape (4, 3, 128, 128)`, `pred_shape (64, 3, 128, 128)`, `delta_shape (64, 3)`
@@ -332,7 +332,7 @@
     - `~550 step latest` 대비 `time 15/15`, `rollout 1fps 12/15`, `rollout 4fps 10/15` 지표 개선
     - 기존 `224` baseline `artifacts/lpips_time_recon_s/nwm_cdit_s` 대비는 여전히 `45/45` 지표 전부 열세
 * [x] `128` baseline `0010000` checkpoint 저장 후 학습 일단 정지
-  - resume config: `configs/experiment/nwm_cdit_s_recon_128_resume.yaml`
+  - resume: `configs/experiment/nwm_cdit_s_recon_128.yaml`가 `latest.pth.tar`를 우선 로드
   - `2026-03-26 04:51:05`에 `step=0010000` 도달
   - 저장 확인: `weights/checkpoints/nwm_cdit_s_recon_128/0010000.pth.tar`
   - 저장 후 잠깐 더 진행되어 마지막 확인 로그는 `step=0010540`
@@ -378,7 +378,7 @@
 * [x] `128 + text` 학습 run 시작 및 `0030000` checkpoint 확보
   - config:
     - `configs/experiment/nwm_cdit_s_recon_128_text_dense.yaml`
-    - `configs/experiment/nwm_cdit_s_recon_128_text_dense_resume.yaml`
+  - resume은 별도 config 없이 같은 config에서 `latest.pth.tar`를 우선 로드
   - warm-start source:
     - `weights/checkpoints/nwm_cdit_s_recon_128/0010000.pth.tar`
   - 로딩 시 missing key:

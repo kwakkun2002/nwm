@@ -26,29 +26,25 @@ torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
 
 import argparse
-import yaml
-import numpy as np
 import lpips
-import torchvision.utils as vutils
-import matplotlib.pyplot as plt
 
-### evo evaluation library ###
-from evo.core.trajectory import PoseTrajectory3D
-from evo.core import sync, metrics
-import evo.main_ape as main_ape
-import evo.main_rpe as main_rpe
-from evo.core.metrics import PoseRelation
-
+from src.config import load_experiment_config
 from src.diffusion import create_diffusion
-from src.data.datasets.trajectory_eval_dataset import TrajectoryEvalDataset
+from src.data.datasets.factory import build_trajectory_eval_dataset
 from src.evaluation.inference.rollout import model_forward_wrapper
-from src.data.transforms.image import build_transform
-from src.data.transforms.action import calculate_delta_yaw, get_action_torch, unnormalize_data
-from src.core.io.paths import DEFAULT_PLANNING_ARTIFACT_ROOT, get_checkpoint_path
-from src.core.io.serialization import save_planning_pred
-from src.analysis.plotting.trajectory_viz import log_viz_single
+from src.data.transforms.action import get_action_torch
+from src.core.paths import DEFAULT_PLANNING_ARTIFACT_ROOT, get_checkpoint_path
 from src.models.checkpoints.vae import load_vae
 from src.evaluation.metrics.perceptual import save_metric_to_disk
+from src.evaluation.metrics.logger import MetricLogger
+from src.evaluation.planning.actions import (
+    ACTION_STATS_TORCH,
+    action_params_to_deltas,
+    action_regularization_cost,
+    initial_action_distribution,
+)
+from src.evaluation.planning.outputs import log_viz_single, plot_batch_final, plot_images_with_losses, save_planning_pred
+from src.evaluation.planning.trajectory_metrics import actions_to_traj, eval_metrics
 import src.core.env.distributed as dist
 from src.models.backbones.cdit import CDiT_models
 from src.features.text.pipeline import get_text_conditioning_config
@@ -59,103 +55,6 @@ from src.evaluation.planning.navigation_ranker import (
     load_ranker_checkpoint,
     score_with_ranker,
 )
-
-
-with open("configs/data/data_config.yaml", "r") as f:
-    data_config = yaml.safe_load(f)
-
-with open("configs/data/data_hyperparams_plan.yaml", "r") as f:
-    data_hyperparams = yaml.safe_load(f)
-
-ACTION_STATS_TORCH = {}
-for key in data_config['action_stats']:
-    ACTION_STATS_TORCH[key] = torch.tensor(data_config['action_stats'][key])
-
-
-def plot_images_with_losses(preds, losses, save_path="predictions_with_losses.png"):
-    # Denormalize images from [-1, 1] to [0, 1]
-    preds = (preds + 1) / 2
-    ncol = int(preds.size(0)**0.5)
-    nrow = preds.size(0) // ncol
-    if ncol * nrow < preds.size(0):
-        nrow += 1
-    grid_img = vutils.make_grid(preds, nrow=ncol, padding=2)
-    np_grid = grid_img.to(torch.float32).permute(1, 2, 0).cpu().numpy()
-    
-    fig, ax = plt.subplots(figsize=(50, 50))
-    ax.imshow(np_grid)
-    ax.axis("off")
-
-    img_height, img_width = np_grid.shape[0] // nrow, np_grid.shape[1] // ncol
-
-    # Overlay the losses on each image
-    for idx, loss in enumerate(losses):
-        row = idx // ncol
-        col = idx % ncol
-        x = col * img_width
-        y = row * img_height
-        if idx == 0:
-            text = f"GT Goal"
-        else:
-            text = f"ID: {idx - 1}  Loss: {loss:.2f}"
-        ax.text(x + img_width / 2, y + 15, text, color="white", 
-                ha="center", va="top", fontsize=50, backgroundcolor="black")
-
-    plt.savefig(save_path, bbox_inches="tight")
-    plt.close()
-
-def plot_batch_final(init_imgs, pred_imgs, goal_imgs, idxs, losses, save_path="final_plan.png"):
-    # images are (B, c, h, w)
-    imgs_for_plotting = torch.cat([init_imgs, pred_imgs, goal_imgs])
-    imgs_for_plotting = (imgs_for_plotting + 1) / 2
-    ncol = init_imgs.shape[0]
-    grid_img = vutils.make_grid(imgs_for_plotting, nrow=ncol, padding=2)
-    np_grid = grid_img.to(torch.float32).permute(1, 2, 0).cpu().numpy()
-    
-    fig, ax = plt.subplots(figsize=(ncol * 10, 30))  # Adjust size as needed
-    ax.imshow(np_grid)
-    ax.axis("off")
-
-    img_height, img_width = np_grid.shape[0] // 3, np_grid.shape[1] // ncol
-
-    # Overlay the IDs and losses on each image pair in the grid
-    for i in range(ncol):
-        x = i * img_width
-        y_pred = img_height
-        ax.text(x + img_width / 2, y_pred + 15, f"ID: {int(idxs[i].item())} Loss: {losses[i]:.2f}", 
-                color="white", ha="center", va="top", fontsize=40, backgroundcolor="black")
-
-    plt.savefig(save_path, bbox_inches="tight")
-    plt.close()
-
-def get_dataset_eval(config, dataset_name, predefined_index=True):
-    data_config = config["eval_datasets"][dataset_name]
-    text_config = get_text_conditioning_config(config)
-    image_transform = build_transform(config["image_size"])
-    if predefined_index:
-        predefined_index = f"data/splits/{dataset_name}/test/navigation_eval.pkl"
-    else:
-        predefined_index = None
-
-    dataset = TrajectoryEvalDataset(
-                data_folder=data_config["data_folder"],
-                data_split_folder=data_config["test"],
-                dataset_name=dataset_name,
-                image_size=config["image_size"],
-                min_dist_cat=config["trajectory_eval_distance"]["min_dist_cat"],
-                max_dist_cat=config["trajectory_eval_distance"]["max_dist_cat"],
-                len_traj_pred=config["trajectory_eval_len_traj_pred"],
-                traj_stride=config["traj_stride"], 
-                context_size=config["trajectory_eval_context_size"],
-                normalize=config["normalize"],
-                transform=image_transform,
-                predefined_index=predefined_index,
-                traj_names="rollout_traj_names.txt",
-                text_embedding_root=text_config["embedding_root"] if text_config["enabled"] else None,
-                text_condition_source=text_config["condition_source"],
-            )
-    
-    return dataset
 
 class WM_Planning_Evaluator:
     def __init__(self, args):
@@ -173,13 +72,7 @@ class WM_Planning_Evaluator:
         self.exp_eval = self.exp
         self.get_eval_name()
 
-        with open("configs/evaluation/eval_config.yaml", "r") as f:
-            default_config = yaml.safe_load(f)
-        self.config = default_config
-
-        with open(self.exp_eval, "r") as f:
-            user_config = yaml.safe_load(f)
-        self.config.update(user_config)
+        self.config = load_experiment_config(self.exp_eval)
         self.text_config = get_text_conditioning_config(self.config)
 
         latent_size = self.config['image_size'] // 8
@@ -197,7 +90,7 @@ class WM_Planning_Evaluator:
         self.dataset_names = self.args.datasets.split(',')
         self.datasets = {}
         for dataset_name in self.dataset_names:
-            dataset_val = get_dataset_eval(self.config, dataset_name, predefined_index=True)
+            dataset_val = build_trajectory_eval_dataset(self.config, dataset_name, predefined_index=True)
             if self.args.max_eval_samples is not None:
                 start_index = min(self.args.eval_start_index, len(dataset_val))
                 end_index = min(start_index + self.args.max_eval_samples, len(dataset_val))
@@ -257,43 +150,13 @@ class WM_Planning_Evaluator:
 
     def init_mu_sigma(self, obs_0, traj_len):
         n_evals = obs_0.shape[0]
-        action_mu = torch.tensor(data_hyperparams[self.args.datasets]['mu'], dtype=torch.float32)
-        action_sigma = torch.tensor(data_hyperparams[self.args.datasets]['var_scale'], dtype=torch.float32)
-
-        if self.action_sampler == "repeat":
-            mu = action_mu.unsqueeze(0).repeat(n_evals, 1)
-            sigma = action_sigma.unsqueeze(0).repeat(n_evals, 1)
-            return mu, sigma
-
-        xy_mu = action_mu[:2].repeat(traj_len)
-        xy_sigma = action_sigma[:2].repeat(traj_len)
-        mu = torch.cat((xy_mu, action_mu[2:3])).unsqueeze(0).repeat(n_evals, 1)
-        sigma = torch.cat((xy_sigma, action_sigma[2:3])).unsqueeze(0).repeat(n_evals, 1)
-        return mu, sigma
+        return initial_action_distribution(self.args.datasets, self.action_sampler, n_evals, traj_len)
 
     def action_params_to_deltas(self, action_params, len_traj_pred):
-        if self.action_sampler == "repeat":
-            xy_deltas = action_params[:, :2].unsqueeze(1).repeat(1, len_traj_pred, 1)
-            final_yaw_offset = action_params[:, -1]
-        else:
-            xy_dim = len_traj_pred * 2
-            xy_deltas = action_params[:, :xy_dim].reshape(-1, len_traj_pred, 2)
-            final_yaw_offset = action_params[:, xy_dim]
-
-        xy_deltas = xy_deltas.clamp(-1.0, 1.0)
-        unnorm_deltas = unnormalize_data(xy_deltas, ACTION_STATS_TORCH)
-        delta_yaw = calculate_delta_yaw(unnorm_deltas)
-        deltas = torch.cat((xy_deltas, delta_yaw.to(xy_deltas.device)), dim=-1)
-        deltas[:, -1, -1] += final_yaw_offset.clamp(-1.0, 1.0) * np.pi
-        return deltas
+        return action_params_to_deltas(action_params, len_traj_pred, self.action_sampler)
 
     def action_regularization_cost(self, deltas):
-        cost = torch.zeros(deltas.shape[0], device=deltas.device, dtype=deltas.dtype)
-        if self.args.action_smoothness_weight > 0:
-            step_delta = deltas[:, 1:, :2] - deltas[:, :-1, :2]
-            smoothness = step_delta.pow(2).mean(dim=(1, 2))
-            cost = cost + self.args.action_smoothness_weight * smoothness
-        return cost
+        return action_regularization_cost(deltas, self.args.action_smoothness_weight)
 
     def learned_navigation_cost(self, pred_images, goal_images, deltas):
         if self.learned_cost_model is None or self.args.learned_cost_weight == 0:
@@ -313,6 +176,38 @@ class WM_Planning_Evaluator:
             self.device,
         )
         return self.args.learned_cost_weight * learned_cost.to(device=deltas.device, dtype=deltas.dtype)
+
+    def evaluate_candidate_losses(self, obs_images, goal_images, deltas, text_emb=None):
+        def evaluate_chunk(obs_chunk, goal_chunk, delta_chunk, text_chunk):
+            preds = self.autoregressive_rollout(
+                obs_chunk,
+                delta_chunk,
+                self.args.rollout_stride,
+                text_emb=text_chunk,
+            )
+            preds = preds[:, -1]
+            loss = self.loss_fn(preds.to(self.device), goal_chunk.to(self.device)).flatten(0)
+            loss = loss + self.learned_navigation_cost(preds, goal_chunk, delta_chunk).to(loss)
+            return loss, preds
+
+        chunk_size = int(self.args.cem_eval_chunk_size or 0)
+        if chunk_size <= 0 or chunk_size >= deltas.shape[0]:
+            return evaluate_chunk(obs_images, goal_images, deltas, text_emb)
+
+        losses = []
+        preds = []
+        for start in range(0, deltas.shape[0], chunk_size):
+            end = min(start + chunk_size, deltas.shape[0])
+            text_chunk = None if text_emb is None else text_emb[start:end]
+            chunk_loss, chunk_preds = evaluate_chunk(
+                obs_images[start:end],
+                goal_images[start:end],
+                deltas[start:end],
+                text_chunk,
+            )
+            losses.append(chunk_loss)
+            preds.append(chunk_preds)
+        return torch.cat(losses, dim=0), torch.cat(preds, dim=0)
         
     def generate_actions(self, dataset_save_output_dir, dataset_name, idxs, obs_image, goal_image, gt_actions, len_traj_pred, text_emb=None):
         idx_string = "_".join(map(str, idxs.flatten().int().tolist())) 
@@ -342,10 +237,7 @@ class WM_Planning_Evaluator:
                     cur_losses = []
                     for r in range(self.num_repeat_eval):
                         cur_text_emb = None if text_emb is None else text_emb[traj:traj + 1].repeat(self.num_samples, 1, 1)
-                        preds = self.autoregressive_rollout(cur_obs_image, deltas, self.args.rollout_stride, text_emb=cur_text_emb)
-                        preds = preds[:, -1] # take the last predicted image
-                        loss = self.loss_fn(preds.to(self.device), cur_goal_image.to(self.device)).flatten(0)
-                        loss = loss + self.learned_navigation_cost(preds, cur_goal_image, deltas).to(loss)
+                        loss, preds = self.evaluate_candidate_losses(cur_obs_image, cur_goal_image, deltas, text_emb=cur_text_emb)
                         cur_losses.append(loss)
 
                     loss = torch.stack(cur_losses).mean(dim=0)
@@ -356,11 +248,7 @@ class WM_Planning_Evaluator:
                     expanded_goal_image = cur_goal_image.repeat(self.num_repeat_eval, 1, 1, 1) 
 
                     expanded_text_emb = None if text_emb is None else text_emb[traj:traj + 1].repeat(self.num_repeat_eval * self.num_samples, 1, 1)
-                    preds = self.autoregressive_rollout(expanded_obs_image, expanded_deltas, self.args.rollout_stride, text_emb=expanded_text_emb)
-                    preds = preds[:, -1]
-
-                    loss = self.loss_fn(preds.to(self.device), expanded_goal_image.to(self.device)).flatten(0)
-                    loss = loss + self.learned_navigation_cost(preds, expanded_goal_image, expanded_deltas).to(loss)
+                    loss, preds = self.evaluate_candidate_losses(expanded_obs_image, expanded_goal_image, expanded_deltas, text_emb=expanded_text_emb)
                     loss = loss.view(self.num_repeat_eval, -1)
                     loss = loss.mean(dim=0)
                     loss = loss + self.action_regularization_cost(deltas).to(loss)
@@ -386,7 +274,7 @@ class WM_Planning_Evaluator:
         loss = self.loss_fn(preds.to(self.device), goal_image.squeeze(1).to(self.device)).flatten(0)
 
         if self.args.save_preds:
-            save_planning_pred(dataset_save_output_dir, n_evals, idxs, obs_image, goal_image, preds, deltas, loss, gt_actions)
+            save_planning_pred(dataset_save_output_dir, idxs, obs_image, goal_image, preds, deltas, loss, gt_actions)
         
         if self.args.plot:
             img_name = os.path.join(image_plot_dir, f'FINAL_{idx_string}.png')
@@ -457,20 +345,11 @@ class WM_Planning_Evaluator:
             learned_suffix = f"_LC{learned_weight}"
         self.eval_name = f'CEM_{sampler_name}_N{self.args.num_samples}_K{self.args.topk}_RS{self.args.rollout_stride}_rep{self.args.num_repeat_eval}_OPT{self.args.opt_steps}{smoothness_suffix}{learned_suffix}'
         
-    def actions_to_traj(self, actions):
-        positions_xyz = torch.zeros((actions.shape[0], 3))
-        positions_xyz[:, :2] = actions
-        orientations_quat_wxyz = torch.zeros((actions.shape[0], 4)) # Define identity quaternion
-        orientations_quat_wxyz[:, -1] = 1 # Define identity quaternion
-        timestamps = torch.arange(actions.shape[0], dtype=torch.float64)
-        traj = PoseTrajectory3D(positions_xyz=positions_xyz, orientations_quat_wxyz=orientations_quat_wxyz, timestamps=timestamps)
-        return traj
-    
-    @torch.no_grad
+    @torch.no_grad()
     def evaluate(self):
         
         for dataset_name in self.dataset_names:
-            metric_logger = dist.MetricLogger(delimiter="  ")
+            metric_logger = MetricLogger(delimiter="  ")
             header = 'Test:'
             eval_save_output_dir = None
             
@@ -501,10 +380,10 @@ class WM_Planning_Evaluator:
                         text_emb=text_emb,
                     )
                 for i in range(len(obs_image)):
-                    pred_traj_i = self.actions_to_traj(pred_actions[i, :, :2])
-                    gt_traj_i = self.actions_to_traj(gt_actions[i, :, :2])
+                    pred_traj_i = actions_to_traj(pred_actions[i, :, :2])
+                    gt_traj_i = actions_to_traj(gt_actions[i, :, :2])
                     
-                    ate, rpe_trans, _ = self.eval_metrics(gt_traj_i, pred_traj_i)
+                    ate, rpe_trans, _ = eval_metrics(gt_traj_i, pred_traj_i)
 
                     pred_final_pos = pred_actions[i, -1, :2].to('cpu') # (2,)
                     pred_final_yaw = pred_yaw[i].to('cpu') # 
@@ -524,25 +403,6 @@ class WM_Planning_Evaluator:
         # gather the stats from all processes
         metric_logger.synchronize_between_processes()
             
-    def eval_metrics(self, traj_ref, traj_pred):
-        traj_ref, traj_pred = sync.associate_trajectories(traj_ref, traj_pred)
-        
-        result = main_ape.ape(traj_ref, traj_pred, est_name='traj',
-            pose_relation=PoseRelation.translation_part, align=False, correct_scale=False)
-        ate = result.stats['rmse']
-
-        result = main_rpe.rpe(traj_ref, traj_pred, est_name='traj',
-            pose_relation=PoseRelation.rotation_angle_deg, align=False, correct_scale=False,
-            delta=1.0, delta_unit=metrics.Unit.frames, rel_delta_tol=0.1)
-        rpe_rot = result.stats['rmse']
-
-        result = main_rpe.rpe(traj_ref, traj_pred, est_name='traj',
-            pose_relation=PoseRelation.translation_part, align=False, correct_scale=False,
-            delta=1.0, delta_unit=metrics.Unit.frames, rel_delta_tol=0.1)
-        rpe_trans = result.stats['rmse']
-
-        return ate, rpe_trans, rpe_rot
-    
 def build_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument("--exp", type=str, default=None, help="experiment name")
@@ -558,6 +418,7 @@ def build_parser():
     parser.add_argument("--opt_steps", type=int, default=15, help="num iterations for CEM")
     parser.add_argument("--num_repeat_eval", type=int, default=1, help="number of evals for one action")
     parser.add_argument("--action_sampler", type=str, default="sequence", choices=["sequence", "repeat"], help="sample per-step action sequences or legacy repeated actions")
+    parser.add_argument("--cem_eval_chunk_size", type=int, default=0, help="evaluate CEM candidates in chunks to reduce peak memory; 0 keeps the original full-batch behavior")
     parser.add_argument("--min_action_std", type=float, default=1e-3, help="minimum CEM std after top-k refitting")
     parser.add_argument("--action_smoothness_weight", type=float, default=0.0, help="penalty weight for changes between consecutive sampled xy deltas")
     parser.add_argument("--learned_cost_ckpt", type=str, default=None, help="optional navigation ranker checkpoint for learned CEM cost")

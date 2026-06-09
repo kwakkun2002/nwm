@@ -18,9 +18,9 @@ nwm/
 ├── notebooks/               # 실험/시각화 노트북
 ├── docs/                    # 프로젝트 문서, 제안서, 데이터 설명
 ├── experiments/             # 실험 노트
-├── models/                  # legacy/pretrained 모델 파일, DINO 코드/가중치
+├── models/                  # ignored local pretrained/legacy bulk files
 ├── third_party/             # 외부 코드 vendoring
-├── diffusion/               # legacy diffusion 모듈로 보임
+├── diffusion/               # ignored stale cache only
 └── Dockerfile, env.yaml 등  # 환경 구성 파일
 ```
 
@@ -81,18 +81,19 @@ plan_eval.py
 
 ```text
 src/
+├── config.py                  # YAML config 로딩 헬퍼
 ├── core/
 │   ├── env/distributed.py       # DDP, rank, device 초기화
-│   ├── io/paths.py              # logs/artifacts/weights 경로 규칙
-│   ├── io/serialization.py      # 저장/로드 유틸
-│   └── logging/logger.py        # logger 생성
+│   └── paths.py                 # logs/artifacts/weights 경로 규칙
 │
 ├── data/
+│   ├── io.py                    # trajectory/image 로드 유틸
 │   ├── datasets/
 │   │   ├── train_dataset.py     # 학습 데이터셋
 │   │   ├── eval_dataset.py      # time/rollout 평가 데이터셋
 │   │   ├── trajectory_eval_dataset.py
-│   │   └── base_dataset.py
+│   │   ├── base_dataset.py
+│   │   └── factory.py           # eval/planning dataset factory
 │   └── transforms/
 │       ├── image.py             # 이미지 transform
 │       └── action.py            # action/delta 처리
@@ -106,23 +107,15 @@ src/
 ├── diffusion/
 │   ├── gaussian_diffusion.py    # DDPM diffusion 구현
 │   ├── respace.py
-│   ├── diffusion_utils.py
-│   └── timestep_sampler.py
+│   └── diffusion_utils.py
 │
 ├── evaluation/
 │   ├── inference/rollout.py     # infer.py에서 쓰는 rollout/time generation
 │   ├── metrics/perceptual.py    # LPIPS, DreamSim, FID
-│   └── planning/cem_planner.py  # CEM planning 평가
+│   └── planning/                # CEM planner, action helpers, metrics, ranker, outputs
 │
-├── features/
-│   └── text/                    # text-conditioning 파이프라인/유틸
-│
-├── training/
-│   └── optim/ema.py             # EMA 업데이트
-│
-└── analysis/
-    ├── plotting/                # plot 유틸
-    └── export/                  # summary export
+└── features/
+    └── text/                    # text-conditioning 파이프라인/유틸
 ```
 
 ## `configs/`
@@ -133,8 +126,7 @@ src/
 configs/
 ├── experiment/             # 실제 학습/평가 실험 설정
 ├── data/                   # 데이터 관련 기본 설정
-├── evaluation/             # 평가 기본 설정
-└── model/                  # 모델 관련 설정
+└── evaluation/             # 평가 기본 설정
 ```
 
 중요한 예:
@@ -238,9 +230,9 @@ notebooks/                # interactive_model, diffusion/VAE visualization
 ## 헷갈릴 수 있는 폴더
 
 - `src/diffusion/`가 현재 코드에서 import되는 diffusion 구현입니다.
-- 루트의 `diffusion/`은 legacy 또는 이전 구조 잔재로 보입니다. 새 작업은 `src/diffusion/` 기준으로 보는 게 맞습니다.
-- `models/`는 현재 모델 코드라기보다 pretrained 파일과 DINO 외부 코드가 섞인 보관 폴더입니다. 실제 CDiT 구현은 `src/models/backbones/cdit.py`입니다.
-- `third_party/`도 외부 DINO 코드 보관용입니다.
+- 루트의 `diffusion/`은 ignored cache 잔재입니다. 새 작업은 `src/diffusion/` 기준으로 보는 게 맞습니다.
+- `models/`는 현재 모델 코드가 아니라 ignored local pretrained/legacy bulk 파일입니다. 실제 CDiT 구현은 `src/models/backbones/cdit.py`입니다.
+- DINO 외부 코드는 추적되는 `third_party/facebookresearch_dino_main/`을 기준으로 사용합니다.
 
 ## 한 줄 실행 흐름
 

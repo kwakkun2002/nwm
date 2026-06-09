@@ -25,18 +25,20 @@ import torch
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
 
-import yaml
 import argparse
 import numpy as np
 
 from src.diffusion import create_diffusion
-from src.core.io.paths import DEFAULT_EVAL_ARTIFACT_ROOT, get_checkpoint_path
+from src.config import load_experiment_config
+from src.core.paths import DEFAULT_EVAL_ARTIFACT_ROOT, get_checkpoint_path
 from src.models.checkpoints.vae import load_vae
 import src.core.env.distributed as dist
 from src.models.backbones.cdit import CDiT_models
 from src.features.text.pipeline import get_text_conditioning_config
+from src.data.datasets.factory import build_eval_dataset
+from src.evaluation.metrics.logger import MetricLogger
 from src.evaluation.inference.rollout import (
-    model_forward_wrapper, get_dataset_eval, generate_rollout, generate_time,
+    generate_rollout, generate_time,
 )
 
 @torch.no_grad()
@@ -62,13 +64,7 @@ def main(args):
 
     os.makedirs(args.save_output_dir, exist_ok=True)
 
-    with open("configs/evaluation/eval_config.yaml", "r") as f:
-        default_config = yaml.safe_load(f)
-    config = default_config
-
-    with open(exp_eval, "r") as f:
-        user_config = yaml.safe_load(f)
-    config.update(user_config)
+    config = load_experiment_config(exp_eval)
     text_config = get_text_conditioning_config(config)
 
     latent_size = config['image_size'] // 8
@@ -100,7 +96,7 @@ def main(args):
     datasets = {}
 
     for dataset_name in dataset_names:
-        dataset_val = get_dataset_eval(config, dataset_name, args.eval_type, predefined_index=True)
+        dataset_val = build_eval_dataset(config, dataset_name, args.eval_type, predefined_index=True)
 
         if len(dataset_val) % num_tasks != 0:
             print('Warning: Enabling distributed evaluation with an eval dataset not divisible by process number. '
@@ -120,7 +116,7 @@ def main(args):
 
     print_freq = 1
     header = 'Evaluation: '
-    metric_logger = dist.MetricLogger(delimiter="  ")
+    metric_logger = MetricLogger(delimiter="  ")
 
     for dataset_name in dataset_names:
         dataset_save_output_dir = os.path.join(args.save_output_dir, dataset_name)

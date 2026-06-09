@@ -91,13 +91,11 @@ train_until_checkpoint() {
   local label="$1"
   local checkpoint_dir="$2"
   local target_checkpoint="$3"
-  local initial_config="$4"
-  local resume_config="$5"
+  local config="$4"
 
   local latest_checkpoint="${checkpoint_dir}/latest.pth.tar"
   while [ ! -f "$target_checkpoint" ]; do
-    wait_for_stage "scripts/train.py --config ${initial_config}" "${label} training"
-    wait_for_stage "scripts/train.py --config ${resume_config}" "${label} resume training"
+    wait_for_stage "scripts/train.py --config ${config}" "${label} training"
 
     if [ -f "$target_checkpoint" ]; then
       break
@@ -106,14 +104,14 @@ train_until_checkpoint() {
     if [ ! -f "$latest_checkpoint" ]; then
       train_stage \
         "${label}_initial_to_30k" \
-        "$initial_config" \
+        "$config" \
         "$TRAIN_EPOCHS_TO_30K"
     else
       local next_epochs
       next_epochs="$(next_epochs_for_target "$latest_checkpoint")"
       train_stage \
         "${label}_resume_to_30k" \
-        "$resume_config" \
+        "$config" \
         "$next_epochs"
     fi
   done
@@ -213,8 +211,7 @@ if [ ! -f "$NO_TEXT_30K" ]; then
     "nwm_cdit_b_recon_128" \
     "weights/checkpoints/nwm_cdit_b_recon_128" \
     "$NO_TEXT_30K" \
-    "configs/experiment/nwm_cdit_b_recon_128.yaml" \
-    "configs/experiment/nwm_cdit_b_recon_128_resume.yaml"
+    "configs/experiment/nwm_cdit_b_recon_128.yaml"
 fi
 
 if [ ! -f "$NO_TEXT_10K" ]; then
@@ -227,8 +224,7 @@ if [ ! -f "$TEXT_30K" ]; then
     "nwm_cdit_b_recon_128_text_dense" \
     "weights/checkpoints/nwm_cdit_b_recon_128_text_dense" \
     "$TEXT_30K" \
-    "configs/experiment/nwm_cdit_b_recon_128_text_dense.yaml" \
-    "configs/experiment/nwm_cdit_b_recon_128_text_dense_resume.yaml"
+    "configs/experiment/nwm_cdit_b_recon_128_text_dense.yaml"
 fi
 
 if [ ! -f "$RAW_TEXT_30K" ]; then
@@ -240,8 +236,7 @@ if [ ! -f "$RAW_TEXT_30K" ]; then
       "nwm_cdit_b_recon_raw_text_dense" \
       "weights/checkpoints/nwm_cdit_b_recon_raw_text_dense" \
       "$RAW_TEXT_30K" \
-      "configs/experiment/nwm_cdit_b_recon_raw_text_dense.yaml" \
-      "configs/experiment/nwm_cdit_b_recon_raw_text_dense_resume.yaml"
+      "configs/experiment/nwm_cdit_b_recon_raw_text_dense.yaml"
   fi
 fi
 
