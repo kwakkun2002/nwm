@@ -52,6 +52,13 @@ from src.evaluation.metrics.perceptual import save_metric_to_disk
 import src.core.env.distributed as dist
 from src.models.backbones.cdit import CDiT_models
 from src.features.text.pipeline import get_text_conditioning_config
+from src.evaluation.planning.navigation_ranker import (
+    DEFAULT_DINO_WEIGHTS,
+    DinoFeatureExtractor,
+    build_ranker_features,
+    load_ranker_checkpoint,
+    score_with_ranker,
+)
 
 
 with open("configs/data/data_config.yaml", "r") as f:
@@ -179,13 +186,12 @@ class WM_Planning_Evaluator:
         self.latent_size = self.config['image_size'] // 8
         self.num_cond = self.config['eval_context_size']
         
-        # logging directory
-        if self.args.save_preds:
-            if self.args.output_dir is None:
-                self.args.output_dir = os.path.join(DEFAULT_PLANNING_ARTIFACT_ROOT, "manual")
-            exp_name = os.path.basename(self.args.exp).split('.')[0]
-            self.args.save_output_dir = os.path.join(self.args.output_dir, exp_name)
-            os.makedirs(self.args.save_output_dir, exist_ok=True)
+        # Metric JSONs are always written; predictions/plots reuse this root when enabled.
+        if self.args.output_dir is None:
+            self.args.output_dir = os.path.join(DEFAULT_PLANNING_ARTIFACT_ROOT, "manual")
+        exp_name = os.path.basename(self.args.exp).split('.')[0]
+        self.args.save_output_dir = os.path.join(self.args.output_dir, exp_name)
+        os.makedirs(self.args.save_output_dir, exist_ok=True)
                 
         # Loading Datasets
         self.dataset_names = self.args.datasets.split(',')
@@ -193,8 +199,9 @@ class WM_Planning_Evaluator:
         for dataset_name in self.dataset_names:
             dataset_val = get_dataset_eval(self.config, dataset_name, predefined_index=True)
             if self.args.max_eval_samples is not None:
-                max_eval_samples = min(self.args.max_eval_samples, len(dataset_val))
-                dataset_val = torch.utils.data.Subset(dataset_val, range(max_eval_samples))
+                start_index = min(self.args.eval_start_index, len(dataset_val))
+                end_index = min(start_index + self.args.max_eval_samples, len(dataset_val))
+                dataset_val = torch.utils.data.Subset(dataset_val, range(start_index, end_index))
             
             if len(dataset_val) % num_tasks != 0:
                 print('Warning: Enabling distributed evaluation with an eval dataset not divisible by process number. '
@@ -237,20 +244,84 @@ class WM_Planning_Evaluator:
         self.topk = self.args.topk
         self.opt_steps = self.args.opt_steps
         self.num_repeat_eval = self.args.num_repeat_eval
-        self.action_dim = 3 # hardcoded (delta_x, delta_y, delta_yaw)
+        self.action_sampler = self.args.action_sampler
+        self.learned_cost_model = None
+        self.learned_cost_checkpoint = None
+        self.learned_cost_dino = None
+        if self.args.learned_cost_ckpt:
+            self.learned_cost_model, self.learned_cost_checkpoint = load_ranker_checkpoint(self.args.learned_cost_ckpt, self.device)
+            metadata = self.learned_cost_checkpoint.get("dataset_metadata", {})
+            dino_weights = self.args.learned_cost_dino_weights or metadata.get("dino_weights", DEFAULT_DINO_WEIGHTS)
+            dino_arch = metadata.get("dino_arch", "vit_base")
+            self.learned_cost_dino = DinoFeatureExtractor(dino_weights, dino_arch).to(self.device).eval()
 
     def init_mu_sigma(self, obs_0, traj_len):
         n_evals = obs_0.shape[0]
-        mu = torch.zeros(n_evals, self.action_dim) 
-        mu[:, ] = torch.tensor(data_hyperparams[self.args.datasets]['mu'])
-        sigma = torch.ones([n_evals, self.action_dim])
-        sigma[:, ] = torch.tensor(data_hyperparams[self.args.datasets]['var_scale']) 
+        action_mu = torch.tensor(data_hyperparams[self.args.datasets]['mu'], dtype=torch.float32)
+        action_sigma = torch.tensor(data_hyperparams[self.args.datasets]['var_scale'], dtype=torch.float32)
+
+        if self.action_sampler == "repeat":
+            mu = action_mu.unsqueeze(0).repeat(n_evals, 1)
+            sigma = action_sigma.unsqueeze(0).repeat(n_evals, 1)
+            return mu, sigma
+
+        xy_mu = action_mu[:2].repeat(traj_len)
+        xy_sigma = action_sigma[:2].repeat(traj_len)
+        mu = torch.cat((xy_mu, action_mu[2:3])).unsqueeze(0).repeat(n_evals, 1)
+        sigma = torch.cat((xy_sigma, action_sigma[2:3])).unsqueeze(0).repeat(n_evals, 1)
         return mu, sigma
+
+    def action_params_to_deltas(self, action_params, len_traj_pred):
+        if self.action_sampler == "repeat":
+            xy_deltas = action_params[:, :2].unsqueeze(1).repeat(1, len_traj_pred, 1)
+            final_yaw_offset = action_params[:, -1]
+        else:
+            xy_dim = len_traj_pred * 2
+            xy_deltas = action_params[:, :xy_dim].reshape(-1, len_traj_pred, 2)
+            final_yaw_offset = action_params[:, xy_dim]
+
+        xy_deltas = xy_deltas.clamp(-1.0, 1.0)
+        unnorm_deltas = unnormalize_data(xy_deltas, ACTION_STATS_TORCH)
+        delta_yaw = calculate_delta_yaw(unnorm_deltas)
+        deltas = torch.cat((xy_deltas, delta_yaw.to(xy_deltas.device)), dim=-1)
+        deltas[:, -1, -1] += final_yaw_offset.clamp(-1.0, 1.0) * np.pi
+        return deltas
+
+    def action_regularization_cost(self, deltas):
+        cost = torch.zeros(deltas.shape[0], device=deltas.device, dtype=deltas.dtype)
+        if self.args.action_smoothness_weight > 0:
+            step_delta = deltas[:, 1:, :2] - deltas[:, :-1, :2]
+            smoothness = step_delta.pow(2).mean(dim=(1, 2))
+            cost = cost + self.args.action_smoothness_weight * smoothness
+        return cost
+
+    def learned_navigation_cost(self, pred_images, goal_images, deltas):
+        if self.learned_cost_model is None or self.args.learned_cost_weight == 0:
+            return torch.zeros(deltas.shape[0], device=deltas.device, dtype=deltas.dtype)
+        features = build_ranker_features(
+            pred_images,
+            goal_images,
+            deltas.detach().cpu(),
+            self.learned_cost_dino,
+            ACTION_STATS_TORCH,
+            dino_batch_size=self.args.learned_cost_dino_batch_size,
+        )
+        learned_cost = score_with_ranker(
+            features,
+            self.learned_cost_model,
+            self.learned_cost_checkpoint,
+            self.device,
+        )
+        return self.args.learned_cost_weight * learned_cost.to(device=deltas.device, dtype=deltas.dtype)
         
     def generate_actions(self, dataset_save_output_dir, dataset_name, idxs, obs_image, goal_image, gt_actions, len_traj_pred, text_emb=None):
         idx_string = "_".join(map(str, idxs.flatten().int().tolist())) 
-        image_plot_dir = os.path.join(dataset_save_output_dir, 'plots')
-        os.makedirs(image_plot_dir, exist_ok=True)
+        image_plot_dir = None
+        if self.args.plot:
+            if dataset_save_output_dir is None:
+                raise ValueError("--plot requires an output directory for planning visualizations")
+            image_plot_dir = os.path.join(dataset_save_output_dir, 'plots')
+            os.makedirs(image_plot_dir, exist_ok=True)
         
         n_evals = obs_image.shape[0]
         mu, sigma = self.init_mu_sigma(obs_image, len_traj_pred)
@@ -260,13 +331,8 @@ class WM_Planning_Evaluator:
             losses = []
             for traj in range(n_evals):
                 traj_id = int(idxs.flatten()[traj].item())
-                sample = (torch.randn(self.num_samples, self.action_dim).to(self.device) * sigma[traj] + mu[traj])
-                single_delta = sample[:, :2]
-                deltas = single_delta.unsqueeze(1).repeat(1, len_traj_pred, 1)
-                unnorm_deltas = unnormalize_data(deltas, ACTION_STATS_TORCH)
-                delta_yaw = calculate_delta_yaw(unnorm_deltas)
-                deltas = torch.cat((deltas, delta_yaw.to(deltas.device)), dim=-1)
-                deltas[:, -1, -1] += sample[:, -1] * np.pi
+                sample = (torch.randn(self.num_samples, mu.shape[-1]).to(self.device) * sigma[traj] + mu[traj])
+                deltas = self.action_params_to_deltas(sample, len_traj_pred)
 
                 cur_obs_image = obs_image[traj].unsqueeze(0).repeat(self.num_samples, 1, 1, 1, 1) 
                 cur_goal_image = goal_image[traj].unsqueeze(0).repeat(self.args.num_samples, 1, 1, 1, 1).squeeze(1)
@@ -279,9 +345,11 @@ class WM_Planning_Evaluator:
                         preds = self.autoregressive_rollout(cur_obs_image, deltas, self.args.rollout_stride, text_emb=cur_text_emb)
                         preds = preds[:, -1] # take the last predicted image
                         loss = self.loss_fn(preds.to(self.device), cur_goal_image.to(self.device)).flatten(0)
+                        loss = loss + self.learned_navigation_cost(preds, cur_goal_image, deltas).to(loss)
                         cur_losses.append(loss)
 
                     loss = torch.stack(cur_losses).mean(dim=0)
+                    loss = loss + self.action_regularization_cost(deltas).to(loss)
                 else:
                     expanded_deltas = deltas.repeat(self.num_repeat_eval, 1, 1) 
                     expanded_obs_image = cur_obs_image.repeat(self.num_repeat_eval, 1, 1, 1, 1) 
@@ -292,30 +360,25 @@ class WM_Planning_Evaluator:
                     preds = preds[:, -1]
 
                     loss = self.loss_fn(preds.to(self.device), expanded_goal_image.to(self.device)).flatten(0)
+                    loss = loss + self.learned_navigation_cost(preds, expanded_goal_image, expanded_deltas).to(loss)
                     loss = loss.view(self.num_repeat_eval, -1)
                     loss = loss.mean(dim=0)
+                    loss = loss + self.action_regularization_cost(deltas).to(loss)
 
                     preds = preds[:self.args.num_samples]
 
                 sorted_idx = torch.argsort(loss)
                 topk_idx = sorted_idx[:self.topk]
-                topk_action = deltas[topk_idx][:, -1]
+                topk_action = sample[topk_idx]
                 losses.append(loss[topk_idx[0]].item())   
                 mu[traj] = topk_action.mean(dim=0)
-                sigma[traj] = topk_action.std(dim=0)
+                sigma[traj] = topk_action.std(dim=0, unbiased=False).clamp_min(self.args.min_action_std)
 
                 if self.args.plot:
                     self.visualize_trajectories(dataset_name, gt_actions, image_plot_dir, i, traj, traj_id, deltas, cur_obs_image, cur_goal_image, preds, loss, topk_idx)                    
         
         # Final rollout 
-        deltas = mu[:, :2]
-        deltas = deltas.unsqueeze(1).repeat(1, len_traj_pred, 1)
-
-        # Calculate yaws
-        unnorm_deltas = unnormalize_data(deltas, ACTION_STATS_TORCH)
-        delta_yaw = calculate_delta_yaw(unnorm_deltas)
-        deltas = torch.cat((deltas, delta_yaw.to(deltas.device)), dim=-1)
-        deltas[:, -1, -1] += mu[:, -1] * np.pi
+        deltas = self.action_params_to_deltas(mu, len_traj_pred)
 
         preds = self.autoregressive_rollout(obs_image, deltas, self.args.rollout_stride, text_emb=text_emb)
         preds = preds[:, -1] # take the last predicted image
@@ -383,7 +446,16 @@ class WM_Planning_Evaluator:
     
     def get_eval_name(self):
         # Get evaluation name for logging. Should overwrite for specific experiments
-        self.eval_name = f'CEM_N{self.args.num_samples}_K{self.args.topk}_RS{self.args.rollout_stride}_rep{self.args.num_repeat_eval}_OPT{self.args.opt_steps}'
+        sampler_name = "seq" if self.args.action_sampler == "sequence" else "repeat"
+        smoothness_suffix = ""
+        if self.args.action_smoothness_weight > 0:
+            smoothness = f"{self.args.action_smoothness_weight:g}".replace(".", "p")
+            smoothness_suffix = f"_SM{smoothness}"
+        learned_suffix = ""
+        if self.args.learned_cost_ckpt:
+            learned_weight = f"{self.args.learned_cost_weight:g}".replace(".", "p")
+            learned_suffix = f"_LC{learned_weight}"
+        self.eval_name = f'CEM_{sampler_name}_N{self.args.num_samples}_K{self.args.topk}_RS{self.args.rollout_stride}_rep{self.args.num_repeat_eval}_OPT{self.args.opt_steps}{smoothness_suffix}{learned_suffix}'
         
     def actions_to_traj(self, actions):
         positions_xyz = torch.zeros((actions.shape[0], 3))
@@ -402,7 +474,7 @@ class WM_Planning_Evaluator:
             header = 'Test:'
             eval_save_output_dir = None
             
-            if self.args.save_preds:
+            if self.args.save_preds or self.args.plot:
                 dataset_save_output_dir = os.path.join(self.args.save_output_dir, dataset_name)
                 os.makedirs(dataset_save_output_dir, exist_ok=True)
                 eval_save_output_dir = os.path.join(dataset_save_output_dir, self.eval_name)
@@ -485,7 +557,15 @@ def build_parser():
     parser.add_argument("--topk", type=int, default=5, help="top k samples to take mean and var for CEM")
     parser.add_argument("--opt_steps", type=int, default=15, help="num iterations for CEM")
     parser.add_argument("--num_repeat_eval", type=int, default=1, help="number of evals for one action")
+    parser.add_argument("--action_sampler", type=str, default="sequence", choices=["sequence", "repeat"], help="sample per-step action sequences or legacy repeated actions")
+    parser.add_argument("--min_action_std", type=float, default=1e-3, help="minimum CEM std after top-k refitting")
+    parser.add_argument("--action_smoothness_weight", type=float, default=0.0, help="penalty weight for changes between consecutive sampled xy deltas")
+    parser.add_argument("--learned_cost_ckpt", type=str, default=None, help="optional navigation ranker checkpoint for learned CEM cost")
+    parser.add_argument("--learned_cost_weight", type=float, default=1.0, help="weight for learned navigation cost")
+    parser.add_argument("--learned_cost_dino_weights", type=str, default=None, help="override DINO weights used by learned navigation cost")
+    parser.add_argument("--learned_cost_dino_batch_size", type=int, default=64, help="DINO batch size for learned navigation cost")
     parser.add_argument("--max_eval_samples", type=int, default=None, help="limit planning eval samples for smoke tests")
+    parser.add_argument("--eval_start_index", type=int, default=0, help="first eval sample index when max_eval_samples is set")
     parser.add_argument("--plot", action="store_true", default=False)
     return parser
 

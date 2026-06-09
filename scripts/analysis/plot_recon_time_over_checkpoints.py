@@ -31,23 +31,30 @@ RUN_LATEST_RE = re.compile(r"^(?P<prefix>.+)_latest$")
 NEW_KEY_RE = re.compile(r"^recon_time_(?P<metric>lpips|dreamsim|fid)_(?P<horizon>\d+s)$")
 OLD_KEY_RE = re.compile(r"^(?P<prefix>.+)_(?P<metric>lpips|dreamsim|fid)_(?P<horizon>\d+s)$")
 
-SERIES = [
-    {
-        "label": "128 No Text",
-        "checkpoint_root": Path("weights/checkpoints/nwm_cdit_s_recon_128"),
-        "artifact_root": Path("artifacts/summaries/eval/eval_s_recon_128"),
-    },
-    {
-        "label": "128 Text Dense",
-        "checkpoint_root": Path("weights/checkpoints/nwm_cdit_s_recon_128_text_dense"),
-        "artifact_root": Path("artifacts/summaries/eval/eval_s_recon_128_text_dense"),
-    },
-    {
-        "label": "Raw Text Dense",
-        "checkpoint_root": Path("weights/checkpoints/nwm_cdit_s_recon_raw_text_dense"),
-        "artifact_root": Path("artifacts/summaries/eval/eval_s_recon_raw_text_dense"),
-    },
-]
+MODEL_LABELS = {
+    "s": "CDiT-S",
+    "b": "CDiT-B",
+}
+
+
+def build_series(model_size: str) -> list[dict]:
+    return [
+        {
+            "label": "128 No Text",
+            "checkpoint_root": Path(f"weights/checkpoints/nwm_cdit_{model_size}_recon_128"),
+            "artifact_root": Path(f"artifacts/summaries/eval/eval_{model_size}_recon_128"),
+        },
+        {
+            "label": "128 Text Dense",
+            "checkpoint_root": Path(f"weights/checkpoints/nwm_cdit_{model_size}_recon_128_text_dense"),
+            "artifact_root": Path(f"artifacts/summaries/eval/eval_{model_size}_recon_128_text_dense"),
+        },
+        {
+            "label": "Raw Text Dense",
+            "checkpoint_root": Path(f"weights/checkpoints/nwm_cdit_{model_size}_recon_raw_text_dense"),
+            "artifact_root": Path(f"artifacts/summaries/eval/eval_{model_size}_recon_raw_text_dense"),
+        },
+    ]
 
 
 def load_json(path: Path) -> dict:
@@ -114,6 +121,9 @@ def extract_metric_map(data: dict) -> dict[str, dict[str, float]]:
 
 
 def discover_json_paths(artifact_root: Path) -> list[Path]:
+    if not artifact_root.exists():
+        return []
+
     json_paths = []
     for run_dir in sorted(path for path in artifact_root.iterdir() if path.is_dir()):
         for candidate in (run_dir / "recon_time.json", run_dir / "recon" / "recon_time.json"):
@@ -164,9 +174,9 @@ def dedupe_rows(rows: list[dict]) -> list[dict]:
     return list(deduped.values())
 
 
-def build_rows(repo_root: Path) -> list[dict]:
+def build_rows(repo_root: Path, series_list: list[dict]) -> list[dict]:
     rows = []
-    for series in SERIES:
+    for series in series_list:
         rows.extend(discover_records(series, repo_root))
     rows = dedupe_rows(rows)
     rows.sort(key=lambda row: (row["series"], row["step"], row["metric"], HORIZONS.index(row["horizon"])))
@@ -192,7 +202,7 @@ def write_csv(rows: list[dict], output_path: Path) -> None:
             )
 
 
-def plot(rows: list[dict], output_path: Path) -> None:
+def plot(rows: list[dict], series_list: list[dict], output_path: Path, model_size: str) -> None:
     plt.rcParams.update(
         {
             "font.family": "DejaVu Sans",
@@ -203,10 +213,10 @@ def plot(rows: list[dict], output_path: Path) -> None:
         }
     )
 
-    fig, axes = plt.subplots(len(SERIES), len(METRICS), figsize=(17, 12.5), dpi=170, sharex=False)
+    fig, axes = plt.subplots(len(series_list), len(METRICS), figsize=(17, 12.5), dpi=170, sharex=False)
     fig.patch.set_facecolor("#f5efe6")
     fig.suptitle(
-        "RECON Time Metrics Across Checkpoints",
+        f"RECON {MODEL_LABELS[model_size]} Time Metrics Across Checkpoints",
         fontsize=22,
         fontweight="bold",
         x=0.055,
@@ -225,7 +235,7 @@ def plot(rows: list[dict], output_path: Path) -> None:
 
     all_steps = sorted({row["step"] for row in rows})
 
-    for row_idx, series in enumerate(SERIES):
+    for row_idx, series in enumerate(series_list):
         series_label = series["label"]
         for col_idx, metric in enumerate(METRICS):
             ax = axes[row_idx][col_idx]
@@ -260,7 +270,7 @@ def plot(rows: list[dict], output_path: Path) -> None:
                 ax.set_title(METRIC_LABELS[metric], fontsize=14, fontweight="bold", pad=12)
             if col_idx == 0:
                 ax.set_ylabel(series_label, fontsize=12, fontweight="bold")
-            if row_idx == len(SERIES) - 1:
+            if row_idx == len(series_list) - 1:
                 ax.set_xlabel("Training step")
 
             if metric == "fid":
@@ -288,8 +298,11 @@ def plot(rows: list[dict], output_path: Path) -> None:
     plt.close(fig)
 
 
-def default_paths(repo_root: Path) -> tuple[Path, Path]:
-    output_dir = repo_root / "artifacts" / "profiling" / "recon_time_over_checkpoints"
+def default_paths(repo_root: Path, model_size: str) -> tuple[Path, Path]:
+    output_name = "recon_time_over_checkpoints"
+    if model_size != "s":
+        output_name = f"{output_name}_cdit_{model_size}"
+    output_dir = repo_root / "artifacts" / "profiling" / output_name
     return (
         output_dir / "01_recon_time_over_checkpoints.csv",
         output_dir / "01_recon_time_over_checkpoints.png",
@@ -299,19 +312,24 @@ def default_paths(repo_root: Path) -> tuple[Path, Path]:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--repo-root", type=Path, default=Path(__file__).resolve().parents[2])
+    parser.add_argument("--model-size", choices=sorted(MODEL_LABELS), default="s")
     parser.add_argument("--csv-path", type=Path, default=None)
     parser.add_argument("--png-path", type=Path, default=None)
     args = parser.parse_args()
 
-    csv_path, png_path = default_paths(args.repo_root)
+    series_list = build_series(args.model_size)
+    csv_path, png_path = default_paths(args.repo_root, args.model_size)
     if args.csv_path is not None:
         csv_path = args.csv_path
     if args.png_path is not None:
         png_path = args.png_path
 
-    rows = build_rows(args.repo_root)
+    rows = build_rows(args.repo_root, series_list)
+    if not rows:
+        series_roots = ", ".join(str(series["artifact_root"]) for series in series_list)
+        raise FileNotFoundError(f"No recon_time summaries found for {MODEL_LABELS[args.model_size]} under: {series_roots}")
     write_csv(rows, csv_path)
-    plot(rows, png_path)
+    plot(rows, series_list, png_path, args.model_size)
     print(f"Saved CSV to {csv_path}")
     print(f"Saved plot to {png_path}")
 

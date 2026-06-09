@@ -187,6 +187,7 @@ torchrun --nproc-per-node=8 scripts/plan_eval.py \
     --batch_size 1   \
     --num_samples 120   \
     --topk 5   \
+    --action_sampler sequence   \
     --num_workers 12   \
     --output_dir ${RESULTS_FOLDER}   \
     --save_preds   \

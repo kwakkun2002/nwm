@@ -7,6 +7,32 @@ from pathlib import Path
 
 
 EXPERIMENTS = {
+    "nwm_cdit_b": {
+        "config": Path("configs/experiment/nwm_cdit_b.yaml"),
+        "checkpoint_dir": Path("weights/checkpoints/nwm_cdit_b"),
+        "suite": "lpips_time_recon_b",
+        "gt_suite": "lpips_time_recon_b",
+        "checkpoint_names": ["0100000"],
+        "default_output_checkpoint": "0100000.pth.tar",
+    },
+    "nwm_cdit_b_recon_128": {
+        "config": Path("configs/experiment/nwm_cdit_b_recon_128.yaml"),
+        "checkpoint_dir": Path("weights/checkpoints/nwm_cdit_b_recon_128"),
+        "suite": "eval_b_recon_128",
+        "gt_suite": "eval_b_recon_128",
+    },
+    "nwm_cdit_b_recon_128_text_dense": {
+        "config": Path("configs/experiment/nwm_cdit_b_recon_128_text_dense.yaml"),
+        "checkpoint_dir": Path("weights/checkpoints/nwm_cdit_b_recon_128_text_dense"),
+        "suite": "eval_b_recon_128_text_dense",
+        "gt_suite": "eval_b_recon_128",
+    },
+    "nwm_cdit_b_recon_raw_text_dense": {
+        "config": Path("configs/experiment/nwm_cdit_b_recon_raw_text_dense.yaml"),
+        "checkpoint_dir": Path("weights/checkpoints/nwm_cdit_b_recon_raw_text_dense"),
+        "suite": "eval_b_recon_raw_text_dense",
+        "gt_suite": "lpips_time_recon_b",
+    },
     "nwm_cdit_s_recon_128": {
         "config": Path("configs/experiment/nwm_cdit_s_recon_128.yaml"),
         "checkpoint_dir": Path("weights/checkpoints/nwm_cdit_s_recon_128"),
@@ -27,6 +53,12 @@ EXPERIMENTS = {
     },
 }
 
+DEFAULT_EXPERIMENTS = (
+    "nwm_cdit_s_recon_128",
+    "nwm_cdit_s_recon_128_text_dense",
+    "nwm_cdit_s_recon_raw_text_dense",
+)
+
 
 def run_command(cmd: list[str], dry_run: bool) -> None:
     print("+", " ".join(cmd))
@@ -44,7 +76,15 @@ def load_checkpoint_steps(checkpoint_paths: list[Path]) -> dict[str, int | None]
     return checkpoint_steps
 
 
-def build_checkpoint_list(checkpoint_dir: Path, include_latest: bool) -> list[Path]:
+def build_checkpoint_list(checkpoint_dir: Path, include_latest: bool, checkpoint_names: list[str] | None = None) -> list[Path]:
+    if checkpoint_names is not None:
+        checkpoint_paths = []
+        for checkpoint_name in checkpoint_names:
+            if not checkpoint_name.endswith(".pth.tar"):
+                checkpoint_name = f"{checkpoint_name}.pth.tar"
+            checkpoint_paths.append(checkpoint_dir / checkpoint_name)
+        return checkpoint_paths
+
     checkpoint_paths = sorted(
         path
         for path in checkpoint_dir.glob("*.pth.tar")
@@ -53,7 +93,14 @@ def build_checkpoint_list(checkpoint_dir: Path, include_latest: bool) -> list[Pa
     return checkpoint_paths
 
 
-def output_dir_for_checkpoint(output_root: Path, exp_name: str, checkpoint_name: str) -> Path:
+def output_dir_for_checkpoint(
+    output_root: Path,
+    exp_name: str,
+    checkpoint_name: str,
+    default_output_checkpoint: str | None = None,
+) -> Path:
+    if default_output_checkpoint is not None and checkpoint_name == default_output_checkpoint:
+        return output_root / exp_name
     checkpoint_stem = checkpoint_name.replace(".pth.tar", "")
     return output_root / f"{exp_name}_{checkpoint_stem}"
 
@@ -100,7 +147,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Run time evaluation for a checkpoint sweep.")
     parser.add_argument(
         "--experiments",
-        default=",".join(EXPERIMENTS.keys()),
+        default=",".join(DEFAULT_EXPERIMENTS),
         help="Comma-separated experiment names.",
     )
     parser.add_argument("--dataset", default="recon")
@@ -135,15 +182,33 @@ def main() -> None:
         gt_dir = bulk_root / exp_cfg["gt_suite"] / "gt"
         gt_ready = gt_dir.exists()
 
-        checkpoint_paths = build_checkpoint_list(exp_cfg["checkpoint_dir"], include_latest=include_latest)
+        checkpoint_paths = build_checkpoint_list(
+            exp_cfg["checkpoint_dir"],
+            include_latest=include_latest,
+            checkpoint_names=exp_cfg.get("checkpoint_names"),
+        )
+        if not checkpoint_paths:
+            print(f"[{exp_name}] No checkpoints found in {exp_cfg['checkpoint_dir']}; skipping.")
+            continue
         checkpoint_steps = load_checkpoint_steps(checkpoint_paths) if not dry_run else {}
+        default_output_checkpoint = exp_cfg.get("default_output_checkpoint")
 
         for checkpoint_path in checkpoint_paths:
             checkpoint_name = checkpoint_path.name
             checkpoint_stem = checkpoint_name.replace(".pth.tar", "")
-            exp_output_dir = output_dir_for_checkpoint(output_root, exp_name, checkpoint_name)
+            exp_output_dir = output_dir_for_checkpoint(
+                output_root,
+                exp_name,
+                checkpoint_name,
+                default_output_checkpoint=default_output_checkpoint,
+            )
             metric_json_path = exp_output_dir / f"{args.dataset}_time.json"
-            summary_json_path = output_dir_for_checkpoint(summary_exp_root, exp_name, checkpoint_name) / f"{args.dataset}_time.json"
+            summary_json_path = output_dir_for_checkpoint(
+                summary_exp_root,
+                exp_name,
+                checkpoint_name,
+                default_output_checkpoint=default_output_checkpoint,
+            ) / f"{args.dataset}_time.json"
             train_steps = checkpoint_steps.get(checkpoint_name)
 
             if skip_existing and (summary_json_path.exists() or metric_json_path.exists()):
