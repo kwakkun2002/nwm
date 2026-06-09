@@ -1,0 +1,5 @@
+sampler,cem,smoothness_weight,ate,rpe_trans,pos_error,yaw_error,total_time,json_path
+repeat,N32/K5/OPT1,0.0,1.4888977608202139,0.42051826995653574,2.4473445892333983,0.5756936550140381,270.8891513347626,artifacts/bulk/planning/recon128_s_notext_0030000_repeat_n32_smoke/nwm_cdit_s_recon_128/recon_CEM_repeat_N32_K5_RS1_rep1_OPT1.json
+sequence,N32/K5/OPT1,0.0,1.6139438233835772,0.4883462645022211,2.875483512878418,0.556075143814087,274.2132315635681,artifacts/bulk/planning/recon128_s_notext_0030000_seq_n32_smoke/nwm_cdit_s_recon_128/recon_CEM_seq_N32_K5_RS1_rep1_OPT1.json
+sequence,N64/K8/OPT2,0.0,1.638592211556531,0.505875105642305,2.850996971130371,0.5294727325439453,612.1393752098083,artifacts/bulk/planning/recon128_s_notext_0030000_seq_n64_opt2_smoke/nwm_cdit_s_recon_128/recon_CEM_seq_N64_K8_RS1_rep1_OPT2.json
+sequence,N64/K8/OPT2,10.0,1.450498496940788,0.4635296423205461,2.683867263793945,0.5453755378723144,605.165326833725,artifacts/bulk/planning/recon128_s_notext_0030000_seq_n64_opt2_sm10_smoke/nwm_cdit_s_recon_128/recon_CEM_seq_N64_K8_RS1_rep1_OPT2_SM10.json

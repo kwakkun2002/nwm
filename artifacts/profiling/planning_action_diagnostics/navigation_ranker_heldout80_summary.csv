@@ -1,0 +1,4 @@
+run,ate,rpe_trans,pos_error,yaw_error,total_time,json_path
+repeat N32 heldout80,1.525370724222473,0.4278889281435047,2.158190155029297,0.3380256652832031,516.5587339401245,artifacts/bulk/planning/recon128_heldout80_repeat_n32/nwm_cdit_s_recon_128/recon_CEM_repeat_N32_K5_RS1_rep1_OPT1.json
+sequence N32 heldout80,2.056832195838769,0.5935569428641363,3.4369720458984374,0.4757495880126953,517.5908226966858,artifacts/bulk/planning/recon128_heldout80_seq_n32/nwm_cdit_s_recon_128/recon_CEM_seq_N32_K5_RS1_rep1_OPT1.json
+sequence N32 LC train80 w0.1 heldout80,1.8838489091552255,0.5545303771037459,3.163835144042969,0.4122203826904297,523.3453826904297,artifacts/bulk/planning/recon128_heldout80_seq_n32_lc_train80_w0p1/nwm_cdit_s_recon_128/recon_CEM_seq_N32_K5_RS1_rep1_OPT1_LC0p1.json
