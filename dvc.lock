@@ -1,0 +1,118 @@
+schema: '2.0'
+stages:
+  smoke_recon_forward:
+    cmd: ./scripts/docker/nwm-run.sh "python tests/smoke/recon_smoke_test.py 
+      --eval-config configs/evaluation/eval_config.yaml --model-config 
+      configs/experiment/nwm_cdit_s_recon_128.yaml --checkpoint 
+      weights/checkpoints/nwm_cdit_s_recon_128/latest.pth.tar --dataset recon 
+      --eval-type time --horizon-steps 8 --output-dir artifacts/dvc/smoke/recon"
+    deps:
+    - path: configs/evaluation/eval_config.yaml
+      hash: md5
+      md5: 7d5cfc71050f86cffec21178be6dd93c
+      size: 900
+    - path: configs/experiment/nwm_cdit_s_recon_128.yaml
+      hash: md5
+      md5: f650a17c626d8f2ff7ee088aa879e503
+      size: 355
+    - path: data/splits/recon/test
+      hash: md5
+      md5: a7ad7e6f7a6c8ea0ae63d52f9137bf92.dir
+      size: 1801825
+      nfiles: 6
+    - path: datasets/recon_raw/recon_release
+      hash: md5
+      md5: ede698434e66f37de8cf880f0b32fe5d.dir
+      size: 76383437178
+      nfiles: 11836
+    - path: src/config.py
+      hash: md5
+      md5: fa7f2e482b104c9c239121b8366b976c
+      size: 6038
+    - path: src/data/datasets
+      hash: md5
+      md5: 9611b4e0abb4971e071d3114dfeffc69.dir
+      size: 20134
+      nfiles: 5
+    - path: src/data/transforms
+      hash: md5
+      md5: c92788340bdbad45477d13dfabf67908.dir
+      size: 3277
+      nfiles: 2
+    - path: src/diffusion
+      hash: md5
+      md5: 6e13a5013efaf1c5386c635af276dacf.dir
+      size: 57119
+      nfiles: 4
+    - path: src/evaluation/inference
+      hash: md5
+      md5: 7cb8863321a1a7760334914d26ff6b92.dir
+      size: 4054
+      nfiles: 1
+    - path: src/models
+      hash: md5
+      md5: 76f1981e00d993d87cf3be6701af7db8.dir
+      size: 19413
+      nfiles: 3
+    - path: tests/smoke/recon_smoke_test.py
+      hash: md5
+      md5: 7524f117295a8a5e1c25b8efed8c5de6
+      size: 8674
+    - path: weights/checkpoints/nwm_cdit_s_recon_128/latest.pth.tar
+      hash: md5
+      md5: dd6b6fa254da5e4b4a5ac18bda95d1cc
+      size: 783950455
+    outs:
+    - path: artifacts/dvc/smoke/recon
+      hash: md5
+      md5: cb985bd35844376877f5ad75332bb399.dir
+      size: 31423
+      nfiles: 1
+  smoke_recon_load:
+    cmd: ./scripts/docker/nwm-run.sh "python tests/smoke/recon_smoke_test.py 
+      --eval-config configs/evaluation/eval_config.yaml --model-config 
+      configs/experiment/nwm_cdit_s_recon_128.yaml --dataset recon --eval-type 
+      time --output-dir artifacts/dvc/smoke/recon_load --skip-forward"
+    deps:
+    - path: configs/evaluation/eval_config.yaml
+      hash: md5
+      md5: 7d5cfc71050f86cffec21178be6dd93c
+      size: 900
+    - path: configs/experiment/nwm_cdit_s_recon_128.yaml
+      hash: md5
+      md5: f650a17c626d8f2ff7ee088aa879e503
+      size: 355
+    - path: data/splits/recon/test
+      hash: md5
+      md5: a7ad7e6f7a6c8ea0ae63d52f9137bf92.dir
+      size: 1801825
+      nfiles: 6
+    - path: datasets/recon_raw/recon_release
+      hash: md5
+      md5: ede698434e66f37de8cf880f0b32fe5d.dir
+      size: 76383437178
+      nfiles: 11836
+    - path: src/config.py
+      hash: md5
+      md5: fa7f2e482b104c9c239121b8366b976c
+      size: 6038
+    - path: src/data/datasets
+      hash: md5
+      md5: 9611b4e0abb4971e071d3114dfeffc69.dir
+      size: 20134
+      nfiles: 5
+    - path: src/data/transforms
+      hash: md5
+      md5: c92788340bdbad45477d13dfabf67908.dir
+      size: 3277
+      nfiles: 2
+    - path: tests/smoke/recon_smoke_test.py
+      hash: md5
+      md5: 7524f117295a8a5e1c25b8efed8c5de6
+      size: 8674
+    outs:
+    - path: artifacts/dvc/smoke/recon_load
+      hash: md5
+      md5: 588e9f4ed7a05d1fd1d7853f259a100b.dir
+      size: 286
+      nfiles: 1

@@ -1,3 +1,5 @@
+# @package _global_
+
 trajectory_eval_distance:
   min_dist_cat: 8
   max_dist_cat: 8

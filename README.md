@@ -60,6 +60,17 @@ mamba install ffmpeg
 pip3 install decord einops evo transformers diffusers tqdm timm notebook dreamsim torcheval lpips ipywidgets
 ```
 
+This fork also includes Hydra, WandB, and DVC scaffolding for experiment
+management. Rebuild the Docker image or recreate the `env.yaml` environment to
+install the added runtime packages:
+
+```bash
+pip3 install hydra-core omegaconf wandb dvc
+```
+
+See [`docs/experiment_tracking.md`](docs/experiment_tracking.md) and
+[`docs/dvc.md`](docs/dvc.md) for the current workflow.
+
 ## Training
 
 Using torchrun:
@@ -85,6 +96,24 @@ python scripts/submitit_train.py --nodes 8 --partition <partition_name> --qos <q
 Or locally on one GPU for debug:
 ```bash
 python scripts/train.py --config configs/experiment/nwm_cdit_xl.yaml --ckpt-every 2000 --eval-every 10000 --bfloat16 1 --epochs 300  --torch-compile 0
+```
+
+Hydra override mode is also supported while preserving the legacy commands:
+
+```bash
+python scripts/train.py experiment=nwm_cdit_xl train.ckpt_every=2000 train.eval_every=10000 train.epochs=300 train.torch_compile=false
+```
+
+The submitit wrapper accepts the same Hydra overrides alongside submitit flags:
+
+```bash
+python scripts/submitit_train.py --nodes 8 --partition <partition_name> --qos <qos> experiment=nwm_cdit_xl train.ckpt_every=2000 train.eval_every=10000 train.epochs=300
+```
+
+Enable WandB logging only when desired:
+
+```bash
+python scripts/train.py experiment=nwm_cdit_xl wandb.enabled=true wandb.project=nwm
 ```
 
 Note: torch compile can lead to ~40%  faster training speed. However, it might lead to instabilities and inconsistent behvaior across different pytorch versions. Use carefuly.

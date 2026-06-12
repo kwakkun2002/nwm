@@ -1,0 +1,62 @@
+[
+  {
+    "kind": "move",
+    "source": "artifacts/eval_s_recon_128",
+    "destination": "artifacts/_trash/20260428_002318/eval_s_recon_128",
+    "reason": "legacy top-level artifact directory"
+  },
+  {
+    "kind": "move",
+    "source": "artifacts/eval_s_recon_128_text_dense",
+    "destination": "artifacts/_trash/20260428_002318/eval_s_recon_128_text_dense",
+    "reason": "legacy top-level artifact directory"
+  },
+  {
+    "kind": "move",
+    "source": "artifacts/eval_s_recon_raw_text_dense",
+    "destination": "artifacts/_trash/20260428_002318/eval_s_recon_raw_text_dense",
+    "reason": "legacy top-level artifact directory"
+  },
+  {
+    "kind": "move",
+    "source": "artifacts/nwm_cdit_s_recon_128",
+    "destination": "artifacts/_trash/20260428_002318/nwm_cdit_s_recon_128",
+    "reason": "legacy top-level artifact directory"
+  },
+  {
+    "kind": "move",
+    "source": "artifacts/nwm_cdit_s_recon_128_from10k_30k",
+    "destination": "artifacts/_trash/20260428_002318/nwm_cdit_s_recon_128_from10k_30k",
+    "reason": "legacy top-level artifact directory"
+  },
+  {
+    "kind": "move",
+    "source": "artifacts/nwm_cdit_s_recon_128_text_dense",
+    "destination": "artifacts/_trash/20260428_002318/nwm_cdit_s_recon_128_text_dense",
+    "reason": "legacy top-level artifact directory"
+  },
+  {
+    "kind": "move",
+    "source": "artifacts/nwm_cdit_s_recon_raw_text_dense",
+    "destination": "artifacts/_trash/20260428_002318/nwm_cdit_s_recon_raw_text_dense",
+    "reason": "legacy top-level artifact directory"
+  },
+  {
+    "kind": "move",
+    "source": "artifacts/plan_eval",
+    "destination": "artifacts/_trash/20260428_002318/plan_eval",
+    "reason": "legacy top-level artifact directory"
+  },
+  {
+    "kind": "move",
+    "source": "artifacts/plan_eval_s_recon_raw_text_dense",
+    "destination": "artifacts/_trash/20260428_002318/plan_eval_s_recon_raw_text_dense",
+    "reason": "legacy top-level artifact directory"
+  },
+  {
+    "kind": "remove",
+    "source": "artifacts/bulk/planning/recon128_s_0055000/nwm_cdit_s_recon_128/recon/CEM_N16_K4_RS1_rep1_OPT1/plots",
+    "destination": null,
+    "reason": "empty directory"
+  }
+]

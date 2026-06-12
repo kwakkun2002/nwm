@@ -26,10 +26,11 @@ torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
 
 import argparse
+from pathlib import Path
 import numpy as np
 
 from src.diffusion import create_diffusion
-from src.config import load_experiment_config
+from src.config import compose_hydra_config, int_list, load_runtime_config, namespace_from_config, save_yaml_config, str_list, update_runtime_section
 from src.core.paths import DEFAULT_EVAL_ARTIFACT_ROOT, get_checkpoint_path
 from src.models.checkpoints.vae import load_vae
 import src.core.env.distributed as dist
@@ -48,6 +49,22 @@ def main(args):
     device = torch.device(device)
     num_tasks = dist.get_world_size()
     global_rank = dist.get_rank()
+    config = load_runtime_config(args, config_attr="exp")
+    if args.exp is None:
+        args.exp = config["run_name"]
+    args.ckp = str(args.ckp)
+    args.rollout_fps_values = int_list(args.rollout_fps_values)
+    dataset_names = str_list(args.datasets)
+    if not dataset_names:
+        raise ValueError("At least one dataset is required. Pass --datasets or infer.datasets.")
+    if args.eval_type not in ("time", "rollout"):
+        raise ValueError("eval_type must be either 'time' or 'rollout'.")
+    config = update_runtime_section(
+        config,
+        "infer",
+        args,
+        ("output_dir", "exp", "ckp", "num_sec_eval", "input_fps", "datasets", "num_workers", "batch_size", "eval_type", "rollout_fps_values", "gt"),
+    )
     exp_eval = args.exp
     if args.output_dir is None:
         args.output_dir = os.path.join(DEFAULT_EVAL_ARTIFACT_ROOT, "manual")
@@ -63,8 +80,8 @@ def main(args):
         args.save_output_dir = args.save_output_dir + "_%s"%(args.ckp)
 
     os.makedirs(args.save_output_dir, exist_ok=True)
-
-    config = load_experiment_config(exp_eval)
+    if global_rank == 0:
+        save_yaml_config(config, Path(args.save_output_dir) / "resolved_config.yaml")
     text_config = get_text_conditioning_config(config)
 
     latent_size = config['image_size'] // 8
@@ -92,7 +109,6 @@ def main(args):
         model_lst = (model, diffusion, vae)
 
     # Loading Datasets
-    dataset_names = args.datasets.split(',')
     datasets = {}
 
     for dataset_name in dataset_names:
@@ -146,7 +162,7 @@ def main(args):
                     generate_time(args, curr_time_output_dir, idxs, model_lst, obs_image, gt_image, delta, secs, num_cond, device, text_emb=text_emb)
     
 
-if __name__ == "__main__":
+def build_parser():
     parser = argparse.ArgumentParser()
     
     parser.add_argument("--output_dir", type=str, default=None, help="output directory")
@@ -161,8 +177,39 @@ if __name__ == "__main__":
     # Rollout Evaluation Args
     parser.add_argument("--rollout_fps_values", type=str, default='1,4', help="")
     parser.add_argument("--gt", type=int, default=0, help="set to 1 to produce ground truth evaluation set")
-    args = parser.parse_args()
-    
-    args.rollout_fps_values = [int(fps) for fps in args.rollout_fps_values.split(',')]
-    
+    return parser
+
+
+def run_hydra_cli(argv):
+    config = compose_hydra_config(argv)
+    args = namespace_from_config(config, "infer")
     main(args)
+
+
+def uses_legacy_cli(argv):
+    legacy_flags = {
+        "--output_dir",
+        "--exp",
+        "--ckp",
+        "--num_sec_eval",
+        "--input_fps",
+        "--datasets",
+        "--num_workers",
+        "--batch_size",
+        "--eval_type",
+        "--rollout_fps_values",
+        "--gt",
+        "-h",
+        "--help",
+    }
+    return not argv or any(arg in legacy_flags or arg.split("=", 1)[0] in legacy_flags for arg in argv)
+
+
+if __name__ == "__main__":
+    argv = sys.argv[1:]
+    if uses_legacy_cli(argv):
+        args = build_parser().parse_args()
+        args.rollout_fps_values = int_list(args.rollout_fps_values)
+        main(args)
+    else:
+        run_hydra_cli(argv)

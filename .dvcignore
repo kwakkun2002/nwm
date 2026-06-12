@@ -1,0 +1,33 @@
+# Keep DVC workspace scans focused on intentional data assets.
+# Do not ignore canonical dataset/checkpoint roots; add those with `dvc add`
+# when they are stable enough to share.
+
+# Python, notebook, and local tool caches.
+**/__pycache__/
+**/*.py[cod]
+.cache/
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/
+
+# Runtime logs and process markers.
+/logs/
+/wandb/
+/results/
+**/*.log
+**/*.pid
+**/*.tmp
+**/*.part
+
+# Large volatile generated artifacts. Curated outputs can live elsewhere and be
+# added explicitly; the dvc.yaml scaffold writes under artifacts/dvc/.
+/artifacts/bulk/
+/artifacts/smoke/
+/artifacts/profiling/raw/
+/artifacts/profiling/**/*.log
+/artifacts/profiling/**/*.pid
+
+# Common temporary media generated during manual debugging.
+*.mp4
+*.avi
+*.mov
+*.mkv

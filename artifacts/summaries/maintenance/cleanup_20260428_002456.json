@@ -1,0 +1,8 @@
+[
+  {
+    "kind": "remove",
+    "source": "artifacts/bulk/planning/recon128_s_0055000/nwm_cdit_s_recon_128/recon/CEM_N16_K4_RS1_rep1_OPT1/plots",
+    "destination": null,
+    "reason": "empty directory"
+  }
+]

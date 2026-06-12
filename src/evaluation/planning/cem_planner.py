@@ -20,6 +20,8 @@
 # 다중 GPU 분산 평가를 지원.
 #
 import os
+import sys
+from pathlib import Path
 
 import torch
 torch.backends.cuda.matmul.allow_tf32 = True
@@ -28,7 +30,7 @@ torch.backends.cudnn.allow_tf32 = True
 import argparse
 import lpips
 
-from src.config import load_experiment_config
+from src.config import compose_hydra_config, load_runtime_config, namespace_from_config, save_yaml_config, str_list, update_runtime_section
 from src.diffusion import create_diffusion
 from src.data.datasets.factory import build_trajectory_eval_dataset
 from src.evaluation.inference.rollout import model_forward_wrapper
@@ -72,7 +74,41 @@ class WM_Planning_Evaluator:
         self.exp_eval = self.exp
         self.get_eval_name()
 
-        self.config = load_experiment_config(self.exp_eval)
+        self.config = update_runtime_section(
+            load_runtime_config(self.args, config_attr="exp"),
+            "planning",
+            self.args,
+            (
+                "exp",
+                "ckp",
+                "datasets",
+                "output_dir",
+                "save_preds",
+                "num_workers",
+                "batch_size",
+                "num_samples",
+                "rollout_stride",
+                "topk",
+                "opt_steps",
+                "num_repeat_eval",
+                "action_sampler",
+                "cem_eval_chunk_size",
+                "min_action_std",
+                "action_smoothness_weight",
+                "learned_cost_ckpt",
+                "learned_cost_weight",
+                "learned_cost_dino_weights",
+                "learned_cost_dino_batch_size",
+                "max_eval_samples",
+                "eval_start_index",
+                "plot",
+            ),
+        )
+        if self.exp_eval is None:
+            self.exp_eval = self.config["run_name"]
+            self.exp = self.exp_eval
+            self.args.exp = self.exp_eval
+            self.config["planning"]["exp"] = self.exp_eval
         self.text_config = get_text_conditioning_config(self.config)
 
         latent_size = self.config['image_size'] // 8
@@ -85,9 +121,11 @@ class WM_Planning_Evaluator:
         exp_name = os.path.basename(self.args.exp).split('.')[0]
         self.args.save_output_dir = os.path.join(self.args.output_dir, exp_name)
         os.makedirs(self.args.save_output_dir, exist_ok=True)
+        if global_rank == 0:
+            save_yaml_config(self.config, Path(self.args.save_output_dir) / "resolved_config.yaml")
                 
         # Loading Datasets
-        self.dataset_names = self.args.datasets.split(',')
+        self.dataset_names = str_list(self.args.datasets)
         self.datasets = {}
         for dataset_name in self.dataset_names:
             dataset_val = build_trajectory_eval_dataset(self.config, dataset_name, predefined_index=True)
@@ -148,9 +186,9 @@ class WM_Planning_Evaluator:
             dino_arch = metadata.get("dino_arch", "vit_base")
             self.learned_cost_dino = DinoFeatureExtractor(dino_weights, dino_arch).to(self.device).eval()
 
-    def init_mu_sigma(self, obs_0, traj_len):
+    def init_mu_sigma(self, dataset_name, obs_0, traj_len):
         n_evals = obs_0.shape[0]
-        return initial_action_distribution(self.args.datasets, self.action_sampler, n_evals, traj_len)
+        return initial_action_distribution(dataset_name, self.action_sampler, n_evals, traj_len)
 
     def action_params_to_deltas(self, action_params, len_traj_pred):
         return action_params_to_deltas(action_params, len_traj_pred, self.action_sampler)
@@ -219,7 +257,7 @@ class WM_Planning_Evaluator:
             os.makedirs(image_plot_dir, exist_ok=True)
         
         n_evals = obs_image.shape[0]
-        mu, sigma = self.init_mu_sigma(obs_image, len_traj_pred)
+        mu, sigma = self.init_mu_sigma(dataset_name, obs_image, len_traj_pred)
         mu, sigma = mu.to(self.device), sigma.to(self.device)
 
         for i in range(self.opt_steps):
@@ -431,11 +469,53 @@ def build_parser():
     return parser
 
 
-def main(argv=None):
-    parser = build_parser()
-    args = parser.parse_args(argv)
+def run_hydra_cli(argv):
+    config = compose_hydra_config(argv)
+    args = namespace_from_config(config, "planning")
     evaluator = WM_Planning_Evaluator(args)
     evaluator.evaluate()
+
+
+def uses_legacy_cli(argv):
+    legacy_flags = {
+        "--exp",
+        "--ckp",
+        "--datasets",
+        "--output_dir",
+        "--save_preds",
+        "--num_workers",
+        "--batch_size",
+        "--num_samples",
+        "--rollout_stride",
+        "--topk",
+        "--opt_steps",
+        "--num_repeat_eval",
+        "--action_sampler",
+        "--cem_eval_chunk_size",
+        "--min_action_std",
+        "--action_smoothness_weight",
+        "--learned_cost_ckpt",
+        "--learned_cost_weight",
+        "--learned_cost_dino_weights",
+        "--learned_cost_dino_batch_size",
+        "--max_eval_samples",
+        "--eval_start_index",
+        "--plot",
+        "-h",
+        "--help",
+    }
+    return not argv or any(arg in legacy_flags or arg.split("=", 1)[0] in legacy_flags for arg in argv)
+
+
+def main(argv=None):
+    argv = sys.argv[1:] if argv is None else argv
+    if uses_legacy_cli(argv):
+        parser = build_parser()
+        args = parser.parse_args(argv)
+        evaluator = WM_Planning_Evaluator(args)
+        evaluator.evaluate()
+    else:
+        run_hydra_cli(argv)
 
 
 if __name__ == "__main__":

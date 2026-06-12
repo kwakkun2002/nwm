@@ -1,0 +1,17 @@
+{
+    "recon_rollout_1fps_lpips_1s": 0.25715747475624084,
+    "recon_rollout_1fps_dreamsim_1s": 0.17759202420711517,
+    "recon_rollout_1fps_lpips_2s": 0.2992666959762573,
+    "recon_rollout_1fps_dreamsim_2s": 0.19449058175086975,
+    "recon_rollout_1fps_lpips_4s": 0.344687819480896,
+    "recon_rollout_1fps_dreamsim_4s": 0.2234880030155182,
+    "recon_rollout_1fps_lpips_8s": 0.4014433026313782,
+    "recon_rollout_1fps_dreamsim_8s": 0.2714601159095764,
+    "recon_rollout_1fps_lpips_16s": 0.4698563516139984,
+    "recon_rollout_1fps_dreamsim_16s": 0.34783193469047546,
+    "recon_rollout_1fps_fid_1s": 60.48533630371094,
+    "recon_rollout_1fps_fid_2s": 62.0150146484375,
+    "recon_rollout_1fps_fid_4s": 62.445648193359375,
+    "recon_rollout_1fps_fid_8s": 65.972900390625,
+    "recon_rollout_1fps_fid_16s": 73.85600280761719
+}

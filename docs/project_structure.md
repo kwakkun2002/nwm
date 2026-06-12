@@ -18,9 +18,7 @@ nwm/
 ├── notebooks/               # 실험/시각화 노트북
 ├── docs/                    # 프로젝트 문서, 제안서, 데이터 설명
 ├── experiments/             # 실험 노트
-├── models/                  # ignored local pretrained/legacy bulk files
 ├── third_party/             # 외부 코드 vendoring
-├── diffusion/               # ignored stale cache only
 └── Dockerfile, env.yaml 등  # 환경 구성 파일
 ```
 
@@ -125,7 +123,9 @@ src/
 ```text
 configs/
 ├── experiment/             # 실제 학습/평가 실험 설정
-├── data/                   # 데이터 관련 기본 설정
+├── model/                  # CDiT S/B/L/XL 모델 축
+├── data/                   # 데이터셋/image-size 축
+├── feature/text/           # text-conditioning 축
 └── evaluation/             # 평가 기본 설정
 ```
 
@@ -135,6 +135,9 @@ configs/
 configs/experiment/nwm_cdit_s_recon_128.yaml
 configs/experiment/nwm_cdit_s_recon_128_text_dense.yaml
 configs/experiment/nwm_cdit_xl.yaml
+configs/model/cdit_s.yaml
+configs/data/recon_raw_128.yaml
+configs/feature/text/dense_recon_raw.yaml
 configs/evaluation/eval_config.yaml
 ```
 
@@ -179,7 +182,7 @@ weights/
 ├── pretrained/             # VAE, Qwen 등 pretrained 모델
 ├── adapters/               # LoRA/adapter류
 ├── cache/                  # 모델/cache 파일
-└── archives/               # 압축 보관본
+└── pretrained/archives/    # legacy pretrained 압축 보관본
 ```
 
 ```text
@@ -198,9 +201,12 @@ artifacts/
 ├── bulk/train/             # 학습 샘플 dump
 ├── bulk/eval/              # raw inference/GT frames
 ├── bulk/planning/          # planning 예측 tensor/plot
-├── summaries/              # metric JSON, compact summary
+├── bulk/logs/              # 재생성 가능한 runtime log
+├── summaries/              # metric JSON, compact summary, deck/report
 ├── profiling/              # profiling CSV/PNG
 ├── smoke/                  # smoke test 출력
+├── dvc/                    # DVC smoke/repro 출력
+├── tmp/                    # 임시 수동 확인
 └── _trash/                 # 정리 대기 산출물
 ```
 
@@ -230,8 +236,8 @@ notebooks/                # interactive_model, diffusion/VAE visualization
 ## 헷갈릴 수 있는 폴더
 
 - `src/diffusion/`가 현재 코드에서 import되는 diffusion 구현입니다.
-- 루트의 `diffusion/`은 ignored cache 잔재입니다. 새 작업은 `src/diffusion/` 기준으로 보는 게 맞습니다.
-- `models/`는 현재 모델 코드가 아니라 ignored local pretrained/legacy bulk 파일입니다. 실제 CDiT 구현은 `src/models/backbones/cdit.py`입니다.
+- 루트의 `diffusion/` 잔재는 제거했고, 새 작업은 `src/diffusion/` 기준으로 보면 됩니다.
+- 루트의 `models/` 잔재는 제거했습니다. 실제 CDiT 구현은 `src/models/backbones/cdit.py`이고, pretrained/metric weight는 `weights/pretrained/` 아래에 둡니다.
 - DINO 외부 코드는 추적되는 `third_party/facebookresearch_dino_main/`을 기준으로 사용합니다.
 
 ## 한 줄 실행 흐름

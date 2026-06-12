@@ -60,8 +60,8 @@ def gt_deltas_from_actions(gt_actions):
     return torch.cat((xy_delta, yaw_delta), dim=1)
 
 
-def sample_candidate_deltas(evaluator, obs_image, gt_actions, len_traj_pred, num_candidates, include_gt):
-    mu, sigma = evaluator.init_mu_sigma(obs_image, len_traj_pred)
+def sample_candidate_deltas(evaluator, dataset_name, obs_image, gt_actions, len_traj_pred, num_candidates, include_gt):
+    mu, sigma = evaluator.init_mu_sigma(dataset_name, obs_image, len_traj_pred)
     mu = mu.to(evaluator.device)
     sigma = sigma.to(evaluator.device)
     params = torch.randn(num_candidates, mu.shape[-1], device=evaluator.device) * sigma[0] + mu[0]
@@ -106,6 +106,7 @@ def build_dataset(args):
             cur_text_emb = None if text_emb is None else text_emb[batch_idx:batch_idx + 1]
             deltas = sample_candidate_deltas(
                 evaluator,
+                args.dataset_name,
                 cur_obs,
                 cur_gt,
                 evaluator.config["trajectory_eval_len_traj_pred"],

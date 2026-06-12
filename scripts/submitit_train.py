@@ -28,12 +28,24 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+from src.config import compose_hydra_config, namespace_from_config
 from scripts import train as trainer
 import submitit
 
 
-def parse_args():
-    trainer_parser = trainer.get_args_parser()
+SUBMITIT_ARG_NAMES = {
+    "ngpus",
+    "nodes",
+    "timeout",
+    "job_dir",
+    "partition",
+    "qos",
+    "use_volta32",
+}
+
+
+def parse_args(argv=None):
+    trainer_parser = trainer.get_args_parser(require_config=False)
     parser = argparse.ArgumentParser(add_help=False, parents=[trainer_parser])
     parser.add_argument("--ngpus", default=8, type=int, help="Number of gpus to request on each node")
     parser.add_argument("--nodes", default=1, type=int, help="Number of nodes to request")
@@ -42,7 +54,18 @@ def parse_args():
     parser.add_argument("--partition", default="learn", type=str, help="Partition where to submit")
     parser.add_argument("--qos", default="low", type=str, help="Partition where to submit")
     parser.add_argument("--use_volta32", action='store_true', help="Request 32G V100 GPUs")
-    return parser.parse_args()
+    args, hydra_overrides = parser.parse_known_args(argv)
+
+    if hydra_overrides:
+        config = compose_hydra_config(hydra_overrides)
+        train_args = namespace_from_config(config, "train")
+        for name in SUBMITIT_ARG_NAMES:
+            setattr(train_args, name, getattr(args, name))
+        return train_args
+
+    if args.config is None:
+        parser.error("one of --config or Hydra overrides such as experiment=nwm_cdit_xl is required")
+    return args
 
 
 def get_shared_folder() -> Path:
@@ -93,8 +116,8 @@ class Trainer(object):
         print(f"Process group: {job_env.num_tasks} tasks, rank: {job_env.global_rank}")
 
 
-def main():
-    args = parse_args()
+def main(argv=None):
+    args = parse_args(argv)
     if args.job_dir == "":
         args.job_dir = get_shared_folder() / "%j"
 

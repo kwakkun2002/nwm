@@ -1,0 +1,20 @@
+[
+  {
+    "kind": "remove",
+    "source": "artifacts/_trash/20260428_002318/plan_eval/nwm_cdit_s/recon",
+    "destination": null,
+    "reason": "empty directory"
+  },
+  {
+    "kind": "remove",
+    "source": "artifacts/_trash/20260428_002318/plan_eval/nwm_cdit_s",
+    "destination": null,
+    "reason": "empty directory"
+  },
+  {
+    "kind": "remove",
+    "source": "artifacts/_trash/20260428_002318/plan_eval",
+    "destination": null,
+    "reason": "empty directory"
+  }
+]

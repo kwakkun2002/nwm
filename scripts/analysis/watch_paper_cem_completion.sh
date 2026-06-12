@@ -31,6 +31,7 @@ while true; do
     echo "[$(date --iso-8601=seconds)] detected ${done_count}/${#EXPECTED_FILES[@]} completed result(s); refreshing summary and deck"
     python scripts/analysis/summarize_paper_cem_planning.py
     python scripts/analysis/build_nwm_text_conditioned_deck.py
+    python scripts/analysis/verify_paper_cem_planning_outputs.py
     last_done_count="$done_count"
   fi
 

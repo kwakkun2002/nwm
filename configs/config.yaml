@@ -1,0 +1,123 @@
+defaults:
+  - evaluation: eval_config
+  - experiment: nwm_cdit_b
+  - _self_
+
+train:
+  epochs: 300
+  global_seed: 0
+  log_every: 100
+  ckpt_every: 2000
+  eval_every: 5000
+  bfloat16: true
+  torch_compile: true
+
+infer:
+  output_dir: null
+  exp: null
+  ckp: "0100000"
+  num_sec_eval: 5
+  input_fps: 4
+  datasets: recon
+  num_workers: 8
+  batch_size: 16
+  eval_type: time
+  rollout_fps_values: [1, 4]
+  gt: false
+
+evaluate:
+  batch_size: 64
+  eval_types: [time, rollout]
+  gt_dir: null
+  exp_dir: null
+  num_sec_eval: 5
+  datasets: recon
+  input_fps: 4
+  rollout_fps_values: [1, 4]
+  exp: null
+
+planning:
+  exp: null
+  ckp: "0100000"
+  datasets: recon
+  output_dir: null
+  save_preds: false
+  num_workers: 8
+  batch_size: 16
+  num_samples: 10
+  rollout_stride: 1
+  topk: 5
+  opt_steps: 15
+  num_repeat_eval: 1
+  action_sampler: sequence
+  cem_eval_chunk_size: 0
+  min_action_std: 1e-3
+  action_smoothness_weight: 0.0
+  learned_cost_ckpt: null
+  learned_cost_weight: 1.0
+  learned_cost_dino_weights: null
+  learned_cost_dino_batch_size: 64
+  max_eval_samples: null
+  eval_start_index: 0
+  plot: false
+
+smoke:
+  eval_config: configs/evaluation/eval_config.yaml
+  model_config: null
+  dataset: recon
+  eval_type: time
+  sample_index: 0
+  checkpoint: weights/checkpoints/nwm_cdit_xl/0100000.pth.tar
+  horizon_steps: 8
+  device: cuda
+  output_dir: artifacts/smoke/recon
+  skip_forward: false
+
+profiling:
+  eval_config: configs/evaluation/eval_config.yaml
+  model_config: null
+  dataset: recon
+  eval_type: time
+  sample_index: 0
+  checkpoint: null
+  checkpoint_tag: "0100000"
+  device: cuda
+  batch_size: 1
+  warmup_runs: 3
+  repeat_runs: 10
+  mode: both
+  horizon_steps: 8
+  input_fps: 4
+  rollout_fps: 1
+  rollout_frames: 0
+  diffusion_steps: 250
+  disable_compile: false
+  skip_flops: false
+  output_dir: artifacts/profiling/raw/gpu_profile_baseline
+
+text_smoke:
+  config: null
+  dataset_name: recon
+  data_folder: null
+  data_split_folder: null
+  embedding_root: null
+  sample_index: 0
+  goals_per_obs: null
+  device: cuda
+  len_traj_pred: null
+  context_size: null
+
+wandb:
+  enabled: false
+  project: nwm
+  entity: null
+  group: null
+  mode: null
+  tags: []
+  log_eval_images: true
+  log_checkpoints: false
+  resume: allow
+
+hydra:
+  job:
+    chdir: false

@@ -1,0 +1,19 @@
+# @package _global_
+
+results_dir: logs
+weights_dir: weights/checkpoints
+artifact_dir: artifacts/bulk/train
+train: true
+batch_size: 16
+num_workers: 12
+lr: 8e-5
+
+normalize: true
+grad_clip_val: 10.0
+context_size: 4
+
+distance:
+  min_dist_cat: -64
+  max_dist_cat: 64
+
+len_traj_pred: 64

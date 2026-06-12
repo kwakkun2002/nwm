@@ -40,6 +40,7 @@ import matplotlib
 matplotlib.use('Agg')
 from collections import OrderedDict
 from copy import deepcopy
+from pathlib import Path
 from time import time
 import argparse
 import logging
@@ -50,8 +51,9 @@ from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data import DataLoader, ConcatDataset
 from torch.utils.data.distributed import DistributedSampler
 
-from src.config import load_experiment_config
+from src.config import compose_hydra_config, load_runtime_config, namespace_from_config, save_yaml_config, update_runtime_section
 from src.core.env.distributed import init_distributed
+from src.core.wandb import finish_wandb_run, init_wandb_run, log_artifact, log_images, log_metrics
 from src.models.backbones.cdit import CDiT_models
 from src.diffusion import create_diffusion
 from src.data.datasets.train_dataset import TrainingDataset
@@ -131,7 +133,12 @@ def main(args):
     seed = args.global_seed * dist.get_world_size() + rank
     torch.manual_seed(seed)
     print(f"Starting rank={rank}, seed={seed}, world_size={dist.get_world_size()}.")
-    config = load_experiment_config(args.config)
+    config = update_runtime_section(
+        load_runtime_config(args),
+        "train",
+        args,
+        ("epochs", "global_seed", "log_every", "ckpt_every", "eval_every", "bfloat16", "torch_compile"),
+    )
     text_config = get_text_conditioning_config(config)
     checkpoint_strict = bool(config.get("checkpoint_strict", True))
     load_training_state = bool(config.get("load_training_state", True))
@@ -152,8 +159,10 @@ def main(args):
         logger.info(f"Log directory created at {log_dir}")
         logger.info(f"Artifact directory created at {artifact_dir}")
         logger.info(f"Checkpoint directory created at {checkpoint_dir}")
+        save_yaml_config(config, Path(log_dir) / "resolved_config.yaml")
     else:
         logger = create_logger(None)
+    wandb_run = init_wandb_run(config, rank=rank, job_type="train", logger=logger)
 
     # Create model:
     tokenizer = load_vae(device)
@@ -386,6 +395,16 @@ def main(args):
                 dist.all_reduce(avg_loss, op=dist.ReduceOp.SUM)
                 avg_loss = avg_loss.item() / dist.get_world_size()
                 logger.info(f"(step={train_steps:07d}) Train Loss: {avg_loss:.4f}, Train Steps/Sec: {steps_per_sec:.2f}, Samples/Sec: {samples_per_sec:.2f}")
+                log_metrics(
+                    wandb_run,
+                    {
+                        "train/loss": avg_loss,
+                        "train/steps_per_sec": steps_per_sec,
+                        "train/samples_per_sec": samples_per_sec,
+                        "train/epoch": epoch,
+                    },
+                    step=train_steps,
+                )
                 # Reset monitoring variables:
                 running_loss = 0
                 log_steps = 0
@@ -410,6 +429,13 @@ def main(args):
                         checkpoint_path = f"{checkpoint_dir}/{train_steps:07d}.pth.tar"
                         torch.save(checkpoint, checkpoint_path)
                     logger.info(f"Saved checkpoint to {checkpoint_path}")
+                    if config.get("wandb", {}).get("log_checkpoints", False):
+                        log_artifact(
+                            wandb_run,
+                            checkpoint_path,
+                            name=f"{config['run_name']}-{train_steps:07d}",
+                            artifact_type="model",
+                        )
             
             if train_steps % args.eval_every == 0 and train_steps > 0:
                 eval_start_time = time()
@@ -422,11 +448,28 @@ def main(args):
                 eval_end_time = time()
                 eval_time = eval_end_time - eval_start_time
                 logger.info(f"(step={train_steps:07d}) Perceptual Loss: {sim_score:.4f}, Eval Time: {eval_time:.2f}")
+                sim_score_value = sim_score.item() if hasattr(sim_score, "item") else float(sim_score)
+                log_metrics(
+                    wandb_run,
+                    {
+                        "eval/perceptual_loss": sim_score_value,
+                        "eval/time_sec": eval_time,
+                    },
+                    step=train_steps,
+                )
+                if config.get("wandb", {}).get("log_eval_images", True):
+                    log_images(
+                        wandb_run,
+                        sorted(Path(save_dir).glob("*.png")),
+                        key="eval/samples",
+                        step=train_steps,
+                    )
 
     model.eval()  # important! This disables randomized embedding dropout
     # do any sampling/FID calculation/etc. with ema (or model) in eval mode ...
 
     logger.info("Done!")
+    finish_wandb_run(wandb_run)
     cleanup()
 
 
@@ -504,9 +547,9 @@ def evaluate(model, vae, diffusion, test_dataloaders, rank, batch_size, num_work
     sim_score = score/n_samples
     return sim_score
 
-def get_args_parser():
+def get_args_parser(require_config=True):
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", type=str, required=True)
+    parser.add_argument("--config", type=str, required=require_config)
     parser.add_argument("--epochs", type=int, default=300)
     # parser.add_argument("--global-batch-size", type=int, default=256)
     parser.add_argument("--global-seed", type=int, default=0)
@@ -517,6 +560,32 @@ def get_args_parser():
     parser.add_argument("--torch-compile", type=int, default=1)
     return parser
 
-if __name__ == "__main__":
-    args = get_args_parser().parse_args()
+def run_hydra_cli(argv):
+    config = compose_hydra_config(argv)
+    args = namespace_from_config(config, "train")
     main(args)
+
+
+def uses_legacy_cli(argv):
+    legacy_flags = {
+        "--config",
+        "--epochs",
+        "--global-seed",
+        "--log-every",
+        "--ckpt-every",
+        "--eval-every",
+        "--bfloat16",
+        "--torch-compile",
+        "-h",
+        "--help",
+    }
+    return not argv or any(arg in legacy_flags or arg.split("=", 1)[0] in legacy_flags for arg in argv)
+
+
+if __name__ == "__main__":
+    argv = sys.argv[1:]
+    if uses_legacy_cli(argv):
+        args = get_args_parser().parse_args()
+        main(args)
+    else:
+        run_hydra_cli(argv)

@@ -1,0 +1,796 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Phase 1 Cache Report</title>
+  <style>
+    :root {
+      --bg: #f2eee6;
+      --paper: #fffdf8;
+      --ink: #171613;
+      --muted: #6b655b;
+      --line: #d9cfbe;
+      --accent: #956f2c;
+      --accent-soft: #efe3c2;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at top left, #f7f0dc 0%, transparent 28%),
+        linear-gradient(180deg, #e9e1d1 0%, var(--bg) 42%, #f8f5ee 100%);
+      color: var(--ink);
+      font: 15px/1.55 Georgia, "Times New Roman", serif;
+    }
+    main {
+      max-width: 1380px;
+      margin: 0 auto;
+      padding: 28px 18px 48px;
+    }
+    h1 {
+      margin: 0 0 6px;
+      font-size: 38px;
+    }
+    h2 {
+      margin: 0 0 12px;
+      font-size: 24px;
+    }
+    p {
+      margin: 0;
+      color: var(--muted);
+    }
+    .intro {
+      margin-bottom: 24px;
+    }
+    .section {
+      margin-top: 26px;
+      background: rgba(255, 253, 248, 0.82);
+      border: 1px solid var(--line);
+      box-shadow: 0 18px 40px rgba(52, 43, 28, 0.08);
+      padding: 18px;
+      backdrop-filter: blur(6px);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 10px 12px;
+      border-top: 1px solid var(--line);
+      vertical-align: top;
+      text-align: left;
+    }
+    th {
+      color: var(--muted);
+      font-weight: 600;
+    }
+    code {
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 12px;
+      word-break: break-all;
+    }
+    .note {
+      margin-top: 10px;
+      font-size: 14px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(540px, 1fr));
+      gap: 20px;
+    }
+    .card {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      overflow: hidden;
+    }
+    .card-head {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(90deg, #fbf7ef 0%, #f3ecdd 100%);
+      flex-wrap: wrap;
+    }
+    .card-head h3 {
+      margin: 0;
+      font-size: 20px;
+    }
+    .eyebrow {
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 4px;
+    }
+    .pill {
+      border: 1px solid #d8c59b;
+      background: var(--accent-soft);
+      color: #5f4717;
+      padding: 5px 9px;
+      font-size: 12px;
+      border-radius: 999px;
+    }
+    .thumb-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 10px;
+      padding: 14px 14px 0;
+    }
+    .thumb {
+      margin: 0;
+    }
+    .thumb img {
+      display: block;
+      width: 100%;
+      height: 110px;
+      object-fit: cover;
+      border: 1px solid var(--line);
+    }
+    .thumb figcaption {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 12px;
+      text-align: center;
+    }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px 12px;
+      padding: 14px;
+      color: #2f2b24;
+    }
+    .caption-table {
+      margin-top: 2px;
+    }
+    .caption-table th:first-child,
+    .caption-table td:first-child {
+      width: 52px;
+    }
+    @media (max-width: 720px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+      .stats {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="intro">
+      <h1>Phase 1 Cache Report</h1>
+      <p>caption JSONL, cleaned JSONL, sparse text embedding cache, dense aligned text embedding cache, and sample 1fps frames in one view</p>
+    </div>
+
+    <section class="section">
+      <h2>Overview</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>split</th>
+            <th>raw caption rows</th>
+            <th>clean rows</th>
+            <th>sparse npz</th>
+            <th>dense npz</th>
+            <th>avg sparse len</th>
+            <th>avg dense len</th>
+            <th>image root</th>
+          </tr>
+        </thead>
+        <tbody>
+          
+      <tr>
+        <td>test</td>
+        <td>13193</td>
+        <td>13193</td>
+        <td>2367</td>
+        <td>2367</td>
+        <td>6.45</td>
+        <td>60.41</td>
+        <td><code>datasets/recon_1fps_test</code></td>
+      </tr>
+    
+      <tr>
+        <td>train</td>
+        <td>53395</td>
+        <td>53395</td>
+        <td>9468</td>
+        <td>9468</td>
+        <td>7.61</td>
+        <td>71.57</td>
+        <td><code>datasets/recon_1fps_train</code></td>
+      </tr>
+    
+        </tbody>
+      </table>
+      <p class="note">embedding statistics use the first 128 trajectory files per cache for a quick summary, not a full sweep.</p>
+    </section>
+
+    <section class="section">
+      <h2>Sample Trajectories</h2>
+      <div class="grid">
+        
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <div class="eyebrow">test sample</div>
+            <h3>jackal_2019-08-08-17-49-25_1_r00</h3>
+          </div>
+          <div class="pill">sparse 11 frames</div>
+          <div class="pill">dense 105 frames</div>
+        </div>
+        <div class="thumb-row">
+          
+            <figure class="thumb">
+              <img src="images/000_jackal_2019-08-08-17-49-25_1_r00_t0.jpg" alt="jackal_2019-08-08-17-49-25_1_r00 t=0">
+              <figcaption>t=0</figcaption>
+            </figure>
+            
+            <figure class="thumb">
+              <img src="images/001_jackal_2019-08-08-17-49-25_1_r00_t3.jpg" alt="jackal_2019-08-08-17-49-25_1_r00 t=3">
+              <figcaption>t=3</figcaption>
+            </figure>
+            
+            <figure class="thumb">
+              <img src="images/002_jackal_2019-08-08-17-49-25_1_r00_t6.jpg" alt="jackal_2019-08-08-17-49-25_1_r00 t=6">
+              <figcaption>t=6</figcaption>
+            </figure>
+            
+            <figure class="thumb">
+              <img src="images/003_jackal_2019-08-08-17-49-25_1_r00_t10.jpg" alt="jackal_2019-08-08-17-49-25_1_r00 t=10">
+              <figcaption>t=10</figcaption>
+            </figure>
+            
+        </div>
+        <div class="stats">
+          <div><strong>sparse times</strong>: [0, 1, 2, 3, 4, 5, 6, 7, ...]</div>
+          <div><strong>dense range</strong>: 0..104</div>
+          <div><strong>sparse norm</strong>: 1.00 +/- 0.00</div>
+          <div><strong>dense norm</strong>: 1.00 +/- 0.00</div>
+        </div>
+        <table class="caption-table">
+          <thead>
+            <tr>
+              <th>t</th>
+              <th>raw caption</th>
+              <th>clean text</th>
+            </tr>
+          </thead>
+          <tbody>
+            
+            <tr>
+              <td>0</td>
+              <td>The scene features a grassy area with scattered leaves, a pathway, and a few buildings in the background, with a clear sky overhead.</td>
+              <td>a grassy area with scattered leaves, a pathway, and a few buildings in the background, with a clear sky overhead</td>
+            </tr>
+            
+            <tr>
+              <td>3</td>
+              <td>The scene shows a residential area with a paved pathway leading to a white house, surrounded by grassy lawns and a clear blue sky.</td>
+              <td>a residential area with a paved pathway leading to a white house, surrounded by grassy lawns and a clear blue sky</td>
+            </tr>
+            
+            <tr>
+              <td>6</td>
+              <td>The scene features a curved, single-story building with a sloped roof, surrounded by a grassy area with scattered trees and power lines overhead.</td>
+              <td>a curved, single-story building with a sloped roof, surrounded by a grassy area with scattered trees and power lines overhead</td>
+            </tr>
+            
+            <tr>
+              <td>10</td>
+              <td>The scene depicts a grassy area with a few scattered leaves, surrounded by buildings and trees, under a bright sky.</td>
+              <td>a grassy area with a few scattered leaves, surrounded by buildings and trees, under a bright sky</td>
+            </tr>
+            
+          </tbody>
+        </table>
+      </section>
+    
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <div class="eyebrow">test sample</div>
+            <h3>jackal_2020-01-04-13-06-12_5_r00</h3>
+          </div>
+          <div class="pill">sparse 11 frames</div>
+          <div class="pill">dense 104 frames</div>
+        </div>
+        <div class="thumb-row">
+          
+            <figure class="thumb">
+              <img src="images/004_jackal_2020-01-04-13-06-12_5_r00_t5.jpg" alt="jackal_2020-01-04-13-06-12_5_r00 t=5">
+              <figcaption>t=5</figcaption>
+            </figure>
+            
+            <figure class="thumb">
+              <img src="images/005_jackal_2020-01-04-13-06-12_5_r00_t8.jpg" alt="jackal_2020-01-04-13-06-12_5_r00 t=8">
+              <figcaption>t=8</figcaption>
+            </figure>
+            
+            <figure class="thumb">
+              <img src="images/006_jackal_2020-01-04-13-06-12_5_r00_t0.jpg" alt="jackal_2020-01-04-13-06-12_5_r00 t=0">
+              <figcaption>t=0</figcaption>
+            </figure>
+            
+            <figure class="thumb">
+              <img src="images/007_jackal_2020-01-04-13-06-12_5_r00_t4.jpg" alt="jackal_2020-01-04-13-06-12_5_r00 t=4">
+              <figcaption>t=4</figcaption>
+            </figure>
+            
+        </div>
+        <div class="stats">
+          <div><strong>sparse times</strong>: [0, 1, 2, 3, 4, 5, 6, 7, ...]</div>
+          <div><strong>dense range</strong>: 0..103</div>
+          <div><strong>sparse norm</strong>: 1.00 +/- 0.00</div>
+          <div><strong>dense norm</strong>: 1.00 +/- 0.00</div>
+        </div>
+        <table class="caption-table">
+          <thead>
+            <tr>
+              <th>t</th>
+              <th>raw caption</th>
+              <th>clean text</th>
+            </tr>
+          </thead>
+          <tbody>
+            
+            <tr>
+              <td>5</td>
+              <td>The scene features a grassy area with a large tree, a clear sky, and some distant structures, indicating an open, possibly rural environment with navigable space.</td>
+              <td>a grassy area with a large tree, a clear sky, and some distant structures, indicating an open, possibly rural environment with navigable space</td>
+            </tr>
+            
+            <tr>
+              <td>8</td>
+              <td>The scene depicts a grassy field with scattered trees and a clear blue sky, providing a wide, open navigable space.</td>
+              <td>a grassy field with scattered trees and a clear blue sky, providing a wide, open navigable space</td>
+            </tr>
+            
+            <tr>
+              <td>0</td>
+              <td>The scene depicts a grassy field with a tree in the distance, a clear sky, and some structures in the background.</td>
+              <td>a grassy field with a tree in the distance, a clear sky, and some structures in the background</td>
+            </tr>
+            
+            <tr>
+              <td>4</td>
+              <td>The scene depicts a grassy field with a large tree in the center, surrounded by tall grass and a clear blue sky.</td>
+              <td>a grassy field with a large tree in the center, surrounded by tall grass and a clear blue sky</td>
+            </tr>
+            
+          </tbody>
+        </table>
+      </section>
+    
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <div class="eyebrow">test sample</div>
+            <h3>jackal_2019-08-13-14-41-24_7_r01</h3>
+          </div>
+          <div class="pill">sparse 15 frames</div>
+          <div class="pill">dense 144 frames</div>
+        </div>
+        <div class="thumb-row">
+          
+            <figure class="thumb">
+              <img src="images/008_jackal_2019-08-13-14-41-24_7_r01_t10.jpg" alt="jackal_2019-08-13-14-41-24_7_r01 t=10">
+              <figcaption>t=10</figcaption>
+            </figure>
+            
+            <figure class="thumb">
+              <img src="images/009_jackal_2019-08-13-14-41-24_7_r01_t14.jpg" alt="jackal_2019-08-13-14-41-24_7_r01 t=14">
+              <figcaption>t=14</figcaption>
+            </figure>
+            
+            <figure class="thumb">
+              <img src="images/010_jackal_2019-08-13-14-41-24_7_r01_t4.jpg" alt="jackal_2019-08-13-14-41-24_7_r01 t=4">
+              <figcaption>t=4</figcaption>
+            </figure>
+            
+            <figure class="thumb">
+              <img src="images/011_jackal_2019-08-13-14-41-24_7_r01_t9.jpg" alt="jackal_2019-08-13-14-41-24_7_r01 t=9">
+              <figcaption>t=9</figcaption>
+            </figure>
+            
+        </div>
+        <div class="stats">
+          <div><strong>sparse times</strong>: [0, 1, 2, 3, 4, 5, 6, 7, ...]</div>
+          <div><strong>dense range</strong>: 0..143</div>
+          <div><strong>sparse norm</strong>: 1.00 +/- 0.00</div>
+          <div><strong>dense norm</strong>: 1.00 +/- 0.00</div>
+        </div>
+        <table class="caption-table">
+          <thead>
+            <tr>
+              <th>t</th>
+              <th>raw caption</th>
+              <th>clean text</th>
+            </tr>
+          </thead>
+          <tbody>
+            
+            <tr>
+              <td>10</td>
+              <td>The scene shows a grassy area with scattered leaves, surrounded by houses, trees, and power lines, under a bright sunny sky.</td>
+              <td>a grassy area with scattered leaves, surrounded by houses, trees, and power lines, under a bright sunny sky</td>
+            </tr>
+            
+            <tr>
+              <td>14</td>
+              <td>The scene features a large, white, curved building with a wooden door, surrounded by a grassy area with scattered leaves and a paved pathway leading to the entrance.</td>
+              <td>a large, white, curved building with a wooden door, surrounded by a grassy area with scattered leaves and a paved pathway leading to the entrance</td>
+            </tr>
+            
+            <tr>
+              <td>4</td>
+              <td>The scene shows a grassy area with a few scattered trees and buildings in the background, creating a semi-urban landscape.</td>
+              <td>a grassy area with a few scattered trees and buildings in the background, creating a semi-urban landscape</td>
+            </tr>
+            
+            <tr>
+              <td>9</td>
+              <td>The scene features a grassy area with a concrete pathway leading towards a building, surrounded by trees and a clear sky.</td>
+              <td>a grassy area with a concrete pathway leading towards a building, surrounded by trees and a clear sky</td>
+            </tr>
+            
+          </tbody>
+        </table>
+      </section>
+    
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <div class="eyebrow">test sample</div>
+            <h3>jackal_2019-08-08-13-45-45_4_r01</h3>
+          </div>
+          <div class="pill">sparse 15 frames</div>
+          <div class="pill">dense 146 frames</div>
+        </div>
+        <div class="thumb-row">
+          
+            <figure class="thumb">
+              <img src="images/012_jackal_2019-08-08-13-45-45_4_r01_t1.jpg" alt="jackal_2019-08-08-13-45-45_4_r01 t=1">
+              <figcaption>t=1</figcaption>
+            </figure>
+            
+            <figure class="thumb">
+              <img src="images/013_jackal_2019-08-08-13-45-45_4_r01_t5.jpg" alt="jackal_2019-08-08-13-45-45_4_r01 t=5">
+              <figcaption>t=5</figcaption>
+            </figure>
+            
+            <figure class="thumb">
+              <img src="images/014_jackal_2019-08-08-13-45-45_4_r01_t10.jpg" alt="jackal_2019-08-08-13-45-45_4_r01 t=10">
+              <figcaption>t=10</figcaption>
+            </figure>
+            
+            <figure class="thumb">
+              <img src="images/015_jackal_2019-08-08-13-45-45_4_r01_t0.jpg" alt="jackal_2019-08-08-13-45-45_4_r01 t=0">
+              <figcaption>t=0</figcaption>
+            </figure>
+            
+        </div>
+        <div class="stats">
+          <div><strong>sparse times</strong>: [0, 1, 2, 3, 4, 5, 6, 7, ...]</div>
+          <div><strong>dense range</strong>: 0..145</div>
+          <div><strong>sparse norm</strong>: 1.00 +/- 0.00</div>
+          <div><strong>dense norm</strong>: 1.00 +/- 0.00</div>
+        </div>
+        <table class="caption-table">
+          <thead>
+            <tr>
+              <th>t</th>
+              <th>raw caption</th>
+              <th>clean text</th>
+            </tr>
+          </thead>
+          <tbody>
+            
+            <tr>
+              <td>1</td>
+              <td>The scene shows a grassy area with a wooden utility pole, a small building, and a larger house in the background, with a clear sky overhead.</td>
+              <td>a grassy area with a wooden utility pole, a small building, and a larger house in the background, with a clear sky overhead</td>
+            </tr>
+            
+            <tr>
+              <td>5</td>
+              <td>The scene features a grassy area with a pathway leading to a building, surrounded by trees and a clear sky.</td>
+              <td>a grassy area with a pathway leading to a building, surrounded by trees and a clear sky</td>
+            </tr>
+            
+            <tr>
+              <td>10</td>
+              <td>The scene shows a circular building with a flat roof, surrounded by a grassy area with a sidewalk leading to the entrance, and a few trees and bushes in the background.</td>
+              <td>a circular building with a flat roof, surrounded by a grassy area with a sidewalk leading to the entrance, and a few trees and bushes in the background</td>
+            </tr>
+            
+            <tr>
+              <td>0</td>
+              <td>The scene shows a grassy area with a few buildings, trees, and a telephone pole, providing navigable space for walking or moving vehicles.</td>
+              <td>a grassy area with a few buildings, trees, and a telephone pole, providing navigable space for walking or moving vehicles</td>
+            </tr>
+            
+          </tbody>
+        </table>
+      </section>
+    
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <div class="eyebrow">train sample</div>
+            <h3>jackal_2019-10-20-16-09-18_0_r04</h3>
+          </div>
+          <div class="pill">sparse 1 frames</div>
+          <div class="pill">dense 6 frames</div>
+        </div>
+        <div class="thumb-row">
+          
+            <figure class="thumb">
+              <img src="images/016_jackal_2019-10-20-16-09-18_0_r04_t0.jpg" alt="jackal_2019-10-20-16-09-18_0_r04 t=0">
+              <figcaption>t=0</figcaption>
+            </figure>
+            
+        </div>
+        <div class="stats">
+          <div><strong>sparse times</strong>: [0]</div>
+          <div><strong>dense range</strong>: 0..5</div>
+          <div><strong>sparse norm</strong>: 1.00 +/- 0.00</div>
+          <div><strong>dense norm</strong>: 1.00 +/- 0.00</div>
+        </div>
+        <table class="caption-table">
+          <thead>
+            <tr>
+              <th>t</th>
+              <th>raw caption</th>
+              <th>clean text</th>
+            </tr>
+          </thead>
+          <tbody>
+            
+            <tr>
+              <td>0</td>
+              <td>The scene shows a dry, grassy area with a white building on the left and a row of houses in the background, under a clear blue sky.</td>
+              <td>a dry, grassy area with a white building on the left and a row of houses in the background, under a clear blue sky</td>
+            </tr>
+            
+          </tbody>
+        </table>
+      </section>
+    
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <div class="eyebrow">train sample</div>
+            <h3>jackal_2019-10-31-16-10-57_9_r00</h3>
+          </div>
+          <div class="pill">sparse 4 frames</div>
+          <div class="pill">dense 32 frames</div>
+        </div>
+        <div class="thumb-row">
+          
+            <figure class="thumb">
+              <img src="images/017_jackal_2019-10-31-16-10-57_9_r00_t0.jpg" alt="jackal_2019-10-31-16-10-57_9_r00 t=0">
+              <figcaption>t=0</figcaption>
+            </figure>
+            
+            <figure class="thumb">
+              <img src="images/018_jackal_2019-10-31-16-10-57_9_r00_t1.jpg" alt="jackal_2019-10-31-16-10-57_9_r00 t=1">
+              <figcaption>t=1</figcaption>
+            </figure>
+            
+            <figure class="thumb">
+              <img src="images/019_jackal_2019-10-31-16-10-57_9_r00_t2.jpg" alt="jackal_2019-10-31-16-10-57_9_r00 t=2">
+              <figcaption>t=2</figcaption>
+            </figure>
+            
+            <figure class="thumb">
+              <img src="images/020_jackal_2019-10-31-16-10-57_9_r00_t3.jpg" alt="jackal_2019-10-31-16-10-57_9_r00 t=3">
+              <figcaption>t=3</figcaption>
+            </figure>
+            
+        </div>
+        <div class="stats">
+          <div><strong>sparse times</strong>: [0, 1, 2, 3]</div>
+          <div><strong>dense range</strong>: 0..31</div>
+          <div><strong>sparse norm</strong>: 1.00 +/- 0.00</div>
+          <div><strong>dense norm</strong>: 1.00 +/- 0.00</div>
+        </div>
+        <table class="caption-table">
+          <thead>
+            <tr>
+              <th>t</th>
+              <th>raw caption</th>
+              <th>clean text</th>
+            </tr>
+          </thead>
+          <tbody>
+            
+            <tr>
+              <td>0</td>
+              <td>The scene shows a sandy area with a house, a tree, and a white structure, with the sun shining brightly in the sky.</td>
+              <td>a sandy area with a house, a tree, and a white structure, with the sun shining brightly in the sky</td>
+            </tr>
+            
+            <tr>
+              <td>1</td>
+              <td>The scene shows a house with a bright sun shining behind it, casting a lens flare effect, and a grassy area with trees and power lines in the background.</td>
+              <td>a house with a bright sun shining behind it, casting a lens flare effect, and a grassy area with trees and power lines in the background</td>
+            </tr>
+            
+            <tr>
+              <td>2</td>
+              <td>The scene features a grassy area with a white curved structure, trees, and a clear sky, providing a navigable space with some obstacles like the trees and the structure.</td>
+              <td>a grassy area with a white curved structure, trees, and a clear sky, providing a navigable space with some obstacles like the trees and the structure</td>
+            </tr>
+            
+            <tr>
+              <td>3</td>
+              <td>The scene shows a large, white, dome-shaped structure with a shadow cast on its side, situated on a dry, grassy terrain with a clear blue sky above.</td>
+              <td>a large, white, dome-shaped structure with a shadow cast on its side, situated on a dry, grassy terrain with a clear blue sky above</td>
+            </tr>
+            
+          </tbody>
+        </table>
+      </section>
+    
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <div class="eyebrow">train sample</div>
+            <h3>jackal_2019-08-15-16-05-21_22_r03</h3>
+          </div>
+          <div class="pill">sparse 13 frames</div>
+          <div class="pill">dense 125 frames</div>
+        </div>
+        <div class="thumb-row">
+          
+            <figure class="thumb">
+              <img src="images/021_jackal_2019-08-15-16-05-21_22_r03_t12.jpg" alt="jackal_2019-08-15-16-05-21_22_r03 t=12">
+              <figcaption>t=12</figcaption>
+            </figure>
+            
+            <figure class="thumb">
+              <img src="images/022_jackal_2019-08-15-16-05-21_22_r03_t3.jpg" alt="jackal_2019-08-15-16-05-21_22_r03 t=3">
+              <figcaption>t=3</figcaption>
+            </figure>
+            
+            <figure class="thumb">
+              <img src="images/023_jackal_2019-08-15-16-05-21_22_r03_t7.jpg" alt="jackal_2019-08-15-16-05-21_22_r03 t=7">
+              <figcaption>t=7</figcaption>
+            </figure>
+            
+            <figure class="thumb">
+              <img src="images/024_jackal_2019-08-15-16-05-21_22_r03_t11.jpg" alt="jackal_2019-08-15-16-05-21_22_r03 t=11">
+              <figcaption>t=11</figcaption>
+            </figure>
+            
+        </div>
+        <div class="stats">
+          <div><strong>sparse times</strong>: [0, 1, 2, 3, 4, 5, 6, 7, ...]</div>
+          <div><strong>dense range</strong>: 0..124</div>
+          <div><strong>sparse norm</strong>: 1.00 +/- 0.00</div>
+          <div><strong>dense norm</strong>: 1.00 +/- 0.00</div>
+        </div>
+        <table class="caption-table">
+          <thead>
+            <tr>
+              <th>t</th>
+              <th>raw caption</th>
+              <th>clean text</th>
+            </tr>
+          </thead>
+          <tbody>
+            
+            <tr>
+              <td>12</td>
+              <td>The scene depicts a grassy area with trees, bushes, and a white building in the background, under a bright sunny sky.</td>
+              <td>a grassy area with trees, bushes, and a white building in the background, under a bright sunny sky</td>
+            </tr>
+            
+            <tr>
+              <td>3</td>
+              <td>The scene shows a residential area with a grassy yard, a white house, and a utility pole, with a clear path leading to the house.</td>
+              <td>a residential area with a grassy yard, a white house, and a utility pole, with a clear path leading to the house</td>
+            </tr>
+            
+            <tr>
+              <td>7</td>
+              <td>The scene features a grassy area with a white building, a parked white truck, and a pathway leading to a house with a brown roof, all under a clear blue sky.</td>
+              <td>a grassy area with a white building, a parked white truck, and a pathway leading to a house with a brown roof, all under a clear blue sky</td>
+            </tr>
+            
+            <tr>
+              <td>11</td>
+              <td>The scene features a grassy area with a tree, a house, and a paved driveway, with a telephone pole and power lines in the background.</td>
+              <td>a grassy area with a tree, a house, and a paved driveway, with a telephone pole and power lines in the background</td>
+            </tr>
+            
+          </tbody>
+        </table>
+      </section>
+    
+      <section class="card">
+        <div class="card-head">
+          <div>
+            <div class="eyebrow">train sample</div>
+            <h3>jackal_2020-01-04-13-15-18_7_r01</h3>
+          </div>
+          <div class="pill">sparse 12 frames</div>
+          <div class="pill">dense 117 frames</div>
+        </div>
+        <div class="thumb-row">
+          
+            <figure class="thumb">
+              <img src="images/025_jackal_2020-01-04-13-15-18_7_r01_t6.jpg" alt="jackal_2020-01-04-13-15-18_7_r01 t=6">
+              <figcaption>t=6</figcaption>
+            </figure>
+            
+            <figure class="thumb">
+              <img src="images/026_jackal_2020-01-04-13-15-18_7_r01_t9.jpg" alt="jackal_2020-01-04-13-15-18_7_r01 t=9">
+              <figcaption>t=9</figcaption>
+            </figure>
+            
+            <figure class="thumb">
+              <img src="images/027_jackal_2020-01-04-13-15-18_7_r01_t1.jpg" alt="jackal_2020-01-04-13-15-18_7_r01 t=1">
+              <figcaption>t=1</figcaption>
+            </figure>
+            
+            <figure class="thumb">
+              <img src="images/028_jackal_2020-01-04-13-15-18_7_r01_t5.jpg" alt="jackal_2020-01-04-13-15-18_7_r01 t=5">
+              <figcaption>t=5</figcaption>
+            </figure>
+            
+        </div>
+        <div class="stats">
+          <div><strong>sparse times</strong>: [0, 1, 2, 3, 4, 5, 6, 7, ...]</div>
+          <div><strong>dense range</strong>: 0..116</div>
+          <div><strong>sparse norm</strong>: 1.00 +/- 0.00</div>
+          <div><strong>dense norm</strong>: 1.00 +/- 0.00</div>
+        </div>
+        <table class="caption-table">
+          <thead>
+            <tr>
+              <th>t</th>
+              <th>raw caption</th>
+              <th>clean text</th>
+            </tr>
+          </thead>
+          <tbody>
+            
+            <tr>
+              <td>6</td>
+              <td>The scene depicts an open field with scattered vegetation, a telephone pole, and a clear sky with some clouds.</td>
+              <td>an open field with scattered vegetation, a telephone pole, and a clear sky with some clouds</td>
+            </tr>
+            
+            <tr>
+              <td>9</td>
+              <td>The scene depicts a grassy area with tall grass, a fence, and a telephone pole, under a bright sky with scattered clouds.</td>
+              <td>a grassy area with tall grass, a fence, and a telephone pole, under a bright sky with scattered clouds</td>
+            </tr>
+            
+            <tr>
+              <td>1</td>
+              <td>The scene shows an open grassy area with scattered trees, a bright sun, and a clear sky, indicating a sunny day with minimal obstacles in the navigable space.</td>
+              <td>an open grassy area with scattered trees, a bright sun, and a clear sky, indicating a sunny day with minimal obstacles in the navigable space</td>
+            </tr>
+            
+            <tr>
+              <td>5</td>
+              <td>The scene depicts a grassy field with scattered trees and power lines, under a bright, sunny sky.</td>
+              <td>a grassy field with scattered trees and power lines, under a bright, sunny sky</td>
+            </tr>
+            
+          </tbody>
+        </table>
+      </section>
+    
+      </div>
+    </section>
+  </main>
+</body>
+</html>
