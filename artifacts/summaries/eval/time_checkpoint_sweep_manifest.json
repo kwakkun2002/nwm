@@ -1,200 +1,128 @@
 [
   {
-    "experiment": "nwm_cdit_b",
-    "checkpoint": "0100000.pth.tar",
-    "checkpoint_label": "0100000",
-    "train_steps": 100000,
-    "output_dir": "artifacts/bulk/eval/lpips_time_recon_b/nwm_cdit_b",
-    "metric_json": "artifacts/summaries/eval/lpips_time_recon_b/nwm_cdit_b/recon_time.json",
-    "status": "existing"
-  },
-  {
-    "experiment": "nwm_cdit_b_recon_128",
+    "experiment": "nwm_cdit_b_recon_64",
     "checkpoint": "0005000.pth.tar",
     "checkpoint_label": "0005000",
     "train_steps": 5000,
-    "output_dir": "artifacts/bulk/eval/eval_b_recon_128/nwm_cdit_b_recon_128_0005000",
-    "metric_json": "artifacts/summaries/eval/eval_b_recon_128/nwm_cdit_b_recon_128_0005000/recon_time.json",
-    "status": "existing"
+    "output_dir": "artifacts/bulk/eval/eval_b_recon_64/nwm_cdit_b_recon_64_0005000",
+    "metric_json": "artifacts/summaries/eval/eval_b_recon_64/nwm_cdit_b_recon_64_0005000/recon_time.json",
+    "status": "ran"
   },
   {
-    "experiment": "nwm_cdit_b_recon_128",
+    "experiment": "nwm_cdit_b_recon_64",
     "checkpoint": "0010000.pth.tar",
     "checkpoint_label": "0010000",
     "train_steps": 10000,
-    "output_dir": "artifacts/bulk/eval/eval_b_recon_128/nwm_cdit_b_recon_128_0010000",
-    "metric_json": "artifacts/summaries/eval/eval_b_recon_128/nwm_cdit_b_recon_128_0010000/recon_time.json",
-    "status": "existing"
+    "output_dir": "artifacts/bulk/eval/eval_b_recon_64/nwm_cdit_b_recon_64_0010000",
+    "metric_json": "artifacts/summaries/eval/eval_b_recon_64/nwm_cdit_b_recon_64_0010000/recon_time.json",
+    "status": "ran"
   },
   {
-    "experiment": "nwm_cdit_b_recon_128",
+    "experiment": "nwm_cdit_b_recon_64",
     "checkpoint": "0015000.pth.tar",
     "checkpoint_label": "0015000",
     "train_steps": 15000,
-    "output_dir": "artifacts/bulk/eval/eval_b_recon_128/nwm_cdit_b_recon_128_0015000",
-    "metric_json": "artifacts/summaries/eval/eval_b_recon_128/nwm_cdit_b_recon_128_0015000/recon_time.json",
-    "status": "existing"
+    "output_dir": "artifacts/bulk/eval/eval_b_recon_64/nwm_cdit_b_recon_64_0015000",
+    "metric_json": "artifacts/summaries/eval/eval_b_recon_64/nwm_cdit_b_recon_64_0015000/recon_time.json",
+    "status": "ran"
   },
   {
-    "experiment": "nwm_cdit_b_recon_128",
+    "experiment": "nwm_cdit_b_recon_64",
     "checkpoint": "0020000.pth.tar",
     "checkpoint_label": "0020000",
     "train_steps": 20000,
-    "output_dir": "artifacts/bulk/eval/eval_b_recon_128/nwm_cdit_b_recon_128_0020000",
-    "metric_json": "artifacts/summaries/eval/eval_b_recon_128/nwm_cdit_b_recon_128_0020000/recon_time.json",
-    "status": "existing"
+    "output_dir": "artifacts/bulk/eval/eval_b_recon_64/nwm_cdit_b_recon_64_0020000",
+    "metric_json": "artifacts/summaries/eval/eval_b_recon_64/nwm_cdit_b_recon_64_0020000/recon_time.json",
+    "status": "ran"
   },
   {
-    "experiment": "nwm_cdit_b_recon_128",
+    "experiment": "nwm_cdit_b_recon_64",
     "checkpoint": "0025000.pth.tar",
     "checkpoint_label": "0025000",
     "train_steps": 25000,
-    "output_dir": "artifacts/bulk/eval/eval_b_recon_128/nwm_cdit_b_recon_128_0025000",
-    "metric_json": "artifacts/summaries/eval/eval_b_recon_128/nwm_cdit_b_recon_128_0025000/recon_time.json",
-    "status": "existing"
+    "output_dir": "artifacts/bulk/eval/eval_b_recon_64/nwm_cdit_b_recon_64_0025000",
+    "metric_json": "artifacts/summaries/eval/eval_b_recon_64/nwm_cdit_b_recon_64_0025000/recon_time.json",
+    "status": "ran"
   },
   {
-    "experiment": "nwm_cdit_b_recon_128",
+    "experiment": "nwm_cdit_b_recon_64",
     "checkpoint": "0030000.pth.tar",
     "checkpoint_label": "0030000",
     "train_steps": 30000,
-    "output_dir": "artifacts/bulk/eval/eval_b_recon_128/nwm_cdit_b_recon_128_0030000",
-    "metric_json": "artifacts/summaries/eval/eval_b_recon_128/nwm_cdit_b_recon_128_0030000/recon_time.json",
-    "status": "existing"
+    "output_dir": "artifacts/bulk/eval/eval_b_recon_64/nwm_cdit_b_recon_64_0030000",
+    "metric_json": "artifacts/summaries/eval/eval_b_recon_64/nwm_cdit_b_recon_64_0030000/recon_time.json",
+    "status": "ran"
   },
   {
-    "experiment": "nwm_cdit_b_recon_128",
-    "checkpoint": "latest.pth.tar",
-    "checkpoint_label": "latest",
-    "train_steps": 32500,
-    "output_dir": "artifacts/bulk/eval/eval_b_recon_128/nwm_cdit_b_recon_128_latest",
-    "metric_json": "artifacts/summaries/eval/eval_b_recon_128/nwm_cdit_b_recon_128_latest/recon_time.json",
-    "status": "existing"
-  },
-  {
-    "experiment": "nwm_cdit_b_recon_128_text_dense",
-    "checkpoint": "0005000.pth.tar",
-    "checkpoint_label": "0005000",
-    "train_steps": 5000,
-    "output_dir": "artifacts/bulk/eval/eval_b_recon_128_text_dense/nwm_cdit_b_recon_128_text_dense_0005000",
-    "metric_json": "artifacts/summaries/eval/eval_b_recon_128_text_dense/nwm_cdit_b_recon_128_text_dense_0005000/recon_time.json",
-    "status": "existing"
-  },
-  {
-    "experiment": "nwm_cdit_b_recon_128_text_dense",
-    "checkpoint": "0010000.pth.tar",
-    "checkpoint_label": "0010000",
-    "train_steps": 10000,
-    "output_dir": "artifacts/bulk/eval/eval_b_recon_128_text_dense/nwm_cdit_b_recon_128_text_dense_0010000",
-    "metric_json": "artifacts/summaries/eval/eval_b_recon_128_text_dense/nwm_cdit_b_recon_128_text_dense_0010000/recon_time.json",
-    "status": "existing"
-  },
-  {
-    "experiment": "nwm_cdit_b_recon_128_text_dense",
-    "checkpoint": "0015000.pth.tar",
-    "checkpoint_label": "0015000",
-    "train_steps": 15000,
-    "output_dir": "artifacts/bulk/eval/eval_b_recon_128_text_dense/nwm_cdit_b_recon_128_text_dense_0015000",
-    "metric_json": "artifacts/summaries/eval/eval_b_recon_128_text_dense/nwm_cdit_b_recon_128_text_dense_0015000/recon_time.json",
-    "status": "existing"
-  },
-  {
-    "experiment": "nwm_cdit_b_recon_128_text_dense",
-    "checkpoint": "0020000.pth.tar",
-    "checkpoint_label": "0020000",
-    "train_steps": 20000,
-    "output_dir": "artifacts/bulk/eval/eval_b_recon_128_text_dense/nwm_cdit_b_recon_128_text_dense_0020000",
-    "metric_json": "artifacts/summaries/eval/eval_b_recon_128_text_dense/nwm_cdit_b_recon_128_text_dense_0020000/recon_time.json",
-    "status": "existing"
-  },
-  {
-    "experiment": "nwm_cdit_b_recon_128_text_dense",
-    "checkpoint": "0025000.pth.tar",
-    "checkpoint_label": "0025000",
-    "train_steps": 25000,
-    "output_dir": "artifacts/bulk/eval/eval_b_recon_128_text_dense/nwm_cdit_b_recon_128_text_dense_0025000",
-    "metric_json": "artifacts/summaries/eval/eval_b_recon_128_text_dense/nwm_cdit_b_recon_128_text_dense_0025000/recon_time.json",
-    "status": "existing"
-  },
-  {
-    "experiment": "nwm_cdit_b_recon_128_text_dense",
-    "checkpoint": "0030000.pth.tar",
-    "checkpoint_label": "0030000",
-    "train_steps": 30000,
-    "output_dir": "artifacts/bulk/eval/eval_b_recon_128_text_dense/nwm_cdit_b_recon_128_text_dense_0030000",
-    "metric_json": "artifacts/summaries/eval/eval_b_recon_128_text_dense/nwm_cdit_b_recon_128_text_dense_0030000/recon_time.json",
-    "status": "existing"
-  },
-  {
-    "experiment": "nwm_cdit_b_recon_128_text_dense",
+    "experiment": "nwm_cdit_b_recon_64",
     "checkpoint": "latest.pth.tar",
     "checkpoint_label": "latest",
     "train_steps": 33000,
-    "output_dir": "artifacts/bulk/eval/eval_b_recon_128_text_dense/nwm_cdit_b_recon_128_text_dense_latest",
-    "metric_json": "artifacts/summaries/eval/eval_b_recon_128_text_dense/nwm_cdit_b_recon_128_text_dense_latest/recon_time.json",
-    "status": "existing"
+    "output_dir": "artifacts/bulk/eval/eval_b_recon_64/nwm_cdit_b_recon_64_latest",
+    "metric_json": "artifacts/summaries/eval/eval_b_recon_64/nwm_cdit_b_recon_64_latest/recon_time.json",
+    "status": "ran"
   },
   {
-    "experiment": "nwm_cdit_b_recon_raw_text_dense",
+    "experiment": "nwm_cdit_b_recon_64_text_dense",
     "checkpoint": "0005000.pth.tar",
     "checkpoint_label": "0005000",
     "train_steps": 5000,
-    "output_dir": "artifacts/bulk/eval/eval_b_recon_raw_text_dense/nwm_cdit_b_recon_raw_text_dense_0005000",
-    "metric_json": "artifacts/summaries/eval/eval_b_recon_raw_text_dense/nwm_cdit_b_recon_raw_text_dense_0005000/recon_time.json",
-    "status": "existing"
+    "output_dir": "artifacts/bulk/eval/eval_b_recon_64_text_dense/nwm_cdit_b_recon_64_text_dense_0005000",
+    "metric_json": "artifacts/summaries/eval/eval_b_recon_64_text_dense/nwm_cdit_b_recon_64_text_dense_0005000/recon_time.json",
+    "status": "ran"
   },
   {
-    "experiment": "nwm_cdit_b_recon_raw_text_dense",
+    "experiment": "nwm_cdit_b_recon_64_text_dense",
     "checkpoint": "0010000.pth.tar",
     "checkpoint_label": "0010000",
     "train_steps": 10000,
-    "output_dir": "artifacts/bulk/eval/eval_b_recon_raw_text_dense/nwm_cdit_b_recon_raw_text_dense_0010000",
-    "metric_json": "artifacts/summaries/eval/eval_b_recon_raw_text_dense/nwm_cdit_b_recon_raw_text_dense_0010000/recon_time.json",
-    "status": "existing"
+    "output_dir": "artifacts/bulk/eval/eval_b_recon_64_text_dense/nwm_cdit_b_recon_64_text_dense_0010000",
+    "metric_json": "artifacts/summaries/eval/eval_b_recon_64_text_dense/nwm_cdit_b_recon_64_text_dense_0010000/recon_time.json",
+    "status": "ran"
   },
   {
-    "experiment": "nwm_cdit_b_recon_raw_text_dense",
+    "experiment": "nwm_cdit_b_recon_64_text_dense",
     "checkpoint": "0015000.pth.tar",
     "checkpoint_label": "0015000",
     "train_steps": 15000,
-    "output_dir": "artifacts/bulk/eval/eval_b_recon_raw_text_dense/nwm_cdit_b_recon_raw_text_dense_0015000",
-    "metric_json": "artifacts/summaries/eval/eval_b_recon_raw_text_dense/nwm_cdit_b_recon_raw_text_dense_0015000/recon_time.json",
-    "status": "existing"
+    "output_dir": "artifacts/bulk/eval/eval_b_recon_64_text_dense/nwm_cdit_b_recon_64_text_dense_0015000",
+    "metric_json": "artifacts/summaries/eval/eval_b_recon_64_text_dense/nwm_cdit_b_recon_64_text_dense_0015000/recon_time.json",
+    "status": "ran"
   },
   {
-    "experiment": "nwm_cdit_b_recon_raw_text_dense",
+    "experiment": "nwm_cdit_b_recon_64_text_dense",
     "checkpoint": "0020000.pth.tar",
     "checkpoint_label": "0020000",
     "train_steps": 20000,
-    "output_dir": "artifacts/bulk/eval/eval_b_recon_raw_text_dense/nwm_cdit_b_recon_raw_text_dense_0020000",
-    "metric_json": "artifacts/summaries/eval/eval_b_recon_raw_text_dense/nwm_cdit_b_recon_raw_text_dense_0020000/recon_time.json",
-    "status": "existing"
+    "output_dir": "artifacts/bulk/eval/eval_b_recon_64_text_dense/nwm_cdit_b_recon_64_text_dense_0020000",
+    "metric_json": "artifacts/summaries/eval/eval_b_recon_64_text_dense/nwm_cdit_b_recon_64_text_dense_0020000/recon_time.json",
+    "status": "ran"
   },
   {
-    "experiment": "nwm_cdit_b_recon_raw_text_dense",
+    "experiment": "nwm_cdit_b_recon_64_text_dense",
     "checkpoint": "0025000.pth.tar",
     "checkpoint_label": "0025000",
     "train_steps": 25000,
-    "output_dir": "artifacts/bulk/eval/eval_b_recon_raw_text_dense/nwm_cdit_b_recon_raw_text_dense_0025000",
-    "metric_json": "artifacts/summaries/eval/eval_b_recon_raw_text_dense/nwm_cdit_b_recon_raw_text_dense_0025000/recon_time.json",
-    "status": "existing"
+    "output_dir": "artifacts/bulk/eval/eval_b_recon_64_text_dense/nwm_cdit_b_recon_64_text_dense_0025000",
+    "metric_json": "artifacts/summaries/eval/eval_b_recon_64_text_dense/nwm_cdit_b_recon_64_text_dense_0025000/recon_time.json",
+    "status": "ran"
   },
   {
-    "experiment": "nwm_cdit_b_recon_raw_text_dense",
+    "experiment": "nwm_cdit_b_recon_64_text_dense",
     "checkpoint": "0030000.pth.tar",
     "checkpoint_label": "0030000",
     "train_steps": 30000,
-    "output_dir": "artifacts/bulk/eval/eval_b_recon_raw_text_dense/nwm_cdit_b_recon_raw_text_dense_0030000",
-    "metric_json": "artifacts/summaries/eval/eval_b_recon_raw_text_dense/nwm_cdit_b_recon_raw_text_dense_0030000/recon_time.json",
-    "status": "existing"
+    "output_dir": "artifacts/bulk/eval/eval_b_recon_64_text_dense/nwm_cdit_b_recon_64_text_dense_0030000",
+    "metric_json": "artifacts/summaries/eval/eval_b_recon_64_text_dense/nwm_cdit_b_recon_64_text_dense_0030000/recon_time.json",
+    "status": "ran"
   },
   {
-    "experiment": "nwm_cdit_b_recon_raw_text_dense",
+    "experiment": "nwm_cdit_b_recon_64_text_dense",
     "checkpoint": "latest.pth.tar",
     "checkpoint_label": "latest",
     "train_steps": 33000,
-    "output_dir": "artifacts/bulk/eval/eval_b_recon_raw_text_dense/nwm_cdit_b_recon_raw_text_dense_latest",
-    "metric_json": "artifacts/summaries/eval/eval_b_recon_raw_text_dense/nwm_cdit_b_recon_raw_text_dense_latest/recon_time.json",
-    "status": "existing"
+    "output_dir": "artifacts/bulk/eval/eval_b_recon_64_text_dense/nwm_cdit_b_recon_64_text_dense_latest",
+    "metric_json": "artifacts/summaries/eval/eval_b_recon_64_text_dense/nwm_cdit_b_recon_64_text_dense_latest/recon_time.json",
+    "status": "ran"
   }
 ]

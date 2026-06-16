@@ -23,6 +23,10 @@ import os
 import sys
 from pathlib import Path
 
+LOCAL_TORCH_CACHE = Path(__file__).resolve().parents[3] / "weights" / "cache" / "torch"
+if LOCAL_TORCH_CACHE.exists():
+    os.environ.setdefault("TORCH_HOME", str(LOCAL_TORCH_CACHE))
+
 import torch
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
@@ -49,7 +53,7 @@ from src.evaluation.planning.outputs import log_viz_single, plot_batch_final, pl
 from src.evaluation.planning.trajectory_metrics import actions_to_traj, eval_metrics
 import src.core.env.distributed as dist
 from src.models.backbones.cdit import CDiT_models
-from src.features.text.pipeline import get_text_conditioning_config
+from src.features.text.pipeline import get_text_conditioning_config, override_text_embedding_root
 from src.evaluation.planning.navigation_ranker import (
     DEFAULT_DINO_WEIGHTS,
     DinoFeatureExtractor,
@@ -75,7 +79,10 @@ class WM_Planning_Evaluator:
         self.get_eval_name()
 
         self.config = update_runtime_section(
-            load_runtime_config(self.args, config_attr="exp"),
+            override_text_embedding_root(
+                load_runtime_config(self.args, config_attr="exp"),
+                getattr(self.args, "text_embedding_root", None),
+            ),
             "planning",
             self.args,
             (
@@ -466,6 +473,7 @@ def build_parser():
     parser.add_argument("--max_eval_samples", type=int, default=None, help="limit planning eval samples for smoke tests")
     parser.add_argument("--eval_start_index", type=int, default=0, help="first eval sample index when max_eval_samples is set")
     parser.add_argument("--plot", action="store_true", default=False)
+    parser.add_argument("--text_embedding_root", type=str, default=None, help="override text conditioning embedding root")
     return parser
 
 
@@ -501,6 +509,7 @@ def uses_legacy_cli(argv):
         "--max_eval_samples",
         "--eval_start_index",
         "--plot",
+        "--text_embedding_root",
         "-h",
         "--help",
     }

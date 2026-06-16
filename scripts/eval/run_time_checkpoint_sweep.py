@@ -21,6 +21,18 @@ EXPERIMENTS = {
         "suite": "eval_b_recon_128",
         "gt_suite": "eval_b_recon_128",
     },
+    "nwm_cdit_b_recon_64": {
+        "config": Path("configs/experiment/nwm_cdit_b_recon_64.yaml"),
+        "checkpoint_dir": Path("weights/checkpoints/nwm_cdit_b_recon_64"),
+        "suite": "eval_b_recon_64",
+        "gt_suite": "eval_b_recon_64",
+    },
+    "nwm_cdit_b_recon_64_text_dense": {
+        "config": Path("configs/experiment/nwm_cdit_b_recon_64_text_dense.yaml"),
+        "checkpoint_dir": Path("weights/checkpoints/nwm_cdit_b_recon_64_text_dense"),
+        "suite": "eval_b_recon_64_text_dense",
+        "gt_suite": "eval_b_recon_64",
+    },
     "nwm_cdit_b_recon_128_text_dense": {
         "config": Path("configs/experiment/nwm_cdit_b_recon_128_text_dense.yaml"),
         "checkpoint_dir": Path("weights/checkpoints/nwm_cdit_b_recon_128_text_dense"),
@@ -39,6 +51,18 @@ EXPERIMENTS = {
         "suite": "eval_s_recon_128",
         "gt_suite": "eval_s_recon_128",
     },
+    "nwm_cdit_s_recon_64": {
+        "config": Path("configs/experiment/nwm_cdit_s_recon_64.yaml"),
+        "checkpoint_dir": Path("weights/checkpoints/nwm_cdit_s_recon_64"),
+        "suite": "eval_s_recon_64",
+        "gt_suite": "eval_s_recon_64",
+    },
+    "nwm_cdit_s_recon_64_text_dense": {
+        "config": Path("configs/experiment/nwm_cdit_s_recon_64_text_dense.yaml"),
+        "checkpoint_dir": Path("weights/checkpoints/nwm_cdit_s_recon_64_text_dense"),
+        "suite": "eval_s_recon_64_text_dense",
+        "gt_suite": "eval_s_recon_64",
+    },
     "nwm_cdit_s_recon_128_text_dense": {
         "config": Path("configs/experiment/nwm_cdit_s_recon_128_text_dense.yaml"),
         "checkpoint_dir": Path("weights/checkpoints/nwm_cdit_s_recon_128_text_dense"),
@@ -54,6 +78,8 @@ EXPERIMENTS = {
 }
 
 DEFAULT_EXPERIMENTS = (
+    "nwm_cdit_s_recon_64",
+    "nwm_cdit_s_recon_64_text_dense",
     "nwm_cdit_s_recon_128",
     "nwm_cdit_s_recon_128_text_dense",
     "nwm_cdit_s_recon_raw_text_dense",
@@ -113,12 +139,19 @@ def copy_metric_summary(metric_json_path: Path, summary_json_path: Path, dry_run
     shutil.copy2(metric_json_path, summary_json_path)
 
 
+def gt_dir_ready(gt_dir: Path, dataset_arg: str) -> bool:
+    datasets = [item.strip() for item in dataset_arg.split(",") if item.strip()]
+    return all((gt_dir / dataset / "time").exists() for dataset in datasets)
+
+
 def maybe_generate_gt(exp_name: str, exp_cfg: dict, args: argparse.Namespace, output_root: Path, gt_dir: Path, dry_run: bool) -> None:
-    if gt_dir.exists():
+    if gt_dir_ready(gt_dir, args.dataset):
         return
 
     print(f"[{exp_name}] GT directory is missing. Generating time GT at {output_root} ...")
     if not dry_run:
+        if gt_dir.exists():
+            shutil.rmtree(gt_dir)
         output_root.mkdir(parents=True, exist_ok=True)
     run_command(
         [
@@ -180,7 +213,7 @@ def main() -> None:
         summary_exp_root = summary_root / exp_cfg["suite"]
         gt_output_root = bulk_root / exp_cfg["gt_suite"]
         gt_dir = bulk_root / exp_cfg["gt_suite"] / "gt"
-        gt_ready = gt_dir.exists()
+        gt_ready = gt_dir_ready(gt_dir, args.dataset)
 
         checkpoint_paths = build_checkpoint_list(
             exp_cfg["checkpoint_dir"],

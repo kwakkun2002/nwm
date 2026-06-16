@@ -15,9 +15,9 @@ from src.features.text.pipeline import build_text_cache_path, infer_frame_time, 
 from src.features.text.utils import iter_jsonl
 
 
-def load_text_encoder(model_name_or_path: str, dtype: str):
+def load_text_encoder(model_name_or_path: str, dtype: str, local_files_only: bool = False):
     try:
-        from transformers import AutoModel, AutoTokenizer, CLIPTextModelWithProjection
+        from transformers import AutoConfig, AutoModel, AutoTokenizer, CLIPTextModel, CLIPTextModelWithProjection
     except ImportError as exc:
         raise ImportError(
             "Failed to import transformers for text embedding precompute. "
@@ -31,11 +31,20 @@ def load_text_encoder(model_name_or_path: str, dtype: str):
     }
     torch_dtype = dtype_map[dtype]
 
-    tokenizer = AutoTokenizer.from_pretrained(model_name_or_path)
-    try:
-        model = CLIPTextModelWithProjection.from_pretrained(model_name_or_path, torch_dtype=torch_dtype)
-    except Exception:
-        model = AutoModel.from_pretrained(model_name_or_path, torch_dtype=torch_dtype)
+    load_kwargs = {
+        "torch_dtype": torch_dtype,
+        "local_files_only": local_files_only,
+    }
+    tokenizer = AutoTokenizer.from_pretrained(model_name_or_path, local_files_only=local_files_only)
+    config = AutoConfig.from_pretrained(model_name_or_path, local_files_only=local_files_only)
+    if getattr(config, "model_type", None) == "clip":
+        try:
+            model = CLIPTextModelWithProjection.from_pretrained(model_name_or_path, **load_kwargs)
+        except Exception as exc:
+            print(f"Falling back to CLIPTextModel without projection after text projection load failed: {exc}")
+            model = CLIPTextModel.from_pretrained(model_name_or_path, **load_kwargs)
+    else:
+        model = AutoModel.from_pretrained(model_name_or_path, **load_kwargs)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     model.to(device)
@@ -109,13 +118,18 @@ def main():
     parser.add_argument("--batch-size", type=int, default=128)
     parser.add_argument("--max-length", type=int, default=77)
     parser.add_argument("--dtype", type=str, default="float16", choices=["float16", "bfloat16", "float32"])
+    parser.add_argument("--local-files-only", type=int, default=0)
     args = parser.parse_args()
 
     records = list(iter_jsonl(args.input))
     if not records:
         raise ValueError(f"No caption records found in {args.input}")
 
-    tokenizer, model, device = load_text_encoder(args.model_name_or_path, dtype=args.dtype)
+    tokenizer, model, device = load_text_encoder(
+        args.model_name_or_path,
+        dtype=args.dtype,
+        local_files_only=bool(args.local_files_only),
+    )
 
     grouped_records = defaultdict(list)
     grouped_embeddings = defaultdict(list)

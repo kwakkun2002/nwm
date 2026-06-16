@@ -26,9 +26,27 @@ def eval_name(action_sampler: str) -> str:
     return f"CEM_{sampler_label}_N32_K5_RS1_rep1_OPT1"
 
 
-def build_series(model_size: str, action_sampler: str) -> list[dict]:
+def build_series(model_size: str, action_sampler: str, images: set[str]) -> list[dict]:
     eval_tag = eval_name(action_sampler)
-    return [
+    series = [
+        {
+            "image": "64",
+            "condition": "No-Text",
+            "checkpoint": f"nwm_cdit_{model_size}_recon_64/0030000",
+            "path": Path(
+                f"artifacts/bulk/planning/recon64_{model_size}_notext_0030000_full_n32/"
+                f"nwm_cdit_{model_size}_recon_64/recon_{eval_tag}.json"
+            ),
+        },
+        {
+            "image": "64",
+            "condition": "Text",
+            "checkpoint": f"nwm_cdit_{model_size}_recon_64_text_dense/0030000",
+            "path": Path(
+                f"artifacts/bulk/planning/recon64_{model_size}_text_dense_0030000_full_n32/"
+                f"nwm_cdit_{model_size}_recon_64_text_dense/recon_{eval_tag}.json"
+            ),
+        },
         {
             "image": "128",
             "condition": "No-Text",
@@ -66,6 +84,7 @@ def build_series(model_size: str, action_sampler: str) -> list[dict]:
             ),
         },
     ]
+    return [item for item in series if item["image"] in images]
 
 
 def load_rows(series: list[dict]) -> list[dict]:
@@ -122,7 +141,8 @@ def write_summary(rows: list[dict], output_dir: Path, model_label: str) -> Path:
         )
 
     lines.extend(["", "## Text minus No-Text", "", "| Image | ATE | RPE trans | Pos error | Yaw error |", "|---|---:|---:|---:|---:|"])
-    for image in ("128", "224"):
+    images = sorted({row["image"] for row in rows}, key=int)
+    for image in images:
         no_text = row_by_key[(image, "No-Text")]
         text = row_by_key[(image, "Text")]
         cells = []
@@ -161,7 +181,8 @@ def plot_metrics(rows: list[dict], output_dir: Path, model_label: str) -> None:
 
     delta_rows = []
     row_by_key = {(row["image"], row["condition"]): row for row in rows}
-    for image in ("128", "224"):
+    images = sorted({row["image"] for row in rows}, key=int)
+    for image in images:
         no_text = row_by_key[(image, "No-Text")]
         text = row_by_key[(image, "Text")]
         delta_rows.append((image, [(text[key] - no_text[key]) / no_text[key] * 100.0 for key, _, _ in METRICS[:4]]))
@@ -170,7 +191,7 @@ def plot_metrics(rows: list[dict], output_dir: Path, model_label: str) -> None:
     fig.patch.set_facecolor("#f5efe6")
     width = 0.18
     metric_labels = [label for _, label, _ in METRICS[:4]]
-    centers = [0, 1]
+    centers = list(range(len(delta_rows)))
     for metric_idx, label in enumerate(metric_labels):
         values = [row_values[metric_idx] for _, row_values in delta_rows]
         offsets = [center + (metric_idx - 1.5) * width for center in centers]
@@ -192,12 +213,14 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--model-size", choices=["s", "b"], default="b")
     parser.add_argument("--action-sampler", choices=["legacy", "repeat", "sequence"], default="repeat")
+    parser.add_argument("--images", nargs="+", choices=["64", "128", "224"], default=["64", "128", "224"])
     parser.add_argument("--output-dir", type=Path, default=None)
     args = parser.parse_args()
 
     model_label = f"CDiT-{args.model_size.upper()}"
-    output_dir = args.output_dir or Path(f"artifacts/summaries/planning/text_vs_notext_128_224_{args.model_size}_n32")
-    rows = load_rows(build_series(args.model_size, args.action_sampler))
+    image_suffix = "_".join(args.images)
+    output_dir = args.output_dir or Path(f"artifacts/summaries/planning/text_vs_notext_{image_suffix}_{args.model_size}_n32")
+    rows = load_rows(build_series(args.model_size, args.action_sampler, set(args.images)))
     print(f"Wrote {write_csv(rows, output_dir)}")
     print(f"Wrote {write_summary(rows, output_dir, model_label)}")
     plot_metrics(rows, output_dir, model_label)

@@ -40,6 +40,16 @@ MODEL_LABELS = {
 def build_series(model_size: str) -> list[dict]:
     return [
         {
+            "label": "64 No Text",
+            "checkpoint_root": Path(f"weights/checkpoints/nwm_cdit_{model_size}_recon_64"),
+            "artifact_root": Path(f"artifacts/summaries/eval/eval_{model_size}_recon_64"),
+        },
+        {
+            "label": "64 Text Dense",
+            "checkpoint_root": Path(f"weights/checkpoints/nwm_cdit_{model_size}_recon_64_text_dense"),
+            "artifact_root": Path(f"artifacts/summaries/eval/eval_{model_size}_recon_64_text_dense"),
+        },
+        {
             "label": "128 No Text",
             "checkpoint_root": Path(f"weights/checkpoints/nwm_cdit_{model_size}_recon_128"),
             "artifact_root": Path(f"artifacts/summaries/eval/eval_{model_size}_recon_128"),

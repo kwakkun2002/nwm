@@ -35,7 +35,7 @@ from src.core.paths import DEFAULT_EVAL_ARTIFACT_ROOT, get_checkpoint_path
 from src.models.checkpoints.vae import load_vae
 import src.core.env.distributed as dist
 from src.models.backbones.cdit import CDiT_models
-from src.features.text.pipeline import get_text_conditioning_config
+from src.features.text.pipeline import get_text_conditioning_config, override_text_embedding_root
 from src.data.datasets.factory import build_eval_dataset
 from src.evaluation.metrics.logger import MetricLogger
 from src.evaluation.inference.rollout import (
@@ -49,7 +49,10 @@ def main(args):
     device = torch.device(device)
     num_tasks = dist.get_world_size()
     global_rank = dist.get_rank()
-    config = load_runtime_config(args, config_attr="exp")
+    config = override_text_embedding_root(
+        load_runtime_config(args, config_attr="exp"),
+        getattr(args, "text_embedding_root", None),
+    )
     if args.exp is None:
         args.exp = config["run_name"]
     args.ckp = str(args.ckp)
@@ -174,6 +177,7 @@ def build_parser():
     parser.add_argument("--num_workers", type=int, default=8, help="num workers")
     parser.add_argument("--batch_size", type=int, default=16, help="batch size")
     parser.add_argument("--eval_type", type=str, default=None, help="type of evaluation has to be either 'time' or 'rollout'")
+    parser.add_argument("--text_embedding_root", type=str, default=None, help="override text conditioning embedding root")
     # Rollout Evaluation Args
     parser.add_argument("--rollout_fps_values", type=str, default='1,4', help="")
     parser.add_argument("--gt", type=int, default=0, help="set to 1 to produce ground truth evaluation set")
@@ -197,6 +201,7 @@ def uses_legacy_cli(argv):
         "--num_workers",
         "--batch_size",
         "--eval_type",
+        "--text_embedding_root",
         "--rollout_fps_values",
         "--gt",
         "-h",

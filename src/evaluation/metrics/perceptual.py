@@ -2,13 +2,51 @@ import torch
 import os
 import json
 import numpy as np
+from contextlib import contextmanager
+from pathlib import Path
 from tqdm import tqdm
 from PIL import Image
 from torchvision import transforms
 
+LOCAL_TORCH_CACHE = Path(__file__).resolve().parents[3] / "weights" / "cache" / "torch"
+if LOCAL_TORCH_CACHE.exists():
+    os.environ.setdefault("TORCH_HOME", str(LOCAL_TORCH_CACHE))
+
 import lpips
 from dreamsim import dreamsim
 from torcheval.metrics import FrechetInceptionDistance
+
+
+def _load_local_dino_vitb16(load_dir):
+    import timm
+
+    ckpt_path = os.path.join(load_dir, 'dino_vitb16_pretrain.pth')
+    sd = torch.load(ckpt_path, map_location='cpu', weights_only=True)
+    backbone_state = {
+        key.removeprefix('module.backbone.'): value
+        for key, value in sd['student'].items()
+        if key.startswith('module.backbone.')
+    }
+
+    model = timm.create_model('vit_base_patch16_224', pretrained=False, num_classes=0)
+    model.load_state_dict(backbone_state, strict=True)
+    return model
+
+
+@contextmanager
+def _local_dino_hub(load_dir):
+    original_load = torch.hub.load
+
+    def local_load(repo_or_dir, model, *args, **kwargs):
+        if repo_or_dir == 'facebookresearch/dino:main' and model == 'dino_vitb16':
+            return _load_local_dino_vitb16(load_dir)
+        return original_load(repo_or_dir, model, *args, **kwargs)
+
+    torch.hub.load = local_load
+    try:
+        yield
+    finally:
+        torch.hub.load = original_load
 
 
 def load_rgb_image_np(path):
@@ -37,7 +75,9 @@ def get_loss_fn(loss_fn_type, secs, device):
 
             return dist_avg
     elif loss_fn_type == 'dreamsim':
-        dreamsim_loss_fn, preprocess = dreamsim(pretrained=True, device=device)
+        dreamsim_cache_dir = './models'
+        with _local_dino_hub(dreamsim_cache_dir):
+            dreamsim_loss_fn, preprocess = dreamsim(pretrained=True, device=device, cache_dir=dreamsim_cache_dir)
         def loss_fn(img0_paths, img1_paths):
             img0_list = []
             img1_list = []

@@ -1,0 +1,15 @@
+# @package _global_
+
+defaults:
+  - _base_train
+  - /model: cdit_b
+  - /data: recon_raw_64
+  - /feature/text: dense_recon_raw
+  - _self_
+
+run_name: nwm_cdit_b_recon_64_text_dense
+from_checkpoint: weights/checkpoints/nwm_cdit_b_recon_64/0010000.pth.tar
+checkpoint_strict: false
+checkpoint_ignore_shape_mismatch: false
+checkpoint_ignore_keys: []
+load_training_state: false

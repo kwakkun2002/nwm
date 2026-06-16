@@ -19,6 +19,17 @@ def get_text_conditioning_config(config):
     }
 
 
+def override_text_embedding_root(config, embedding_root):
+    if not embedding_root:
+        return config
+    text_config = dict(config.get("text_conditioning", {}))
+    if not bool(text_config.get("enabled", False)):
+        raise ValueError("--text_embedding_root was provided, but text_conditioning.enabled is false")
+    text_config["embedding_root"] = str(embedding_root)
+    config["text_conditioning"] = text_config
+    return config
+
+
 def infer_trajectory_name(image_path: str, input_root: Optional[str] = None) -> str:
     normalized_path = os.path.normpath(image_path)
     parent_dir = os.path.dirname(normalized_path)
