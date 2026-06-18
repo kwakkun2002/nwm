@@ -30,7 +30,7 @@ def init_wandb_run(config: dict, rank: int, job_type: str, logger=None):
         "job_type": job_type,
         "resume": wandb_config.get("resume", "allow"),
     }
-    for key in ("entity", "group", "mode", "tags", "dir"):
+    for key in ("entity", "group", "mode", "tags", "dir", "anonymous"):
         value = wandb_config.get(key)
         if value not in (None, "", []):
             init_kwargs[key] = value

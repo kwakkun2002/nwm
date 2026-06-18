@@ -137,7 +137,16 @@ def main(args):
         load_runtime_config(args),
         "train",
         args,
-        ("epochs", "global_seed", "log_every", "ckpt_every", "eval_every", "bfloat16", "torch_compile"),
+        (
+            "epochs",
+            "global_seed",
+            "log_every",
+            "ckpt_every",
+            "eval_every",
+            "bfloat16",
+            "torch_compile",
+            "max_train_steps",
+        ),
     )
     text_config = get_text_conditioning_config(config)
     checkpoint_strict = bool(config.get("checkpoint_strict", True))
@@ -465,6 +474,13 @@ def main(args):
                         step=train_steps,
                     )
 
+            if args.max_train_steps is not None and train_steps >= args.max_train_steps:
+                logger.info(f"Reached max_train_steps={args.max_train_steps}; stopping training.")
+                break
+
+        if args.max_train_steps is not None and train_steps >= args.max_train_steps:
+            break
+
     model.eval()  # important! This disables randomized embedding dropout
     # do any sampling/FID calculation/etc. with ema (or model) in eval mode ...
 
@@ -558,6 +574,7 @@ def get_args_parser(require_config=True):
     parser.add_argument("--eval-every", type=int, default=5000)
     parser.add_argument("--bfloat16", type=int, default=1)
     parser.add_argument("--torch-compile", type=int, default=1)
+    parser.add_argument("--max-train-steps", type=int, default=None)
     return parser
 
 def run_hydra_cli(argv):
@@ -576,6 +593,7 @@ def uses_legacy_cli(argv):
         "--eval-every",
         "--bfloat16",
         "--torch-compile",
+        "--max-train-steps",
         "-h",
         "--help",
     }

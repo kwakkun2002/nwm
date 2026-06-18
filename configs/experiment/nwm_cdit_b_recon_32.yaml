@@ -1,0 +1,16 @@
+# @package _global_
+
+defaults:
+  - _base_train
+  - /model: cdit_b
+  - /data: recon_raw_32
+  - /feature/text: disabled
+  - _self_
+
+run_name: nwm_cdit_b_recon_32
+from_checkpoint: weights/checkpoints/nwm_cdit_b/0100000.pth.tar
+checkpoint_strict: false
+checkpoint_ignore_shape_mismatch: true
+checkpoint_ignore_keys:
+  - pos_embed
+load_training_state: false

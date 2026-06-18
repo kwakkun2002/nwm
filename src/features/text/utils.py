@@ -20,6 +20,14 @@ PROMPT_TEMPLATES = {
         "Focus on terrain, obstacles, structures, and free space. "
         "Do not mention the image itself."
     ),
+    "nav_prediction": (
+        "Return exactly one single-line navigation caption under 60 words using this format: "
+        "layout: short phrase; free_space: short phrase; obstacles: short phrase; "
+        "openings: short phrase; motion_cue: short phrase. "
+        "Focus only on visible layout, terrain or surface, obstacles, openings or turns, "
+        "and near-term next-frame prediction cues. Do not mention the image itself, "
+        "do not invent a goal, and do not add explanations or line breaks."
+    ),
 }
 
 TEXT_BOILERPLATE_PATTERNS = [
@@ -86,3 +94,12 @@ def caption_to_tags(text: str, max_tags: int = 12) -> str:
         if len(deduped) >= max_tags:
             break
     return ", ".join(deduped)
+
+
+def normalize_structured_caption_text(text: str) -> str:
+    text = text.strip()
+    if not text:
+        return ""
+    text = re.sub(r"\s+", " ", text)
+    text = text.strip(" \t\r\n")
+    return text

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import json
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -27,10 +28,28 @@ EXPERIMENTS = {
         "suite": "eval_b_recon_64",
         "gt_suite": "eval_b_recon_64",
     },
+    "nwm_cdit_b_recon_32": {
+        "config": Path("configs/experiment/nwm_cdit_b_recon_32.yaml"),
+        "checkpoint_dir": Path("weights/checkpoints/nwm_cdit_b_recon_32"),
+        "suite": "eval_b_recon_32",
+        "gt_suite": "eval_b_recon_32",
+    },
+    "nwm_cdit_b_recon_32_text_dense": {
+        "config": Path("configs/experiment/nwm_cdit_b_recon_32_text_dense.yaml"),
+        "checkpoint_dir": Path("weights/checkpoints/nwm_cdit_b_recon_32_text_dense"),
+        "suite": "eval_b_recon_32_text_dense",
+        "gt_suite": "eval_b_recon_32",
+    },
     "nwm_cdit_b_recon_64_text_dense": {
         "config": Path("configs/experiment/nwm_cdit_b_recon_64_text_dense.yaml"),
         "checkpoint_dir": Path("weights/checkpoints/nwm_cdit_b_recon_64_text_dense"),
         "suite": "eval_b_recon_64_text_dense",
+        "gt_suite": "eval_b_recon_64",
+    },
+    "nwm_cdit_b_recon_64_text_nav_pred_clip": {
+        "config": Path("configs/experiment/nwm_cdit_b_recon_64_text_nav_pred_clip.yaml"),
+        "checkpoint_dir": Path("weights/checkpoints/nwm_cdit_b_recon_64_text_nav_pred_clip"),
+        "suite": "eval_b_recon_64_text_nav_pred_clip",
         "gt_suite": "eval_b_recon_64",
     },
     "nwm_cdit_b_recon_128_text_dense": {
@@ -45,6 +64,14 @@ EXPERIMENTS = {
         "suite": "eval_b_recon_raw_text_dense",
         "gt_suite": "lpips_time_recon_b",
     },
+    "nwm_cdit_b_recon_raw": {
+        "config": Path("configs/experiment/nwm_cdit_b_recon_raw.yaml"),
+        "checkpoint_dir": Path("weights/checkpoints/nwm_cdit_b"),
+        "suite": "eval_b_recon_raw",
+        "gt_suite": "lpips_time_recon_b",
+        "checkpoint_names": ["0100000"],
+        "default_output_checkpoint": "0100000.pth.tar",
+    },
     "nwm_cdit_s_recon_128": {
         "config": Path("configs/experiment/nwm_cdit_s_recon_128.yaml"),
         "checkpoint_dir": Path("weights/checkpoints/nwm_cdit_s_recon_128"),
@@ -57,10 +84,28 @@ EXPERIMENTS = {
         "suite": "eval_s_recon_64",
         "gt_suite": "eval_s_recon_64",
     },
+    "nwm_cdit_s_recon_32": {
+        "config": Path("configs/experiment/nwm_cdit_s_recon_32.yaml"),
+        "checkpoint_dir": Path("weights/checkpoints/nwm_cdit_s_recon_32"),
+        "suite": "eval_s_recon_32",
+        "gt_suite": "eval_s_recon_32",
+    },
+    "nwm_cdit_s_recon_32_text_dense": {
+        "config": Path("configs/experiment/nwm_cdit_s_recon_32_text_dense.yaml"),
+        "checkpoint_dir": Path("weights/checkpoints/nwm_cdit_s_recon_32_text_dense"),
+        "suite": "eval_s_recon_32_text_dense",
+        "gt_suite": "eval_s_recon_32",
+    },
     "nwm_cdit_s_recon_64_text_dense": {
         "config": Path("configs/experiment/nwm_cdit_s_recon_64_text_dense.yaml"),
         "checkpoint_dir": Path("weights/checkpoints/nwm_cdit_s_recon_64_text_dense"),
         "suite": "eval_s_recon_64_text_dense",
+        "gt_suite": "eval_s_recon_64",
+    },
+    "nwm_cdit_s_recon_64_text_nav_pred_clip": {
+        "config": Path("configs/experiment/nwm_cdit_s_recon_64_text_nav_pred_clip.yaml"),
+        "checkpoint_dir": Path("weights/checkpoints/nwm_cdit_s_recon_64_text_nav_pred_clip"),
+        "suite": "eval_s_recon_64_text_nav_pred_clip",
         "gt_suite": "eval_s_recon_64",
     },
     "nwm_cdit_s_recon_128_text_dense": {
@@ -75,6 +120,14 @@ EXPERIMENTS = {
         "suite": "eval_s_recon_raw_text_dense",
         "gt_suite": "lpips_time_recon_s",
     },
+    "nwm_cdit_s_recon_raw": {
+        "config": Path("configs/experiment/nwm_cdit_s_recon_raw.yaml"),
+        "checkpoint_dir": Path("weights/checkpoints/nwm_cdit_s"),
+        "suite": "eval_s_recon_raw",
+        "gt_suite": "lpips_time_recon_s",
+        "checkpoint_names": ["0100000"],
+        "default_output_checkpoint": "0100000.pth.tar",
+    },
 }
 
 DEFAULT_EXPERIMENTS = (
@@ -86,10 +139,17 @@ DEFAULT_EXPERIMENTS = (
 )
 
 
-def run_command(cmd: list[str], dry_run: bool) -> None:
+def run_command(cmd: list[str], dry_run: bool, env: dict[str, str] | None = None) -> None:
     print("+", " ".join(cmd))
     if not dry_run:
-        subprocess.run(cmd, check=True)
+        subprocess.run(cmd, check=True, env=env)
+
+
+def child_env(master_port: int) -> dict[str, str]:
+    env = dict(os.environ)
+    env["MASTER_ADDR"] = env.get("MASTER_ADDR", "127.0.0.1")
+    env["MASTER_PORT"] = str(master_port)
+    return env
 
 
 def load_checkpoint_steps(checkpoint_paths: list[Path]) -> dict[str, int | None]:
@@ -173,6 +233,7 @@ def maybe_generate_gt(exp_name: str, exp_cfg: dict, args: argparse.Namespace, ou
             "1",
         ],
         dry_run=dry_run,
+        env=child_env(args.master_port_base),
     )
 
 
@@ -193,6 +254,12 @@ def main() -> None:
     parser.add_argument("--artifact_root", type=Path, default=Path("artifacts"))
     parser.add_argument("--bulk_root", type=Path, default=None)
     parser.add_argument("--summary_root", type=Path, default=None)
+    parser.add_argument(
+        "--master_port_base",
+        type=int,
+        default=None,
+        help="Base MASTER_PORT for child infer processes. Defaults to a PID-derived value to avoid concurrent sweep collisions.",
+    )
     args = parser.parse_args()
 
     dry_run = bool(args.dry_run)
@@ -200,6 +267,8 @@ def main() -> None:
     include_latest = bool(args.include_latest)
     bulk_root = args.bulk_root or (args.artifact_root / "bulk" / "eval")
     summary_root = args.summary_root or (args.artifact_root / "summaries" / "eval")
+    if args.master_port_base is None:
+        args.master_port_base = 30000 + (os.getpid() % 20000)
 
     selected_experiments = [item.strip() for item in args.experiments.split(",") if item.strip()]
 
@@ -227,6 +296,7 @@ def main() -> None:
         default_output_checkpoint = exp_cfg.get("default_output_checkpoint")
 
         for checkpoint_path in checkpoint_paths:
+            child_port = args.master_port_base + len(summary_rows)
             checkpoint_name = checkpoint_path.name
             checkpoint_stem = checkpoint_name.replace(".pth.tar", "")
             exp_output_dir = output_dir_for_checkpoint(
@@ -244,8 +314,23 @@ def main() -> None:
             ) / f"{args.dataset}_time.json"
             train_steps = checkpoint_steps.get(checkpoint_name)
 
-            if skip_existing and (summary_json_path.exists() or metric_json_path.exists()):
+            if skip_existing and summary_json_path.exists():
                 print(f"[{exp_name}] Skipping existing result: {summary_json_path}")
+                summary_rows.append(
+                    {
+                        "experiment": exp_name,
+                        "checkpoint": checkpoint_name,
+                        "checkpoint_label": checkpoint_stem,
+                        "train_steps": train_steps,
+                        "output_dir": str(exp_output_dir),
+                        "metric_json": str(summary_json_path),
+                        "status": "existing",
+                    }
+                )
+                continue
+            if skip_existing and metric_json_path.exists():
+                print(f"[{exp_name}] Reusing existing bulk metric: {metric_json_path}")
+                copy_metric_summary(metric_json_path, summary_json_path, dry_run=dry_run)
                 summary_rows.append(
                     {
                         "experiment": exp_name,
@@ -286,6 +371,7 @@ def main() -> None:
                     str(output_root),
                 ],
                 dry_run=dry_run,
+                env=child_env(child_port),
             )
             run_command(
                 [

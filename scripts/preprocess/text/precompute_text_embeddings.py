@@ -162,6 +162,7 @@ def main():
         for trajectory_name, embeddings in grouped_embeddings.items()
     }
     save_grouped_embeddings(grouped_records, grouped_embeddings, args.output_root)
+    sys.exit(0)
 
 
 if __name__ == "__main__":

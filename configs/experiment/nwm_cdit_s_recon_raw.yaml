@@ -1,0 +1,11 @@
+# @package _global_
+
+defaults:
+  - _base_train
+  - /model: cdit_s
+  - /data: recon_raw_224
+  - /feature/text: disabled
+  - _self_
+
+# Evaluate the vanilla no-text 224px checkpoint on RECON raw.
+run_name: nwm_cdit_s

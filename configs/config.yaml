@@ -11,6 +11,7 @@ train:
   eval_every: 5000
   bfloat16: true
   torch_compile: true
+  max_train_steps: null
 
 infer:
   output_dir: null
