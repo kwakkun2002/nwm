@@ -1,4 +1,3 @@
-import os
 import sys
 from pathlib import Path
 
@@ -10,6 +9,7 @@ from src.data.transforms.action import get_action_torch
 
 
 DEFAULT_DINO_WEIGHTS = "weights/pretrained/dino/dino_vitbase16_pretrain.pth"
+DINO_SOURCE_DIR = Path(__file__).resolve().parents[3] / "third_party" / "facebookresearch_dino_main"
 IMAGENET_MEAN = torch.tensor([0.485, 0.456, 0.406]).view(1, 3, 1, 1)
 IMAGENET_STD = torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1)
 
@@ -38,9 +38,8 @@ class DinoFeatureExtractor(nn.Module):
     def __init__(self, weights_path=DEFAULT_DINO_WEIGHTS, arch="vit_base", patch_size=16, image_size=224):
         super().__init__()
         self.image_size = image_size
-        dino_dir = Path("models/facebookresearch_dino_main").resolve()
-        if str(dino_dir) not in sys.path:
-            sys.path.insert(0, str(dino_dir))
+        if str(DINO_SOURCE_DIR) not in sys.path:
+            sys.path.insert(0, str(DINO_SOURCE_DIR))
 
         import vision_transformer as vits
 

@@ -1,0 +1,596 @@
+[
+  {
+    "experiment": "nwm_cdit_b_recon_128_text_dense",
+    "checkpoint": "0005000",
+    "source_suite": "eval_b_recon_128_text_dense",
+    "target_suite": "eval_b_scand_128_text_dense",
+    "output_name": "nwm_cdit_b_recon_128_text_dense_0005000",
+    "eval_types": [
+      "time"
+    ],
+    "image_size": 128,
+    "source_files": [
+      "artifacts/summaries/eval/eval_b_recon_128_text_dense/nwm_cdit_b_recon_128_text_dense_0005000/recon_time.json"
+    ]
+  },
+  {
+    "experiment": "nwm_cdit_b_recon_128_text_dense",
+    "checkpoint": "0010000",
+    "source_suite": "eval_b_recon_128_text_dense",
+    "target_suite": "eval_b_scand_128_text_dense",
+    "output_name": "nwm_cdit_b_recon_128_text_dense_0010000",
+    "eval_types": [
+      "time"
+    ],
+    "image_size": 128,
+    "source_files": [
+      "artifacts/summaries/eval/eval_b_recon_128_text_dense/nwm_cdit_b_recon_128_text_dense_0010000/recon_time.json"
+    ]
+  },
+  {
+    "experiment": "nwm_cdit_b_recon_128_text_dense",
+    "checkpoint": "0015000",
+    "source_suite": "eval_b_recon_128_text_dense",
+    "target_suite": "eval_b_scand_128_text_dense",
+    "output_name": "nwm_cdit_b_recon_128_text_dense_0015000",
+    "eval_types": [
+      "time"
+    ],
+    "image_size": 128,
+    "source_files": [
+      "artifacts/summaries/eval/eval_b_recon_128_text_dense/nwm_cdit_b_recon_128_text_dense_0015000/recon_time.json"
+    ]
+  },
+  {
+    "experiment": "nwm_cdit_b_recon_128_text_dense",
+    "checkpoint": "0020000",
+    "source_suite": "eval_b_recon_128_text_dense",
+    "target_suite": "eval_b_scand_128_text_dense",
+    "output_name": "nwm_cdit_b_recon_128_text_dense_0020000",
+    "eval_types": [
+      "time"
+    ],
+    "image_size": 128,
+    "source_files": [
+      "artifacts/summaries/eval/eval_b_recon_128_text_dense/nwm_cdit_b_recon_128_text_dense_0020000/recon_time.json"
+    ]
+  },
+  {
+    "experiment": "nwm_cdit_b_recon_128_text_dense",
+    "checkpoint": "0025000",
+    "source_suite": "eval_b_recon_128_text_dense",
+    "target_suite": "eval_b_scand_128_text_dense",
+    "output_name": "nwm_cdit_b_recon_128_text_dense_0025000",
+    "eval_types": [
+      "time"
+    ],
+    "image_size": 128,
+    "source_files": [
+      "artifacts/summaries/eval/eval_b_recon_128_text_dense/nwm_cdit_b_recon_128_text_dense_0025000/recon_time.json"
+    ]
+  },
+  {
+    "experiment": "nwm_cdit_b_recon_128_text_dense",
+    "checkpoint": "0030000",
+    "source_suite": "eval_b_recon_128_text_dense",
+    "target_suite": "eval_b_scand_128_text_dense",
+    "output_name": "nwm_cdit_b_recon_128_text_dense_0030000",
+    "eval_types": [
+      "time"
+    ],
+    "image_size": 128,
+    "source_files": [
+      "artifacts/summaries/eval/eval_b_recon_128_text_dense/nwm_cdit_b_recon_128_text_dense_0030000/recon_time.json"
+    ]
+  },
+  {
+    "experiment": "nwm_cdit_b_recon_128_text_dense",
+    "checkpoint": "latest",
+    "source_suite": "eval_b_recon_128_text_dense",
+    "target_suite": "eval_b_scand_128_text_dense",
+    "output_name": "nwm_cdit_b_recon_128_text_dense_latest",
+    "eval_types": [
+      "time"
+    ],
+    "image_size": 128,
+    "source_files": [
+      "artifacts/summaries/eval/eval_b_recon_128_text_dense/nwm_cdit_b_recon_128_text_dense_latest/recon_time.json"
+    ]
+  },
+  {
+    "experiment": "nwm_cdit_b_recon_64_text_dense",
+    "checkpoint": "0005000",
+    "source_suite": "eval_b_recon_64_text_dense",
+    "target_suite": "eval_b_scand_64_text_dense",
+    "output_name": "nwm_cdit_b_recon_64_text_dense_0005000",
+    "eval_types": [
+      "time"
+    ],
+    "image_size": 64,
+    "source_files": [
+      "artifacts/summaries/eval/eval_b_recon_64_text_dense/nwm_cdit_b_recon_64_text_dense_0005000/recon_time.json"
+    ]
+  },
+  {
+    "experiment": "nwm_cdit_b_recon_64_text_dense",
+    "checkpoint": "0010000",
+    "source_suite": "eval_b_recon_64_text_dense",
+    "target_suite": "eval_b_scand_64_text_dense",
+    "output_name": "nwm_cdit_b_recon_64_text_dense_0010000",
+    "eval_types": [
+      "time"
+    ],
+    "image_size": 64,
+    "source_files": [
+      "artifacts/summaries/eval/eval_b_recon_64_text_dense/nwm_cdit_b_recon_64_text_dense_0010000/recon_time.json"
+    ]
+  },
+  {
+    "experiment": "nwm_cdit_b_recon_64_text_dense",
+    "checkpoint": "0015000",
+    "source_suite": "eval_b_recon_64_text_dense",
+    "target_suite": "eval_b_scand_64_text_dense",
+    "output_name": "nwm_cdit_b_recon_64_text_dense_0015000",
+    "eval_types": [
+      "time"
+    ],
+    "image_size": 64,
+    "source_files": [
+      "artifacts/summaries/eval/eval_b_recon_64_text_dense/nwm_cdit_b_recon_64_text_dense_0015000/recon_time.json"
+    ]
+  },
+  {
+    "experiment": "nwm_cdit_b_recon_64_text_dense",
+    "checkpoint": "0020000",
+    "source_suite": "eval_b_recon_64_text_dense",
+    "target_suite": "eval_b_scand_64_text_dense",
+    "output_name": "nwm_cdit_b_recon_64_text_dense_0020000",
+    "eval_types": [
+      "time"
+    ],
+    "image_size": 64,
+    "source_files": [
+      "artifacts/summaries/eval/eval_b_recon_64_text_dense/nwm_cdit_b_recon_64_text_dense_0020000/recon_time.json"
+    ]
+  },
+  {
+    "experiment": "nwm_cdit_b_recon_64_text_dense",
+    "checkpoint": "0025000",
+    "source_suite": "eval_b_recon_64_text_dense",
+    "target_suite": "eval_b_scand_64_text_dense",
+    "output_name": "nwm_cdit_b_recon_64_text_dense_0025000",
+    "eval_types": [
+      "time"
+    ],
+    "image_size": 64,
+    "source_files": [
+      "artifacts/summaries/eval/eval_b_recon_64_text_dense/nwm_cdit_b_recon_64_text_dense_0025000/recon_time.json"
+    ]
+  },
+  {
+    "experiment": "nwm_cdit_b_recon_64_text_dense",
+    "checkpoint": "0030000",
+    "source_suite": "eval_b_recon_64_text_dense",
+    "target_suite": "eval_b_scand_64_text_dense",
+    "output_name": "nwm_cdit_b_recon_64_text_dense_0030000",
+    "eval_types": [
+      "time"
+    ],
+    "image_size": 64,
+    "source_files": [
+      "artifacts/summaries/eval/eval_b_recon_64_text_dense/nwm_cdit_b_recon_64_text_dense_0030000/recon_time.json"
+    ]
+  },
+  {
+    "experiment": "nwm_cdit_b_recon_64_text_dense",
+    "checkpoint": "latest",
+    "source_suite": "eval_b_recon_64_text_dense",
+    "target_suite": "eval_b_scand_64_text_dense",
+    "output_name": "nwm_cdit_b_recon_64_text_dense_latest",
+    "eval_types": [
+      "time"
+    ],
+    "image_size": 64,
+    "source_files": [
+      "artifacts/summaries/eval/eval_b_recon_64_text_dense/nwm_cdit_b_recon_64_text_dense_latest/recon_time.json"
+    ]
+  },
+  {
+    "experiment": "nwm_cdit_b_recon_raw_text_dense",
+    "checkpoint": "0005000",
+    "source_suite": "eval_b_recon_raw_text_dense",
+    "target_suite": "eval_b_scand_raw_text_dense",
+    "output_name": "nwm_cdit_b_recon_raw_text_dense_0005000",
+    "eval_types": [
+      "time"
+    ],
+    "image_size": 224,
+    "source_files": [
+      "artifacts/summaries/eval/eval_b_recon_raw_text_dense/nwm_cdit_b_recon_raw_text_dense_0005000/recon_time.json"
+    ]
+  },
+  {
+    "experiment": "nwm_cdit_b_recon_raw_text_dense",
+    "checkpoint": "0010000",
+    "source_suite": "eval_b_recon_raw_text_dense",
+    "target_suite": "eval_b_scand_raw_text_dense",
+    "output_name": "nwm_cdit_b_recon_raw_text_dense_0010000",
+    "eval_types": [
+      "time"
+    ],
+    "image_size": 224,
+    "source_files": [
+      "artifacts/summaries/eval/eval_b_recon_raw_text_dense/nwm_cdit_b_recon_raw_text_dense_0010000/recon_time.json"
+    ]
+  },
+  {
+    "experiment": "nwm_cdit_b_recon_raw_text_dense",
+    "checkpoint": "0015000",
+    "source_suite": "eval_b_recon_raw_text_dense",
+    "target_suite": "eval_b_scand_raw_text_dense",
+    "output_name": "nwm_cdit_b_recon_raw_text_dense_0015000",
+    "eval_types": [
+      "time"
+    ],
+    "image_size": 224,
+    "source_files": [
+      "artifacts/summaries/eval/eval_b_recon_raw_text_dense/nwm_cdit_b_recon_raw_text_dense_0015000/recon_time.json"
+    ]
+  },
+  {
+    "experiment": "nwm_cdit_b_recon_raw_text_dense",
+    "checkpoint": "0020000",
+    "source_suite": "eval_b_recon_raw_text_dense",
+    "target_suite": "eval_b_scand_raw_text_dense",
+    "output_name": "nwm_cdit_b_recon_raw_text_dense_0020000",
+    "eval_types": [
+      "time"
+    ],
+    "image_size": 224,
+    "source_files": [
+      "artifacts/summaries/eval/eval_b_recon_raw_text_dense/nwm_cdit_b_recon_raw_text_dense_0020000/recon_time.json"
+    ]
+  },
+  {
+    "experiment": "nwm_cdit_b_recon_raw_text_dense",
+    "checkpoint": "0025000",
+    "source_suite": "eval_b_recon_raw_text_dense",
+    "target_suite": "eval_b_scand_raw_text_dense",
+    "output_name": "nwm_cdit_b_recon_raw_text_dense_0025000",
+    "eval_types": [
+      "time"
+    ],
+    "image_size": 224,
+    "source_files": [
+      "artifacts/summaries/eval/eval_b_recon_raw_text_dense/nwm_cdit_b_recon_raw_text_dense_0025000/recon_time.json"
+    ]
+  },
+  {
+    "experiment": "nwm_cdit_b_recon_raw_text_dense",
+    "checkpoint": "0030000",
+    "source_suite": "eval_b_recon_raw_text_dense",
+    "target_suite": "eval_b_scand_raw_text_dense",
+    "output_name": "nwm_cdit_b_recon_raw_text_dense_0030000",
+    "eval_types": [
+      "time"
+    ],
+    "image_size": 224,
+    "source_files": [
+      "artifacts/summaries/eval/eval_b_recon_raw_text_dense/nwm_cdit_b_recon_raw_text_dense_0030000/recon_time.json"
+    ]
+  },
+  {
+    "experiment": "nwm_cdit_b_recon_raw_text_dense",
+    "checkpoint": "latest",
+    "source_suite": "eval_b_recon_raw_text_dense",
+    "target_suite": "eval_b_scand_raw_text_dense",
+    "output_name": "nwm_cdit_b_recon_raw_text_dense_latest",
+    "eval_types": [
+      "time"
+    ],
+    "image_size": 224,
+    "source_files": [
+      "artifacts/summaries/eval/eval_b_recon_raw_text_dense/nwm_cdit_b_recon_raw_text_dense_latest/recon_time.json"
+    ]
+  },
+  {
+    "experiment": "nwm_cdit_s_recon_128_text_dense",
+    "checkpoint": "0005000",
+    "source_suite": "eval_s_recon_128_text_dense",
+    "target_suite": "eval_s_scand_128_text_dense",
+    "output_name": "nwm_cdit_s_recon_128_text_dense_0005000",
+    "eval_types": [
+      "time"
+    ],
+    "image_size": 128,
+    "source_files": [
+      "artifacts/summaries/eval/eval_s_recon_128_text_dense/nwm_cdit_s_recon_128_text_dense_0005000/recon_time.json"
+    ]
+  },
+  {
+    "experiment": "nwm_cdit_s_recon_128_text_dense",
+    "checkpoint": "0010000",
+    "source_suite": "eval_s_recon_128_text_dense",
+    "target_suite": "eval_s_scand_128_text_dense",
+    "output_name": "nwm_cdit_s_recon_128_text_dense_0010000",
+    "eval_types": [
+      "time"
+    ],
+    "image_size": 128,
+    "source_files": [
+      "artifacts/summaries/eval/eval_s_recon_128_text_dense/nwm_cdit_s_recon_128_text_dense_0010000/recon_time.json"
+    ]
+  },
+  {
+    "experiment": "nwm_cdit_s_recon_128_text_dense",
+    "checkpoint": "0015000",
+    "source_suite": "eval_s_recon_128_text_dense",
+    "target_suite": "eval_s_scand_128_text_dense",
+    "output_name": "nwm_cdit_s_recon_128_text_dense_0015000",
+    "eval_types": [
+      "time"
+    ],
+    "image_size": 128,
+    "source_files": [
+      "artifacts/summaries/eval/eval_s_recon_128_text_dense/nwm_cdit_s_recon_128_text_dense_0015000/recon_time.json"
+    ]
+  },
+  {
+    "experiment": "nwm_cdit_s_recon_128_text_dense",
+    "checkpoint": "0020000",
+    "source_suite": "eval_s_recon_128_text_dense",
+    "target_suite": "eval_s_scand_128_text_dense",
+    "output_name": "nwm_cdit_s_recon_128_text_dense_0020000",
+    "eval_types": [
+      "time"
+    ],
+    "image_size": 128,
+    "source_files": [
+      "artifacts/summaries/eval/eval_s_recon_128_text_dense/nwm_cdit_s_recon_128_text_dense_0020000/recon_time.json"
+    ]
+  },
+  {
+    "experiment": "nwm_cdit_s_recon_128_text_dense",
+    "checkpoint": "0025000",
+    "source_suite": "eval_s_recon_128_text_dense",
+    "target_suite": "eval_s_scand_128_text_dense",
+    "output_name": "nwm_cdit_s_recon_128_text_dense_0025000",
+    "eval_types": [
+      "time"
+    ],
+    "image_size": 128,
+    "source_files": [
+      "artifacts/summaries/eval/eval_s_recon_128_text_dense/nwm_cdit_s_recon_128_text_dense_0025000/recon_time.json"
+    ]
+  },
+  {
+    "experiment": "nwm_cdit_s_recon_128_text_dense",
+    "checkpoint": "0030000",
+    "source_suite": "eval_s_recon_128_text_dense",
+    "target_suite": "eval_s_scand_128_text_dense",
+    "output_name": "nwm_cdit_s_recon_128_text_dense_0030000",
+    "eval_types": [
+      "rollout",
+      "time"
+    ],
+    "image_size": 128,
+    "source_files": [
+      "artifacts/summaries/eval/eval_s_recon_128_text_dense/nwm_cdit_s_recon_128_text_dense_0030000/recon_rollout_1fps.json",
+      "artifacts/summaries/eval/eval_s_recon_128_text_dense/nwm_cdit_s_recon_128_text_dense_0030000/recon_rollout_4fps.json",
+      "artifacts/summaries/eval/eval_s_recon_128_text_dense/nwm_cdit_s_recon_128_text_dense_0030000/recon_time.json"
+    ]
+  },
+  {
+    "experiment": "nwm_cdit_s_recon_128_text_dense",
+    "checkpoint": "latest",
+    "source_suite": "eval_s_recon_128_text_dense",
+    "target_suite": "eval_s_scand_128_text_dense",
+    "output_name": "nwm_cdit_s_recon_128_text_dense_latest",
+    "eval_types": [
+      "time"
+    ],
+    "image_size": 128,
+    "source_files": [
+      "artifacts/summaries/eval/eval_s_recon_128_text_dense/nwm_cdit_s_recon_128_text_dense_latest/recon_time.json"
+    ]
+  },
+  {
+    "experiment": "nwm_cdit_s_recon_64_text_dense",
+    "checkpoint": "0005000",
+    "source_suite": "eval_s_recon_64_text_dense",
+    "target_suite": "eval_s_scand_64_text_dense",
+    "output_name": "nwm_cdit_s_recon_64_text_dense_0005000",
+    "eval_types": [
+      "time"
+    ],
+    "image_size": 64,
+    "source_files": [
+      "artifacts/summaries/eval/eval_s_recon_64_text_dense/nwm_cdit_s_recon_64_text_dense_0005000/recon_time.json"
+    ]
+  },
+  {
+    "experiment": "nwm_cdit_s_recon_64_text_dense",
+    "checkpoint": "0010000",
+    "source_suite": "eval_s_recon_64_text_dense",
+    "target_suite": "eval_s_scand_64_text_dense",
+    "output_name": "nwm_cdit_s_recon_64_text_dense_0010000",
+    "eval_types": [
+      "time"
+    ],
+    "image_size": 64,
+    "source_files": [
+      "artifacts/summaries/eval/eval_s_recon_64_text_dense/nwm_cdit_s_recon_64_text_dense_0010000/recon_time.json"
+    ]
+  },
+  {
+    "experiment": "nwm_cdit_s_recon_64_text_dense",
+    "checkpoint": "0015000",
+    "source_suite": "eval_s_recon_64_text_dense",
+    "target_suite": "eval_s_scand_64_text_dense",
+    "output_name": "nwm_cdit_s_recon_64_text_dense_0015000",
+    "eval_types": [
+      "time"
+    ],
+    "image_size": 64,
+    "source_files": [
+      "artifacts/summaries/eval/eval_s_recon_64_text_dense/nwm_cdit_s_recon_64_text_dense_0015000/recon_time.json"
+    ]
+  },
+  {
+    "experiment": "nwm_cdit_s_recon_64_text_dense",
+    "checkpoint": "0020000",
+    "source_suite": "eval_s_recon_64_text_dense",
+    "target_suite": "eval_s_scand_64_text_dense",
+    "output_name": "nwm_cdit_s_recon_64_text_dense_0020000",
+    "eval_types": [
+      "time"
+    ],
+    "image_size": 64,
+    "source_files": [
+      "artifacts/summaries/eval/eval_s_recon_64_text_dense/nwm_cdit_s_recon_64_text_dense_0020000/recon_time.json"
+    ]
+  },
+  {
+    "experiment": "nwm_cdit_s_recon_64_text_dense",
+    "checkpoint": "0025000",
+    "source_suite": "eval_s_recon_64_text_dense",
+    "target_suite": "eval_s_scand_64_text_dense",
+    "output_name": "nwm_cdit_s_recon_64_text_dense_0025000",
+    "eval_types": [
+      "time"
+    ],
+    "image_size": 64,
+    "source_files": [
+      "artifacts/summaries/eval/eval_s_recon_64_text_dense/nwm_cdit_s_recon_64_text_dense_0025000/recon_time.json"
+    ]
+  },
+  {
+    "experiment": "nwm_cdit_s_recon_64_text_dense",
+    "checkpoint": "0030000",
+    "source_suite": "eval_s_recon_64_text_dense",
+    "target_suite": "eval_s_scand_64_text_dense",
+    "output_name": "nwm_cdit_s_recon_64_text_dense_0030000",
+    "eval_types": [
+      "time"
+    ],
+    "image_size": 64,
+    "source_files": [
+      "artifacts/summaries/eval/eval_s_recon_64_text_dense/nwm_cdit_s_recon_64_text_dense_0030000/recon_time.json"
+    ]
+  },
+  {
+    "experiment": "nwm_cdit_s_recon_64_text_dense",
+    "checkpoint": "latest",
+    "source_suite": "eval_s_recon_64_text_dense",
+    "target_suite": "eval_s_scand_64_text_dense",
+    "output_name": "nwm_cdit_s_recon_64_text_dense_latest",
+    "eval_types": [
+      "time"
+    ],
+    "image_size": 64,
+    "source_files": [
+      "artifacts/summaries/eval/eval_s_recon_64_text_dense/nwm_cdit_s_recon_64_text_dense_latest/recon_time.json"
+    ]
+  },
+  {
+    "experiment": "nwm_cdit_s_recon_raw_text_dense",
+    "checkpoint": "0005000",
+    "source_suite": "eval_s_recon_raw_text_dense",
+    "target_suite": "eval_s_scand_raw_text_dense",
+    "output_name": "nwm_cdit_s_recon_raw_text_dense_0005000",
+    "eval_types": [
+      "time"
+    ],
+    "image_size": 224,
+    "source_files": [
+      "artifacts/summaries/eval/eval_s_recon_raw_text_dense/nwm_cdit_s_recon_raw_text_dense_0005000/recon_time.json"
+    ]
+  },
+  {
+    "experiment": "nwm_cdit_s_recon_raw_text_dense",
+    "checkpoint": "0010000",
+    "source_suite": "eval_s_recon_raw_text_dense",
+    "target_suite": "eval_s_scand_raw_text_dense",
+    "output_name": "nwm_cdit_s_recon_raw_text_dense_0010000",
+    "eval_types": [
+      "time"
+    ],
+    "image_size": 224,
+    "source_files": [
+      "artifacts/summaries/eval/eval_s_recon_raw_text_dense/nwm_cdit_s_recon_raw_text_dense_0010000/recon_time.json"
+    ]
+  },
+  {
+    "experiment": "nwm_cdit_s_recon_raw_text_dense",
+    "checkpoint": "0015000",
+    "source_suite": "eval_s_recon_raw_text_dense",
+    "target_suite": "eval_s_scand_raw_text_dense",
+    "output_name": "nwm_cdit_s_recon_raw_text_dense_0015000",
+    "eval_types": [
+      "time"
+    ],
+    "image_size": 224,
+    "source_files": [
+      "artifacts/summaries/eval/eval_s_recon_raw_text_dense/nwm_cdit_s_recon_raw_text_dense_0015000/recon_time.json"
+    ]
+  },
+  {
+    "experiment": "nwm_cdit_s_recon_raw_text_dense",
+    "checkpoint": "0020000",
+    "source_suite": "eval_s_recon_raw_text_dense",
+    "target_suite": "eval_s_scand_raw_text_dense",
+    "output_name": "nwm_cdit_s_recon_raw_text_dense_0020000",
+    "eval_types": [
+      "time"
+    ],
+    "image_size": 224,
+    "source_files": [
+      "artifacts/summaries/eval/eval_s_recon_raw_text_dense/nwm_cdit_s_recon_raw_text_dense_0020000/recon_time.json"
+    ]
+  },
+  {
+    "experiment": "nwm_cdit_s_recon_raw_text_dense",
+    "checkpoint": "0025000",
+    "source_suite": "eval_s_recon_raw_text_dense",
+    "target_suite": "eval_s_scand_raw_text_dense",
+    "output_name": "nwm_cdit_s_recon_raw_text_dense_0025000",
+    "eval_types": [
+      "time"
+    ],
+    "image_size": 224,
+    "source_files": [
+      "artifacts/summaries/eval/eval_s_recon_raw_text_dense/nwm_cdit_s_recon_raw_text_dense_0025000/recon_time.json"
+    ]
+  },
+  {
+    "experiment": "nwm_cdit_s_recon_raw_text_dense",
+    "checkpoint": "0030000",
+    "source_suite": "eval_s_recon_raw_text_dense",
+    "target_suite": "eval_s_scand_raw_text_dense",
+    "output_name": "nwm_cdit_s_recon_raw_text_dense_0030000",
+    "eval_types": [
+      "rollout",
+      "time"
+    ],
+    "image_size": 224,
+    "source_files": [
+      "artifacts/summaries/eval/eval_s_recon_raw_text_dense/nwm_cdit_s_recon_raw_text_dense_0030000/recon_rollout_1fps.json",
+      "artifacts/summaries/eval/eval_s_recon_raw_text_dense/nwm_cdit_s_recon_raw_text_dense_0030000/recon_rollout_4fps.json",
+      "artifacts/summaries/eval/eval_s_recon_raw_text_dense/nwm_cdit_s_recon_raw_text_dense_0030000/recon_time.json"
+    ]
+  },
+  {
+    "experiment": "nwm_cdit_s_recon_raw_text_dense",
+    "checkpoint": "latest",
+    "source_suite": "eval_s_recon_raw_text_dense",
+    "target_suite": "eval_s_scand_raw_text_dense",
+    "output_name": "nwm_cdit_s_recon_raw_text_dense_latest",
+    "eval_types": [
+      "time"
+    ],
+    "image_size": 224,
+    "source_files": [
+      "artifacts/summaries/eval/eval_s_recon_raw_text_dense/nwm_cdit_s_recon_raw_text_dense_latest/recon_time.json"
+    ]
+  }
+]

@@ -1,0 +1,812 @@
+                                                                                       Navigation World Models
+
+                                              Amir Bar1      Gaoyue Zhou2     Danny Tran3                                Trevor Darrell3      Yann LeCun1,2
+                                                   1                     2                                                     3
+                                                     FAIR at Meta          New York University                                   Berkeley AI Research
+arXiv:2412.03572v2 [cs.CV] 11 Apr 2025
+
+
+
+
+                                         Figure 1. We train a Navigation World Model (NWM) from video footage of robots and their associated navigation actions (a). After
+                                         training, NWM can evaluate trajectories by synthesizing their videos and scoring the final frame’s similarity with the goal (b). We use
+                                         NWM to plan from scratch or rank experts navigation trajectories, improving downstream visual navigation performance. In unknown
+                                         environments, NWM can simulate imagined trajectories from a single image (c). In all examples above, the input to the model is the first
+                                         image and actions, then the model auto-regressively synthesizes future observations. Click on the image to view examples in a browser.
+
+
+                                                                   Abstract                                     can plan navigation trajectories by simulating them and
+                                                                                                                evaluating whether they achieve the desired goal. Unlike
+                                         Navigation is a fundamental skill of agents with visual-               supervised navigation policies with fixed behavior, NWM
+                                         motor capabilities. We introduce a Navigation World Model              can dynamically incorporate constraints during planning.
+                                         (NWM), a controllable video generation model that pre-                 Experiments demonstrate its effectiveness in planning tra-
+                                         dicts future visual observations based on past observations            jectories from scratch or by ranking trajectories sampled
+                                         and navigation actions. To capture complex environment                 from an external policy. Furthermore, NWM leverages its
+                                         dynamics, NWM employs a Conditional Diffusion Trans-                   learned visual priors to imagine trajectories in unfamiliar
+                                         former (CDiT), trained on a diverse collection of egocen-              environments from a single input image, making it a flexible
+                                         tric videos of both human and robotic agents, and scaled up            and powerful tool for next-generation navigation systems1 .
+                                         to 1 billion parameters. In familiar environments, NWM                    1 Project page: https://amirbar.net/nwm
+1. Introduction                                                  videos, without relying on 3D priors.
+                                                                     To learn a NWM, we propose a novel Conditional Diffu-
+Navigation is a fundamental skill for any organism with vi-
+                                                                 sion Transformer (CDiT), trained to predict the next image
+sion, playing a crucial role in survival by allowing agents
+                                                                 state given past image states and actions as context. Un-
+to locate food, shelter, and avoid predators. In order to
+                                                                 like a DiT [44], CDiT’s computational complexity is linear
+successfully navigate environments, smart agents primarily
+                                                                 with respect to the number of context frames, and it scales
+rely on vision, allowing them to construct representations
+                                                                 favorably for models trained up to 1B parameters across di-
+of their surroundings to assess distances and capture land-
+                                                                 verse environments and embodiments, requiring 4× fewer
+marks in the environment, all useful for planning a naviga-
+                                                                 FLOPs compared to a standard DiT while achieving better
+tion route.
+                                                                 future prediction results.
+    When human agents plan, they often imagine their fu-
+                                                                     In unknown environments, our results show that NWM
+ture trajectories considering constraints and counterfactu-
+                                                                 benefits from training on unlabeled, action- and reward-free
+als. On the other hand, current state-of-the-art robotics nav-
+                                                                 video data from Ego4D. Qualitatively, we observe improved
+igation policies [53, 55] are “hard-coded”, and after train-
+                                                                 video prediction and generation performance on single im-
+ing, new constraints cannot be easily introduced (e.g. “no
+                                                                 ages (see Figure 1(c)). Quantitatively, with additional unla-
+left turns”). Another limitation of current supervised vi-
+                                                                 beled data, NWM produces more accurate predictions when
+sual navigation models is that they cannot dynamically al-
+                                                                 evaluated on the held-out Stanford Go [24] dataset.
+locate more computational resources to address hard prob-
+                                                                     Our contributions are as follows. We introduce a Nav-
+lems. We aim to design a new model that can mitigate these
+                                                                 igation World Model (NWM) and propose a novel Con-
+issues.
+                                                                 ditional Diffusion Transformer (CDiT), which scales ef-
+    In this work, we propose a Navigation World Model            ficiently up to 1B parameters with significantly reduced
+(NWM), trained to predict the future representation of a         computational requirements compared to standard DiT. We
+video frame based on past frame representation(s) and            train CDiT on video footage and navigation actions from di-
+action(s) (see Figure 1(a)). NWM is trained on video             verse robotic agents, enabling planning by simulating navi-
+footage and navigation actions collected from various            gation plans independently or alongside external navigation
+robotic agents. After training, NWM is used to plan novel        policies, achieving state-of-the-art visual navigation perfor-
+navigation trajectories by simulating potential navigation       mance. Finally, by training NWM on action- and reward-
+plans and verifying if they reach a target goal (see Fig-        free video data, such as Ego4D, we demonstrate improved
+ure 1(b)). To evaluate its navigation skills, we test NWM        video prediction and generation performance in unseen en-
+in known environments, assessing its ability to plan novel       vironments.
+trajectories either independently or by ranking an external
+navigation policy. In the planning setup, we use NWM in
+                                                                 2. Related Work
+a Model Predictive Control (MPC) framework, optimizing
+the action sequence that enables NWM to reach a target           Goal conditioned visual navigation is an important task in
+goal. In the ranking setup, we assume access to an exist-        robotics requiring both perception and planning skills [8,
+ing navigation policy, such as NoMaD [55], which allows          13, 15, 41, 43, 51, 55]. Given context image(s) and an
+us to sample trajectories, simulate them using NWM, and          image specifying the navigation goals, goal-conditioned vi-
+select the best ones. Our NWM achieves state-of-the-art          sual navigation models [51, 55] aim to generate a viable
+standalone performance and competitive results when com-         path towards the goal if the environment is known, or to ex-
+bined with existing methods.                                     plore it otherwise. Recent visual navigation methods like
+    NWM is conceptually similar to recent diffusion-based        NoMaD [55] train a diffusion policy via behavior cloning
+world models for offline model-based reinforcement learn-        and temporal distance objective to follow goals in the con-
+ing, such as DIAMOND [1] and GameNGen [66]. How-                 ditional setting or to explore new environments in the un-
+ever, unlike these models, NWM is trained across a wide          conditional setting. Previous approaches like Active Neural
+range of environments and embodiments, leveraging the di-        SLAM [8] used neural SLAM together with analytical plan-
+versity of navigation data from robotic and human agents.        ners to plan trajectories in the 3D environment, while other
+This allows us to train a large diffusion transformer model      approaches like [9] learn policies via reinforcement learn-
+capable of scaling effectively with model size and data to       ing. Here we show that world models can use exploratory
+adapt to multiple environments. Our approach also shares         data to plan or improve existing navigation policies.
+similarities with Novel View Synthesis (NVS) methods like            Differently than in learning a policy, the goal of a world
+NeRF [40], Zero-1-2-3 [38], and GDC [67], from which             model [19] is to simulate the environment, e.g. given the
+we draw inspiration. However, unlike NVS approaches, our         current state and action to predict the next state and an as-
+goal is to train a single model for navigation across diverse    sociated reward. Previous works have shown that jointly
+environments and model temporal dynamics from natural            learning a policy and a world model can improve sample
+efficiency on Atari [1, 20, 21], simulated robotics environ-            mated based on the change in the agent’s location.
+ments [50], and even when applied to real world robots [71].               Our goal is to learn a world model F , a stochastic map-
+More recently, [22] proposed to use a single world model                ping from previous latent observation(s) sτ and action aτ to
+that is shared across tasks by introducing action and task              future latent state representation st+1 :
+embeddings while [37, 73] proposed to describe actions in
+language, and [6] proposed to learn latent actions. World                     si = encθ (xi )        sτ +1 ∼ Fθ (sτ +1 | sτ , aτ )   (1)
+models were also explored in the context of game simula-
+                                                                        Where sτ = (sτ , ..., sτ −m ) are the past m visual observa-
+tion. DIAMOND [1] and GameNGen [66] propose to use
+                                                                        tions encoded via a pretrained VAE [4]. Using a VAE has
+diffusion models to learn game engines of computer games
+                                                                        the benefit of working with compressed latents, allowing to
+like Atari and Doom. Our work is inspired by these works,
+                                                                        decode predictions back to pixel space for visualization.
+and we aim to learn a single general diffusion video trans-
+                                                                            Due to the simplicity of this formulation, it can be nat-
+former that can be shared across many environments and
+                                                                        urally shared across environments and easily extended to
+different embodiments for navigation.
+                                                                        more complex action spaces, like controlling a robotic arm.
+    In computer vision, generating videos has been a long
+                                                                        Different than [20], we aim to train a single world model
+standing challenge [3, 4, 17, 29, 32, 62, 74]. Most recently,
+                                                                        across environments and embodiments, without using task
+there has been tremendous progress with text-to-video syn-
+                                                                        or action embeddings like in [22].
+thesis with methods like Sora [5] and MovieGen [45]. Past
+                                                                            The formulation in Equation 1 models action but does
+works proposed to control video synthesis given structured
+                                                                        not allow control over the temporal dynamics. We extend
+action-object class categories [61] or Action Graphs [2].
+                                                                        this formulation with a time shift input k ∈ [Tmin , Tmax ], set-
+Video generation models were previously used in reinforce-
+                                                                        ting aτ = (u, ϕ, k), thus now aτ specifies the time change
+ment learning as rewards [10], pretraining methods [59], for
+                                                                        k, used to determine how many steps should the model
+simulating and planning manipulation actions [11, 35] and
+                                                                        move into the future (or past). Hence, given a current state
+for generating paths in indoor environments [26, 31]. Inter-
+                                                                        sτ , we can randomly choose a timeshift k and use the cor-
+estingly, diffusion models [28, 54] are useful both for video
+                                                                        responding time shifted video frame as our next state sτ +1 .
+tasks like generation [69] and prediction [36], but also for
+                                                                        The navigation actions can then be approximated to be a
+view synthesis [7, 46, 63]. Differently, we use a conditional
+                                                                        summation from time τ to m = τ + k − 1:
+diffusion transformer to simulate trajectories for planning
+without explicit 3D representations or priors.                                         m
+                                                                                       X                      m
+                                                                                                              X
+                                                                            uτ →m =          ut    ϕτ →m =          ϕt   mod 2π      (2)
+                                                                                       t=τ                    t=τ
+3. Navigation World Models
+                                                                        This formulation allows learning both navigation actions,
+3.1. Formulation                                                        but also the environment temporal dynamics. In practice,
+Next, we turn to describe our NWM formulation. Intu-                    we allow time shifts of up to ±16 seconds.
+itively, a NWM is a model that receives the current state of               One challenge that may arise is the entanglement of ac-
+the world (e.g. an image observation) and a navigation ac-              tions and time. For example, if reaching a specific loca-
+tion describing where to move and how to rotate. The model              tion always occurs at a particular time, the model may learn
+then produces the next state of the world with respect to the           to rely solely on time and ignore the subsequent actions,
+agent’s point of view.                                                  or vice versa. In practice, the data may contain natural
+    We are given an egocentric video dataset together with              counterfactuals—such as reaching the same area at differ-
+agent navigation actions D = {(x0 , a0 , ..., xT , aT )}ni=1 ,          ent times. To encourage these natural counterfactuals, we
+such that xi ∈ RH×W ×3 is an image and ai = (u, ϕ) is a                 sample multiple goals for each state during training. We
+navigation command given by translation parameter u ∈ R2                further explore this approach in Section 4.
+that controls the change in forward/backward and right/left
+motion, as well as ϕ ∈ R that controls the change in yaw                3.2. Diffusion Transformer as World Model
+rotation angle.2                                                        As mentioned in the previous section, we design Fθ as
+    The navigation actions ai can be fully observed (as in              a stochastic mapping so it can simulate stochastic envi-
+Habitat [49]), e.g. moving forward towards a wall will                  ronments. This is achieved using a Conditional Diffusion
+trigger a response from the environment based on physics,               Transformer (CDiT) model, described next.
+which will lead to the agent staying in place, whereas in               Conditional Diffusion Transformer Architecture. The
+other environments the navigation actions can be approxi-               architecture we use is a temporally autoregressive trans-
+   2 This can be naturally extended to three dimensions by having u ∈   former model utilizing the efficient CDiT block (see Fig-
+R3 and θ ∈ R3 defining yaw, pitch and roll. For simplicity, we assume   ure 2), which is applied ×N times over the input sequence
+navigation on a flat surface with fixed pitch and roll.                 of latents with input action conditioning.
+   CDiT enables time-efficient autoregressive modeling by
+constraining the attention in the first attention block only
+to tokens from the target frame which is being denoised.
+To condition on tokens from past frames, we incorporate a
+cross-attention layer, such that every query token from the
+current target attends to tokens from past frames, which are
+used as keys and values. The cross-attention then contextu-
+alizes the representations using a skip connection layer.
+   To condition on the navigation action a ∈ R3 , we first
+                        d
+map each scalar to R 3 by extracting sine-cosine features,
+then applying a 2-layer MLP, and concatenating them into
+a single vector ψa ∈ Rd . We follow a similar process to
+map the timeshift k ∈ R to ψk ∈ Rd and the diffusion
+timestep t ∈ R to ψk ∈ Rd . Finally we sum all embeddings
+into a single vector used for conditioning:
+                       ξ = ψa + ψk + ψt                         (3)
+ξ is then fed to an AdaLN [72] block to generate scale
+and shift coefficients that modulate the Layer Normaliza-
+tion [34] outputs, as well as the outputs of the attention lay-
+ers. To train on unlabeled data, we simply omit explicit
+navigation actions when computing ξ (see Eq. 3).
+   An alternative approach is to simply use DiT [44], how-
+ever, applying a DiT on the full input is computation-
+ally expensive. Denote n the number of input tokens per
+                                                                       Figure 2. Conditional Diffusion Transformer (CDiT) Block.
+frame, and m the number of frames, and d the token di-
+                                                                       The block’s complexity is linear with the number of frames.
+mension. Scaled Multi-head Attention Layer [68] complex-
+ity is dominated by the attention term O(m2 n2 d), which                   In this objective, the timestep t is sampled randomly to
+is quadratic with context length. In contrast, our CDiT                ensure that the model learns to denoise frames across vary-
+block is dominated by the cross-attention layer complexity             ing levels of corruption. By minimizing this loss, the model
+O(mn2 d), which is linear with respect to the context, al-                                                                 (t)
+                                                                       learns to reconstruct sτ +1 from its noisy version sτ +1 , con-
+lowing us to use longer context size. We analyze these two             ditioned on the context sτ and action aτ , thereby enabling
+design choices in Section 4. CDiT resembles the original               the generation of realistic future frames. Following [44], we
+Transformer Block [68], without applying expensive self-               also predict the covariance matrix of the noise and supervise
+attention over the context tokens.                                     it with the variational lower bound loss Lvlb [42].
+Diffusion Training. In the forward process, noise is added
+to the target state sτ +1 according to a randomly chosen               3.3. Navigation Planning with World Models
+                                                (t)
+timestep t ∈ {1, . . . , T }. The noisy state sτ +1 can be de-         Here we move to describe how to use a trained NWM to
+           (t)    √             √
+fined as: sτ +1 = αt sτ +1 + 1 − αt ϵ, where ϵ ∼ N (0, I)              plan navigation trajectories. Intuitively, if our world model
+is Gaussian noise, and {αt } is a noise schedule control-              is familiar with an environment, we can use it to simulate
+                                       (t)
+ling the variance. As t increases, sτ +1 converges to pure             navigation trajectories, and choose the ones which reach the
+noise. The reverse process attempts to recover the origi-              goal. In an unknown, out of distribution environments, long
+                                                             (t)       term planning might rely on imagination.
+nal state representation sτ +1 from the noisy version sτ +1 ,
+                                                                           Formally, given the latent encoding s0 and navigation
+conditioned on the context sτ , the current action aτ , and the
+                                                                       target s∗ , we look for a sequence of actions (a0 , ..., aT −1 )
+diffusion timestep t. We define Fθ (sτ +1 |sτ , aτ , t) as the de-
+                                                                       that maximizes the likelihood of reaching s∗ . Let S(sT , s∗ )
+noising neural network model parameterized by θ. We fol-
+                                                                       represent the unnormalized score for reaching state s∗
+low the same noise schedule and hyperparams of DiT [44].
+                                                                       with sT given the initial condition s0 , actions a =
+Training Objective. The model is trained to minimize the               (a0 , . . . , aT −1 ), and states s = (s1 , . . . sT ) obtained by au-
+mean-squared between the clean and predicted target, aim-              toregressively rolling out the NWM: s ∼ Fθ (·|s0 , a).
+ing to learn the denoising process:                                        We define the energy function E(s0 , a0 , . . . , aT −1 , sT ),
+                                                                       such that minimizing the energy corresponds to maximizing
+                              h                                   i
+                                             (t)
+ Lsimple = Esτ +1 ,aτ ,sτ ,ϵ,t ∥sτ +1 − Fθ (sτ +1 |sτ , aτ , t)∥22 .
+                                                                       the unnormalized perceptual similarity score and following
+potential constraints on the states and actions:                              unlabeled Ego4D videos and GO Stanford [24] serves as an
+                                                                              unknown evaluation environment. For the full details, see
+      E(s0 , a0 , . . . , aT −1 , sT ) = −S(sT , s∗ )+                  (4)   Appendix 8.1.
+         T −1                           T −1
+         X                              X                                     Evaluation Metrics. We evaluate predicted navigation
+     +          I(aτ ∈
+                     / Avalid ) +              I(sτ ∈
+                                                    / Ssafe ),
+                                                                              trajectories using Absolute Trajectory Error (ATE) for
+         τ =0                           τ =0
+                                                                              accuracy and Relative Pose Error (RPE) for pose con-
+The similarity is computed by decoding s∗ and sT to pixels                    sistency [57]. To check how semantically similar are
+using a pretrained VAE decoder [4] and then measuring the                     world model predictions to ground truth images, we ap-
+perceptual similarity [14, 75]. Constraints like “never go                    ply LPIPS [76] and DreamSim [14], measuring perceptual
+left then right” can be encoded by constraining aτ to be in                   similarity by comparing deep features, and PSNR for pixel-
+a valid action set Avalid , and “never explore the edge of the                level quality. For image and video synthesis quality, we use
+cliff” by ensuring such states sτ are in Ssafe . I(·) denotes the             FID [23] and FVD [64] which evaluate the generated data
+indicator function that applies a large penalty if any action                 distribution. See Appendix 8.1 for more details.
+or state constraint is violated.
+                                                                              Baselines. We consider all the following baselines.
+    The problem then reduces to finding the actions that min-
+imize this energy function:                                                   • DIAMOND [1] is a diffusion world model based on
+                                                                                the UNet [47] architecture. We use DIAMOND in
+          arg      min          Es [E(s0 , a0 , . . . , aT −1 , sT )]   (5)     the offline-reinforcement learning setting following their
+                a0 ,...,aT −1
+                                                                                public code. The diffusion model is trained to autoregres-
+This objective can be reformulated as a Model Predic-                           sively predict at 56x56 resolution alongside an upsampler
+tive Control (MPC) problem, and we optimize it using the                        to obtrain 224x224 resolution predictions. To condition
+Cross-Entropy Method [48], a simple derivative-free and                         on continuous actions, we use a linear embedding layer.
+population-based optimization method which was recently                       • GNM [53] is a general goal-conditioned navigation pol-
+used with with world models for planning [77]. We include                       icy trained on a dataset soup of robotic navigation datasets
+an overview of the Cross-Entropy Method and the full opti-                      with a fully connected trajectory prediction network.
+mization technical details in Appendix 7.                                       GNM is trained on multiple datasets including SCAND,
+Ranking Navigation Trajectories. Assuming we have an                            TartanDrive, GO Stanford, and RECON.
+existing navigation policy Π(a|s0 , s∗ ), we can use NWMs                     • NoMaD [55] extends GNM using a diffusion policy for
+to rank sampled trajectories. Here we use NoMaD [55],                           predicting trajectories for robot exploration and visual
+a state-of-the-art navigation policy for robotic navigation.                    navigation. NoMaD is trained on the same datasets used
+To rank trajectories, we draw multiple samples from Π and                       by GNM and on HuRoN.
+choose the one with the lowest energy, like in Eq. 5.                         Implementation Details. In the default experimental set-
+                                                                              ting we use a CDiT-XL of 1B parameters with context of 4
+4. Experiments and Results                                                    frames, a total batch size of 1024, and 4 different navigation
+We describe the experimental setting, our design choices,                     goals, leading to a final total batch size of 4096. We use the
+and compare NWM to previous approaches. Additional re-                        Stable Diffusion [4] VAE tokenizer, similar as in DiT [44].
+sults are included in the Supplementary Material.                             We use the AdamW [39] optimizer with a learning rate of
+                                                                              8e − 5. After training, we sample 5 times from each model
+4.1. Experimental Setting                                                     to report mean and std results. XL sized model are trained
+Datasets. For all robotics datasets (SCAND [30], Tartan-                      on 8 H100 machines, each with 8 GPUs. Unless otherwise
+Drive [60], RECON [52], and HuRoN [27]), we have ac-                          mentioned, we use the same setting as in DiT-*/2 models.
+cess to the location and rotation of robots, allowing us to in-               4.2. Ablations
+fer relative actions compare to current location (see Eq. 2).
+To standardize the step size across agents, we divide the                     Models are evaluated on single-step 4 seconds future pre-
+distance agents travel between frames by their average step                   diction on validation set trajectories on the known envi-
+size in meters, ensuring the action space is similar for dif-                 ronment RECON. We evaluate the performance against the
+ferent agents. We further filter out backward movements,                      ground truth frame by measuring LPIPS, DreamSim, and
+following NoMaD [55]. Additionally, we use unlabeled                          PSNR. We provide qualitative examples in Figure 3.
+Ego4D [18] videos, where the only action we consider is                       Model Size and CDiT. We compare CDiT (see Section 3.2)
+time shift. SCAND provides video footage of socially com-                     with a standard DiT in which all context tokens are fed as
+pliant navigation in diverse environments, TartanDrive fo-                    inputs. We hypothesize that for navigating known environ-
+cuses on off-road driving, RECON covers open-world nav-                       ments, the capacity of the model is the most important, and
+igation, HuRoN captures social interactions. We train on                      the results in Figure 5, indicate that CDiT indeed performs
+Figure 3. Following trajectories in known environments. We include qualitative video generation comparisons of different models
+following ground truth trajectories. Click on the image to play the video clip in a browser.
+
+ ablation            lpips ↓      dreamsim ↓          psnr ↑
+ 1               0.312 ± 0.001   0.098 ± 0.001   15.044 ± 0.031
+ 2 #goals        0.305 ± 0.000   0.096 ± 0.001   15.154 ± 0.017
+ 4               0.296 ±0.002    0.091 ±0.001    15.331 ±0.027
+ 1               0.304 ± 0.001   0.097 ± 0.001   15.223 ± 0.033
+ 2 #context      0.302 ± 0.001   0.095 ± 0.000   15.274 ± 0.027
+ 4               0.296 ±0.002    0.091 ±0.001    15.331 ±0.027
+ time only       0.760 ± 0.001   0.783 ± 0.000    7.839 ± 0.017
+ action only     0.318 ± 0.002   0.100 ± 0.000   14.858 ± 0.055
+ action + time   0.295 ±0.002    0.091 ±0.001    15.343 ±0.060
+
+Table 1. Ablations of predicted goals per sample number, context
+size, and the use of action and time conditioning. We report pre-
+diction results 4 seconds into the future on RECON.
+
+
+
+
+                                                                    Figure 5. CDiT vs. DiT. Measuring how well models predict 4
+                                                                    seconds into the future on RECON. We report LPIPS as a function
+                                                                    of Tera FLOPs, lower is better.
+
+                                                                             model        diamond          NWM (ours)
+                                                                             FVD ↓    762.734 ± 3.361     200.969 ±5.629
+Figure 4. Comparing generation accuracy and quality of NWM
+and DIAMOND at 1 and 4 FPS as function of time, up to 16 sec-       Figure 6. Comparison of Video Synthesis Quality. 16 second
+onds of generated video on the RECON dataset.                       videos generated at 4 FPS on RECON.
+
+
+better with models of up to 1B parameters, while consuming           input contributes to the prediction performance (we include
+less than 2× FLOPs. Surprisingly, even with equal amount             the results in Table 1. We find that running the model with
+of parameters (e.g, CDiT-L compared to DiT-XL), CDiT is              time only leads to poor performance, while not conditioning
+4× faster and performs better.                                       on time leads to small drop in performance as well. This
+Number of Goals. We train models with variable number                confirms that both inputs are beneficial to the model.
+of goal states given a fixed context, changing the number of         4.3. Video Prediction and Synthesis
+goals from 1 to 4. Each goal is randomly chosen between
+±16 seconds window around the current state. The results             We evaluate how well our model follows ground truth ac-
+reported in Table 1 indicate that using 4 goals leads to sig-        tions and predicts future states. The model is conditioned
+nificantly improved prediction performance in all metrics.           on the first image and context frames, then autoregressively
+                                                                     predicts the next state using ground truth actions, feeding
+Context Size. We train models while varying the number               back each prediction. We compare predictions to ground
+of conditioning frames from 1 to 4 (see Table 1). Unsurpris-         truth images at 1, 2, 4, 8, and 16 seconds, reporting FID
+ingly, more context helps, and with short context the model          and LPIPS on the RECON dataset. Figure 4 shows perfor-
+often “lose track”, leading to poor predictions.                     mance over time compared to DIAMOND at 4 FPS and 1
+Time and Action Conditioning. We train our model with                FPS, showing that NWM predictions are significantly more
+both time and action conditioning and test how much each             accurate than DIAMOND. Initially, the NWM 1 FPS vari-
+Figure 7. Ranking an external policy’s trajectories using NWM. To navigate from the observation image to the goal, we sample
+trajectories from NoMaD [55], simulate each of these trajectories using NWM, score them (see Equation 4), and rank them. With NWM
+we can accurately choose trajectories that are closer to the groundtruth trajectory. Click the image to play examples in a browser.
+
+     model                      ATE ↓          RPE ↓                        model                     Rel. δu ↓         Rel. δϕ ↓
+     GNM                     1.87 ± 0.00    0.73 ± 0.00                     forward first            +0.36 ± 0.01      +0.61 ± 0.02
+     NoMaD                   1.93 ± 0.04    0.52 ± 0.00
+     NWM + NoMaD (×16)       1.83 ± 0.03    0.50 ± 0.01
+                                                                            left-right first         −0.03 ± 0.01      +0.20 ± 0.01
+     NWM + NoMaD (×32)       1.78 ± 0.03    0.48 ± 0.01                     straight then forward    +0.08 ± 0.01      +0.22 ± 0.01
+     NWM (planning)          1.13 ± 0.02    0.35 ± 0.01
+                                                                         Table 3. Planning with Navigation Constraints. We present
+Table 2. Goal Conditioned Visual Navigation. ATE and RPE                 results for planning with NWM under three action constraints,
+results on RECON, predicting 2 second trajectories. NWM                  reporting the differences in final position (δu) and yaw (δϕ)
+achieves improved results on all metrics compared to previous            relative to the no-constraints baseline. All constraints are met,
+approaches NoMaD [55] and GNM [53].                                      demonstrating that NWM can effectively adhere to them.
+
+
+ant performs better, but after 8 seconds, predictions degrade       or a single turn. We show that NWM supports constraint-
+due to accumulated errors and loss of context and the 4 FPS         aware planning. In forward-first, the agent moves forward
+becomes superior. See qualitative examples in Figure 3.             for 5 steps, then turns for 3. In left-right first, it turns for
+Generation Quality. To evaluate video quality, we auto-             3 steps before moving forward. In straight then forward,
+regressively predict videos at 4 FPS for 16 seconds to cre-         it moves straight for 3 steps, then forward. Constraints are
+ate videos, while conditioning on ground truth actions. We          enforced by zeroing out specific actions; e.g., in left-right
+then evaluate the quality of videos generated using FVD,            first, forward motion is zeroed for the first 3 steps, and Stan-
+compared to DIAMOND [1]. The results in Figure 6 indi-              dalone Planning optimizes the rest. We report the norm of
+cate that NWM outputs higher quality videos.                        the difference in final position and yaw relative to uncon-
+                                                                    strained planning. Results (Table 3) show NWM plans ef-
+4.4. Planning Using a Navigation World Model                        fectively under constraints, with only minor performance
+                                                                    drops (see examples in Figure 9).
+Next, we turn to describe experiments that measure how
+                                                                    Using a Navigation World Model for Ranking. NWM
+well can we navigate using a NWM. We include the full
+                                                                    can enhance existing navigation policies in a goal-
+technical details of the experiments in Appendix 8.2.
+                                                                    conditioned navigation. Conditioning NoMaD on past ob-
+Standalone Planning. We demonstrate that NWM can be                 servations and a goal image, we sample n ∈ {16, 32} tra-
+effectively used independently for goal-conditioned naviga-         jectories, each of length 8, and evaluate them by autoregres-
+tion. We condition it on past observations and a goal image,        sively following the actions using NWM. Finally, we rank
+and use the Cross-Entropy Method to find a trajectory that          each trajectory’s final prediction by measuring LPIPS sim-
+minimizes the LPIPS similarity of the last predicted image          ilarity with the goal image (see Figure 7). We report ATE
+to the goal image (see Equation 5). To rank an action se-           and RPE on all in-domain datasets (Table 2) and find that
+quence, we execute the NWM and measure LPIPS between                NWM-based trajectory ranking improves navigation perfor-
+the last state and the goal 3 times to get an average score.        mance, with more samples yielding better results.
+We generate trajectories of length 8, with temporal shift of
+k = 0.25. We evaluate the model performance in Table 2.             4.5. Generalization to Unknown Environments
+We find that using a NWM for planning leads to competitive          Here we experiment with adding unlabeled data, and ask
+results with state-of-the-art policies.                             whether NWM can make predictions in new environments
+Planning with Constraints. World models allow planning              using imagination. In this experiment, we train a model
+under constraints—for example, requiring straight motion            on all in-domain datasets, as well as a susbet of unlabeled
+Figure 8. Navigating Unknown Environments. NWM is conditioned on a single image, and autoregressively predicts the next states
+given the associated actions (marked in yellow). Click on the image to play the video clip in a browser.
+
+       data                            unknown environment (Go Stanford)                     known environment (RECON)
+                                  lpips ↓        dreamsim ↓          psnr ↑          lpips ↓        dreamsim ↓         psnr ↑
+       in-domain data         0.658 ± 0.002    0.478 ± 0.001    11.031 ± 0.036   0.295 ±0.002      0.091 ±0.001    15.343 ±0.060
+       + Ego4D (unlabeled)    0.652 ±0.003      0.464 ±0.003     11.083 ±0.064   0.368 ± 0.003    0.138 ± 0.002    14.072 ± 0.075
+
+Table 4. Training on additional unlabeled data improves performance on unseen environments. Reporting results on unknown
+environment (Go Stanford) and known one (RECON). Results reported by evaluating 4 seconds into the future.
+
+
+
+
+Figure 9. Planning with Constraints Using NWM. We visualize            Figure 10. Limitations and Failure Cases. In unknown environ-
+trajectories planned with NWM under the constraint of moving left      ments, a common failure case is mode collapse, where the model
+or right first, followed by forward motion. The planning objective     outputs slowly become more similar to data seen in training. Click
+is to reach the same final position and orientation as the ground      on the image to play the video clip in a browser.
+truth (GT) trajectory. Shown are the costs for proposed trajectories
+0, 1, and 2, with trajectory 0 (in green) achieving the lowest cost.   training data. Additionally, the model currently utilizes 3
+                                                                       DoF navigation actions, but extending to 6 DoF navigation
+videos from Ego4D, where we only have access to the time-              and potentially more (like controlling the joints of a robotic
+shift action. We train a CDiT-XL model and test it on the              arm) are possible as well, which we leave for future work.
+Go Stanford dataset as well as other random images. We re-
+port the results in Table 4, finding that training on unlabeled        6. Discussion
+data leads to significantly better video predictions according
+to all metrics, including improved generation quality. We              Our proposed Navigation World Model (NWM) offers a
+include qualitative examples in Figure 8. Compared to in-              scalable, data-driven approach to learning world models for
+domain (Figure 3), the model breaks faster and expectedly              visual navigation; However, we are not exactly sure yet
+hallucinates paths as it generates traversals of imagined en-          what representations enable this, as our NWM does not ex-
+vironments.                                                            plicitly utilize a structured map of the environment. One
+                                                                       idea, is that next frame prediction from an egocentric point
+5. Limitations                                                         of view can drive the emergence of allocentric representa-
+                                                                       tions [65]. Ultimately, our approach bridges learning from
+We identify multiple limitations. First, when applied to out           video, visual navigation, and model-based planning and
+of distribution data, the model tends to slowly lose context           could potentially open the door to self-supervised systems
+and generates next states that resemble the training data,             that not only perceive but can also plan to inform action.
+a phenomena that was observed in image generation and
+is known as mode collapse [56, 58]. We include such an                 Acknowledgments. We thank Noriaki Hirose for his
+example in Figure 10. Second, while the model can plan,                help with the HuRoN dataset and for sharing his insights,
+it struggles with simulating temporal dynamics like pedes-             and to Manan Tomar, David Fan, Sonia Joseph, Angjoo
+trian motion (although in some cases it does). Both limita-            Kanazawa, Ethan Weber, Nicolas Ballas, and the anony-
+tions are likely to be solved with longer context and more             mous reviewers for their helpful discussions and feedback.
+References                                                             [13] J Frey, M Mattamala, N Chebrolu, C Cadena, M Fallon, and
+                                                                            M Hutter. Fast traversability estimation for wild visual nav-
+ [1] Eloi Alonso, Adam Jelley, Vincent Micheli, Anssi Kan-                  igation. Robotics: Science and Systems Proceedings, 19,
+     ervisto, Amos Storkey, Tim Pearce, and François Fleuret.              2023. 2, 3
+     Diffusion for world modeling: Visual details matter in atari.
+                                                                       [14] Stephanie Fu, Netanel Tamir, Shobhita Sundaram, Lucy
+     In Thirty-eighth Conference on Neural Information Process-
+                                                                            Chai, Richard Zhang, Tali Dekel, and Phillip Isola. Dream-
+     ing Systems. 2, 3, 5, 7
+                                                                            sim: Learning new dimensions of human visual similarity
+ [2] Amir Bar, Roei Herzig, Xiaolong Wang, Anna Rohrbach,                   using synthetic data. Advances in Neural Information Pro-
+     Gal Chechik, Trevor Darrell, and Amir Globerson. Compo-                cessing Systems, 36, 2024. 5, 1
+     sitional video synthesis with action graphs. In International
+                                                                       [15] Zipeng Fu, Ashish Kumar, Ananye Agarwal, Haozhi Qi, Ji-
+     Conference on Machine Learning, pages 662–673. PMLR,
+                                                                            tendra Malik, and Deepak Pathak. Coupling vision and pro-
+     2021. 3
+                                                                            prioception for navigation of legged robots. In Proceedings
+ [3] Omer Bar-Tal, Hila Chefer, Omer Tov, Charles Her-                      of the IEEE/CVF Conference on Computer Vision and Pat-
+     rmann, Roni Paiss, Shiran Zada, Ariel Ephrat, Junhwa                   tern Recognition, pages 17273–17283, 2022. 2
+     Hur, Guanghui Liu, Amit Raj, et al. Lumiere: A space-             [16] Junyu Gao, Xuan Yao, and Changsheng Xu. Fast-slow test-
+     time diffusion model for video generation. arXiv preprint              time adaptation for online vision-and-language navigation.
+     arXiv:2401.12945, 2024. 3                                              In Proceedings of the 41st International Conference on Ma-
+ [4] Andreas Blattmann, Tim Dockhorn, Sumith Kulal, Daniel                  chine Learning, pages 14902–14919. PMLR, 2024. 3
+     Mendelevitch, Maciej Kilian, Dominik Lorenz, Yam Levi,            [17] Rohit Girdhar, Mannat Singh, Andrew Brown, Quentin Du-
+     Zion English, Vikram Voleti, Adam Letts, et al. Stable video           val, Samaneh Azadi, Sai Saketh Rambhatla, Akbar Shah, Xi
+     diffusion: Scaling latent video diffusion models to large              Yin, Devi Parikh, and Ishan Misra. Emu video: Factoriz-
+     datasets. arXiv preprint arXiv:2311.15127, 2023. 3, 5                  ing text-to-video generation by explicit image conditioning.
+ [5] Tim Brooks, Bill Peebles, Connor Holmes, Will DePue,                   arXiv preprint arXiv:2311.10709, 2023. 3
+     Yufei Guo, Li Jing, David Schnurr, Joe Taylor, Troy Luh-          [18] Kristen Grauman, Andrew Westbury, Eugene Byrne,
+     man, Eric Luhman, et al. Video generation models as world              Zachary Chavis, Antonino Furnari, Rohit Girdhar, Jackson
+     simulators, 2024. 3                                                    Hamburger, Hao Jiang, Miao Liu, Xingyu Liu, et al. Ego4d:
+ [6] Jake Bruce, Michael D Dennis, Ashley Edwards, Jack                     Around the world in 3,000 hours of egocentric video. In Pro-
+     Parker-Holder, Yuge Shi, Edward Hughes, Matthew Lai,                   ceedings of the IEEE/CVF Conference on Computer Vision
+     Aditi Mavalankar, Richie Steigerwald, Chris Apps, et al. Ge-           and Pattern Recognition, pages 18995–19012, 2022. 5, 2
+     nie: Generative interactive environments. In Forty-first Inter-   [19] David Ha and Jürgen Schmidhuber. World models. arXiv
+     national Conference on Machine Learning, 2024. 3                       preprint arXiv:1803.10122, 2018. 2
+ [7] Eric R. Chan, Koki Nagano, Matthew A. Chan, Alexander W.          [20] Danijar Hafner, Timothy Lillicrap, Jimmy Ba, and Moham-
+     Bergman, Jeong Joon Park, Axel Levy, Miika Aittala, Shalini            mad Norouzi. Dream to control: Learning behaviors by la-
+     De Mello, Tero Karras, and Gordon Wetzstein. Generative                tent imagination. In International Conference on Learning
+     novel view synthesis with 3d-aware diffusion models. In                Representations, . 3
+     Proceedings of the IEEE/CVF International Conference on           [21] Danijar Hafner, Timothy P Lillicrap, Mohammad Norouzi,
+     Computer Vision (ICCV), pages 4217–4229, 2023. 3                       and Jimmy Ba. Mastering atari with discrete world models.
+ [8] Devendra Singh Chaplot, Dhiraj Gandhi, Saurabh Gupta,                  In International Conference on Learning Representations, .
+     Abhinav Gupta, and Ruslan Salakhutdinov. Learning to ex-               3
+     plore using active neural slam. In International Conference       [22] Nicklas Hansen, Hao Su, and Xiaolong Wang. Td-mpc2:
+     on Learning Representations. 2                                         Scalable, robust world models for continuous control. In The
+ [9] Tao Chen, Saurabh Gupta, and Abhinav Gupta. Learning                   Twelfth International Conference on Learning Representa-
+     exploration policies for navigation. In International Confer-          tions. 3
+     ence on Learning Representations. 2                               [23] Martin Heusel, Hubert Ramsauer, Thomas Unterthiner,
+[10] Alejandro Escontrela, Ademi Adeniji, Wilson Yan, Ajay                  Bernhard Nessler, and Sepp Hochreiter. Gans trained by a
+     Jain, Xue Bin Peng, Ken Goldberg, Youngwoon Lee, Dani-                 two time-scale update rule converge to a local nash equilib-
+     jar Hafner, and Pieter Abbeel. Video prediction models as              rium. Advances in neural information processing systems,
+     rewards for reinforcement learning. Advances in Neural In-             30, 2017. 5, 1
+     formation Processing Systems, 36, 2024. 3                         [24] Noriaki Hirose, Amir Sadeghian, Marynel Vázquez, Patrick
+[11] Chelsea Finn and Sergey Levine. Deep visual foresight for              Goebel, and Silvio Savarese. Gonet: A semi-supervised
+     planning robot motion. In 2017 IEEE International Confer-              deep learning approach for traversability estimation. In 2018
+     ence on Robotics and Automation (ICRA), pages 2786–2793.               IEEE/RSJ International Conference on Intelligent Robots
+     IEEE, 2017. 3                                                          and Systems (IROS), pages 3044–3051. IEEE, 2018. 2, 5
+[12] Elias Frantar, Saleh Ashkboos, Torsten Hoefler, and Dan           [25] Noriaki Hirose, Amir Sadeghian, Fei Xia, Roberto Martı́n-
+     Alistarh.     Gptq: Accurate post-training quantization                Martı́n, and Silvio Savarese. Vunet: Dynamic scene view
+     for generative pre-trained transformers. arXiv preprint                synthesis for traversability estimation using an rgb camera.
+     arXiv:2210.17323, 2022. 3                                              IEEE Robotics and Automation Letters, 2019. 2
+[26] Noriaki Hirose, Fei Xia, Roberto Martı́n-Martı́n, Amir          [40] Ben Mildenhall, Pratul P Srinivasan, Matthew Tancik,
+     Sadeghian, and Silvio Savarese. Deep visual mpc-policy               Jonathan T Barron, Ravi Ramamoorthi, and Ren Ng. Nerf:
+     learning for navigation. IEEE Robotics and Automation Let-           Representing scenes as neural radiance fields for view syn-
+     ters, 4(4):3184–3191, 2019. 3                                        thesis. Communications of the ACM, 65(1):99–106, 2021.
+[27] Noriaki Hirose, Dhruv Shah, Ajay Sridhar, and Sergey                 2
+     Levine. Sacson: Scalable autonomous control for social nav-     [41] Piotr Mirowski, Razvan Pascanu, Fabio Viola, Hubert Soyer,
+     igation. IEEE Robotics and Automation Letters, 2023. 5, 1,           Andy Ballard, Andrea Banino, Misha Denil, Ross Goroshin,
+     2                                                                    Laurent Sifre, Koray Kavukcuoglu, et al. Learning to navi-
+[28] Jonathan Ho, Ajay Jain, and Pieter Abbeel. Denoising dif-            gate in complex environments. In International Conference
+     fusion probabilistic models. Advances in neural information          on Learning Representations, 2022. 2
+     processing systems, 33:6840–6851, 2020. 3                       [42] Alexander Quinn Nichol and Prafulla Dhariwal. Improved
+[29] Jonathan Ho, William Chan, Chitwan Saharia, Jay Whang,               denoising diffusion probabilistic models. In Proceedings
+     Ruiqi Gao, Alexey Gritsenko, Diederik P Kingma, Ben                  of the 38th International Conference on Machine Learning,
+     Poole, Mohammad Norouzi, David J Fleet, et al. Imagen                pages 8162–8171. PMLR, 2021. 4
+     video: High definition video generation with diffusion mod-     [43] Deepak Pathak, Parsa Mahmoudieh, Guanghao Luo, Pulkit
+     els. arXiv preprint arXiv:2210.02303, 2022. 3                        Agrawal, Dian Chen, Yide Shentu, Evan Shelhamer, Jiten-
+[30] Haresh Karnan, Anirudh Nair, Xuesu Xiao, Garrett War-                dra Malik, Alexei A Efros, and Trevor Darrell. Zero-shot
+     nell, Sören Pirk, Alexander Toshev, Justin Hart, Joydeep            visual imitation. In Proceedings of the IEEE conference on
+     Biswas, and Peter Stone. Socially compliant navigation               computer vision and pattern recognition workshops, pages
+     dataset (scand): A large-scale dataset of demonstrations for         2050–2053, 2018. 2
+     social navigation. IEEE Robotics and Automation Letters, 7      [44] William Peebles and Saining Xie. Scalable diffusion mod-
+     (4):11807–11814, 2022. 5, 1                                          els with transformers. In Proceedings of the IEEE/CVF In-
+[31] Jing Yu Koh, Honglak Lee, Yinfei Yang, Jason Baldridge,              ternational Conference on Computer Vision (ICCV), pages
+     and Peter Anderson. Pathdreamer: A world model for indoor            4195–4205, 2023. 2, 4, 5
+     navigation. In Proceedings of the IEEE/CVF International        [45] Adam Polyak, Amit Zohar, Andrew Brown, Andros Tjandra,
+     Conference on Computer Vision, pages 14738–14748, 2021.              Animesh Sinha, Ann Lee, Apoorv Vyas, Bowen Shi, Chih-
+     3                                                                    Yao Ma, Ching-Yao Chuang, et al. Movie gen: A cast of
+[32] Dan Kondratyuk, Lijun Yu, Xiuye Gu, Jose Lezama,                     media foundation models. arXiv preprint arXiv:2410.13720,
+     Jonathan Huang, Grant Schindler, Rachel Hornung, Vigh-               2024. 3
+     nesh Birodkar, Jimmy Yan, Ming-Chang Chiu, et al.               [46] Ben Poole, Ajay Jain, Jonathan T Barron, and Ben Milden-
+     Videopoet: A large language model for zero-shot video gen-           hall. Dreamfusion: Text-to-3d using 2d diffusion. In The
+     eration. In Forty-first International Conference on Machine          Eleventh International Conference on Learning Representa-
+     Learning. 3                                                          tions. 3
+[33] Alex Krizhevsky, Ilya Sutskever, and Geoffrey E Hinton.         [47] Olaf Ronneberger, Philipp Fischer, and Thomas Brox. U-
+     Imagenet classification with deep convolutional neural net-          net: Convolutional networks for biomedical image segmen-
+     works. Advances in neural information processing systems,            tation. In Medical image computing and computer-assisted
+     25, 2012. 1                                                          intervention–MICCAI 2015: 18th international conference,
+[34] Jimmy Lei Ba, Jamie Ryan Kiros, and Geoffrey E Hinton.               Munich, Germany, October 5-9, 2015, proceedings, part III
+     Layer normalization. ArXiv e-prints, pages arXiv–1607,               18, pages 234–241. Springer, 2015. 5
+     2016. 4                                                         [48] Reuven Y Rubinstein. Optimization of computer simulation
+[35] Junbang Liang, Ruoshi Liu, Ege Ozguroglu, Sruthi Sud-                models with rare events. European Journal of Operational
+     hakar, Achal Dave, Pavel Tokmakov, Shuran Song, and Carl             Research, 99(1):89–112, 1997. 5, 1
+     Vondrick. Dreamitate: Real-world visuomotor policy learn-       [49] Manolis Savva, Abhishek Kadian, Oleksandr Maksymets,
+     ing via video generation, 2024. 3                                    Yili Zhao, Erik Wijmans, Bhavana Jain, Julian Straub, Jia
+[36] Han Lin, Tushar Nagarajan, Nicolas Ballas, Mido Assran,              Liu, Vladlen Koltun, Jitendra Malik, et al. Habitat: A
+     Mojtaba Komeili, Mohit Bansal, and Koustuv Sinha. Vedit:             platform for embodied ai research. In Proceedings of
+     Latent prediction architecture for procedural video represen-        the IEEE/CVF international conference on computer vision,
+     tation learning, 2024. 3                                             pages 9339–9347, 2019. 3
+[37] Jessy Lin, Yuqing Du, Olivia Watkins, Danijar Hafner, Pieter    [50] Younggyo Seo, Danijar Hafner, Hao Liu, Fangchen Liu,
+     Abbeel, Dan Klein, and Anca Dragan. Learning to model the            Stephen James, Kimin Lee, and Pieter Abbeel. Masked
+     world with language, 2024. 3                                         world models for visual control. In Conference on Robot
+[38] Ruoshi Liu, Rundi Wu, Basile Van Hoorick, Pavel Tok-                 Learning, pages 1332–1344. PMLR, 2023. 3
+     makov, Sergey Zakharov, and Carl Vondrick. Zero-1-to-           [51] Dhruv Shah, Ajay Sridhar, Nitish Dashora, Kyle Stachow-
+     3: Zero-shot one image to 3d object. In Proceedings of               icz, Kevin Black, Noriaki Hirose, and Sergey Levine. Vint:
+     the IEEE/CVF international conference on computer vision,            A foundation model for visual navigation. In 7th Annual
+     pages 9298–9309, 2023. 2                                             Conference on Robot Learning. 2
+[39] I Loshchilov. Decoupled weight decay regularization. arXiv      [52] Dhruv Shah, Benjamin Eysenbach, Gregory Kahn, Nicholas
+     preprint arXiv:1711.05101, 2017. 5                                   Rhinehart, and Sergey Levine. Rapid exploration for open-
+     world navigation with latent goal models. arXiv preprint       [65] Benigno Uria, Borja Ibarz, Andrea Banino, Vinicius Zam-
+     arXiv:2104.05859, 2021. 5, 1, 2                                     baldi, Dharshan Kumaran, Demis Hassabis, Caswell Barry,
+[53] Dhruv Shah, Ajay Sridhar, Arjun Bhorkar, Noriaki Hirose,            and Charles Blundell. A model of egocentric to allocentric
+     and Sergey Levine. Gnm: A general navigation model to               understanding in mammalian brains. bioRxiv, 2022. 8
+     drive any robot. In 2023 IEEE International Conference on      [66] Dani Valevski, Yaniv Leviathan, Moab Arar, and Shlomi
+     Robotics and Automation (ICRA), pages 7226–7233. IEEE,              Fruchter. Diffusion models are real-time game engines.
+     2023. 2, 5, 7, 3                                                    arXiv preprint arXiv:2408.14837, 2024. 2, 3
+[54] Jascha Sohl-Dickstein, Eric Weiss, Niru Maheswaranathan,       [67] Basile Van Hoorick, Rundi Wu, Ege Ozguroglu, Kyle Sar-
+     and Surya Ganguli. Deep unsupervised learning using                 gent, Ruoshi Liu, Pavel Tokmakov, Achal Dave, Changxi
+     nonequilibrium thermodynamics. In International confer-             Zheng, and Carl Vondrick. Generative camera dolly: Ex-
+     ence on machine learning, pages 2256–2265. PMLR, 2015.              treme monocular dynamic novel view synthesis. 2024. 2
+     3                                                              [68] A Vaswani. Attention is all you need. Advances in Neural
+[55] Ajay Sridhar, Dhruv Shah, Catherine Glossop, and Sergey             Information Processing Systems, 2017. 4
+     Levine. Nomad: Goal masked diffusion policies for nav-         [69] Vikram Voleti, Alexia Jolicoeur-Martineau, and Chris Pal.
+     igation and exploration. In 2024 IEEE International Con-            Mcvd-masked conditional video diffusion for prediction,
+     ference on Robotics and Automation (ICRA), pages 63–70.             generation, and interpolation. Advances in neural informa-
+     IEEE, 2024. 2, 5, 7, 1, 3                                           tion processing systems, 35:23371–23385, 2022. 3
+[56] Akash Srivastava, Lazar Valkov, Chris Russell, Michael U       [70] Fu-Yun Wang, Zhaoyang Huang, Alexander Bergman,
+     Gutmann, and Charles Sutton. Veegan: Reducing mode col-             Dazhong Shen, Peng Gao, Michael Lingelbach, Keqiang
+     lapse in gans using implicit variational learning. Advances         Sun, Weikang Bian, Guanglu Song, Yu Liu, et al. Phased
+     in neural information processing systems, 30, 2017. 8               consistency models. Advances in Neural Information Pro-
+[57] Jürgen Sturm, Wolfram Burgard, and Daniel Cremers. Eval-           cessing Systems, 37:83951–84009, 2024. 3
+     uating egomotion and structure-from-motion approaches us-      [71] Philipp Wu, Alejandro Escontrela, Danijar Hafner, Pieter
+     ing the tum rgb-d benchmark. In Proc. of the Workshop on            Abbeel, and Ken Goldberg. Daydreamer: World models for
+     Color-Depth Camera Fusion in Robotics at the IEEE/RJS In-           physical robot learning. In Conference on robot learning,
+     ternational Conference on Intelligent Robot Systems (IROS),         pages 2226–2240. PMLR, 2023. 3
+     page 6, 2012. 5, 1                                             [72] Jingjing Xu, Xu Sun, Zhiyuan Zhang, Guangxiang Zhao, and
+[58] Hoang Thanh-Tung and Truyen Tran. Catastrophic forget-              Junyang Lin. Understanding and improving layer normaliza-
+     ting and mode collapse in gans. In 2020 international joint         tion, 2019. 4
+     conference on neural networks (ijcnn), pages 1–10. IEEE,       [73] Sherry Yang, Yilun Du, Seyed Kamyar Seyed Ghasemipour,
+     2020. 8                                                             Jonathan Tompson, Leslie Pack Kaelbling, Dale Schuur-
+[59] Manan Tomar, Philippe Hansen-Estruch, Philip Bachman,               mans, and Pieter Abbeel. Learning interactive real-world
+     Alex Lamb, John Langford, Matthew E. Taylor, and Sergey             simulators. In The Twelfth International Conference on
+     Levine. Video occupancy models, 2024. 3                             Learning Representations. 3
+[60] Samuel Triest, Matthew Sivaprakasam, Sean J Wang, Wen-         [74] Lijun Yu, Yong Cheng, Kihyuk Sohn, José Lezama, Han
+     shan Wang, Aaron M Johnson, and Sebastian Scherer. Tar-             Zhang, Huiwen Chang, Alexander G Hauptmann, Ming-
+     tandrive: A large-scale dataset for learning off-road dynam-        Hsuan Yang, Yuan Hao, Irfan Essa, et al.             Magvit:
+     ics models. In 2022 International Conference on Robotics            Masked generative video transformer. In Proceedings of
+     and Automation (ICRA), pages 2546–2552. IEEE, 2022. 5,              the IEEE/CVF Conference on Computer Vision and Pattern
+     1, 2                                                                Recognition, pages 10459–10469, 2023. 3
+[61] Sergey Tulyakov, Ming-Yu Liu, Xiaodong Yang, and Jan           [75] Richard Zhang, Phillip Isola, Alexei A Efros, Eli Shechtman,
+     Kautz. MoCoGAN: Decomposing motion and content for                  and Oliver Wang. The unreasonable effectiveness of deep
+     video generation. In IEEE Conference on Computer Vision             features as a perceptual metric. In CVPR, 2018. 5, 1
+     and Pattern Recognition (CVPR), pages 1526–1535, 2018. 3       [76] Richard Zhang, Phillip Isola, Alexei A Efros, Eli Shecht-
+[62] Sergey Tulyakov, Ming-Yu Liu, Xiaodong Yang, and Jan                man, and Oliver Wang. The unreasonable effectiveness of
+     Kautz. Mocogan: Decomposing motion and content for                  deep features as a perceptual metric. In Proceedings of the
+     video generation. In Proceedings of the IEEE conference on          IEEE conference on computer vision and pattern recogni-
+     computer vision and pattern recognition, pages 1526–1535,           tion, pages 586–595, 2018. 5
+     2018. 3                                                        [77] Gaoyue Zhou, Hengkai Pan, Yann LeCun, and Lerrel Pinto.
+[63] Joseph Tung, Gene Chou, Ruojin Cai, Guandao Yang, Kai               Dino-wm: World models on pre-trained visual features en-
+     Zhang, Gordon Wetzstein, Bharath Hariharan, and Noah                able zero-shot planning, 2024. 5
+     Snavely. Megascenes: Scene-level view synthesis at scale.
+     In Computer Vision – ECCV 2024, pages 197–214, Cham,
+     2025. Springer Nature Switzerland. 3
+[64] Thomas Unterthiner, Sjoerd van Steenkiste, Karol Kurach,
+     Raphaël Marinier, Marcin Michalski, and Sylvain Gelly.
+     Fvd: A new metric for video generation. 2019. 5, 1
+                                            Navigation World Models
+                                              Supplementary Material
+   The structure of the Appendix is as follows: we start         these constraints. For instance, in the ”forward-first” sce-
+by describing how we plan navigation trajectories via Stan-      nario, the translation action is u = (∆x, 0) for the first five
+dalone Planning in Section 7, and then include more exper-       steps and u = (0, ∆y) for the last three steps.
+iments and results in Section 8.
+                                                                 8. Experiments and Results
+7. Standalone Planning Optimization                              8.1. Experimental Study
+As described in Section 3.3, we use a pretrained NWM to          We elaborate on the metrics and datasets used.
+standalone-plan goal-conditioned navigation trajectories by      Evaluation Metrics. We describe the evaluation metrics
+optimizing Eq.5. Here, we provide additional details about       used to assess predicted navigation trajectories and the qual-
+the optimization using the Cross-Entropy Method [48] and         ity of images generated by our NWM.
+the hyperparameters used. Full standalone navigation plan-           For visual navigation performance, Absolute Trajec-
+ning results are presented in Section 8.2.                       tory Error (ATE) measures the overall accuracy of trajec-
+    We optimize trajectories using the Cross-Entropy             tory estimation by computing the Euclidean distance be-
+Method, a gradient-free stochastic optimization technique        tween corresponding points in the estimated and ground-
+for continuous optimization problems. This method itera-         truth trajectories. Relative Pose Error (RPE) evaluates the
+tively updates a probability distribution to improve the like-   consistency of consecutive poses by calculating the error in
+lihood of generating better solutions. In the unconstrained      relative transformations between them [57].
+standalone planning scenario, we assume the trajectory is a          To more rigorously assess the semantics in the world
+straight line and optimize only its endpoint, represented by     model outputs, we use Learned Perceptual Image Patch
+three variables: a single translation u and yaw rotation ϕ.      Similarity (LPIPS) and DreamSim [14], which evaluate per-
+We then map this tuple into eight evenly spaced delta steps,     ceptual similarity by comparing deep features from a neural
+applying the yaw rotation at the final step. The time interval   network [75]. LPIPS, in particular, uses AlexNet [33] to
+between steps is fixed at k = 0.25 seconds. The main steps       focus on human perception of structural differences. Ad-
+of our optimization process are as follows:                      ditionally, we use Peak Signal-to-Noise Ratio (PSNR) to
+• Initialization: Define a Gaussian distribution with            quantify the pixel-level quality of generated images by mea-
+   mean µ = (µ∆x , µ∆y , µϕ ) and variance Σ =                   suring the ratio of maximum pixel value to error, with
+   diag(σ∆x2     2
+              , σ∆y , σϕ2 ) over the solution space.             higher values indicating better quality.
+• Sampling: Generate N = 120 candidate solutions by                  To study image and video synthesis quality, we use
+   sampling from the current Gaussian distribution.              Fréchet Inception Distance (FID) and Fréchet Video Dis-
+• Evaluation: Evaluate each candidate solution by simulat-       tance (FVD), which compare the feature distributions of
+   ing it using the NWM and measuring the LPIPS score be-        real and generated images or videos. Lower FID and FVD
+   tween the simulation output and input goal images. Since      scores indicate higher visual quality [23, 64].
+   NWM is stochastic, we evaluate each candidate solution        Datasets. For all robotics datasets, we have access to the
+   M times and average to obtain a final score.                  location and rotation of the robots, and we use this to infer
+• Selection: Select a subset of the best-performing solu-        the actions as the delta in location and rotation. We remove
+   tions based on the LPIPS scores.                              all backward movement which can be jittery following No-
+• Update: Adjust the parameters of the distribution to in-       MaD [55], thereby splitting the data to forward walking seg-
+   crease the probability of generating solutions similar to     ments for SCAND [30], TartanDrive [60], RECON [52],
+   the top-performing ones. This step minimizes the cross-       and HuRoN [27]. We also utilize unlabeled Ego4D videos,
+   entropy between the old and updated distributions.            where we only use time shift as action. Next, we describe
+• Iteration: Repeat the sampling, evaluation, selection, and     each individual dataset.
+   update steps until a stopping criterion (e.g. convergence     • SCAND [30] is a robotics dataset consisting of socially
+   or iteration limit) is met.                                     compliant navigation demonstrations using a wheeled
+For simplicity, we run the optimization process for a sin-         Clearpath Jackal and a legged Boston Dynamics Spot.
+gle iteration, which we found effective for short-horizon          SCAND has demonstrations in both indoor and outdoor
+planning of two seconds, though further improvements are           settings at UT Austin. The dataset consists of 8.7 hours,
+possible with more iterations. When navigation constraints         138 trajectories, 25 miles of data and we use the corre-
+are applied, parts of the trajectory are zeroed out to respect     sponding camera poses. We use 484 video segments for
+                               unknown environment                          known environments
+         data                      Go Stanford           RECON           HuRoN           SCAND            TartanDrive
+         in-domain data           0.658 ± 0.002       0.295 ± 0.002   0.250 ± 0.003 0.403 ± 0.002        0.414 ± 0.001
+         + Ego4D (unlabeled)      0.652 ± 0.003       0.368 ± 0.003   0.377 ± 0.002 0.398 ± 0.001        0.430 ± 0.000
+
+Table 5. Training on additional unlabeled data improves performance on unseen environments. Reporting results on unknown
+environment (Go Stanford) and known one (RECON). Results reported by evaluating LPIPS 4 seconds into the future.
+
+
+  training and 121 video segments for testing. Used for          constructing visual navigation evaluation sets is that for-
+  training and evaluation.                                       ward motion is highly prevalent, and if not carefully ac-
+• TartanDrive [60] is an outdoor off-roading driving dataset     counted for, it can dominate the evaluation data. To create
+  collected using a modified Yamaha Viking ATV in Pitts-         diverse evaluation sets, we rank potential evaluation trajec-
+  burgh. The dataset consists of 5 hours and 630 trajecto-       tories based on how well they can be predicted by simply
+  ries. We use 1, 000 video segments for training and 251        moving forward. For each dataset, we select the 100 exam-
+  video segments for testing.                                    ples that are least predictable by this heuristic and use them
+• RECON [52] is an outdoor robotics dataset collected us-        for evaluation.
+  ing a Clearpath Jackal UGV platform. The dataset con-          Time Prediction Evaluation Set. Predicting the future
+  sists of 40 hours across 9 open-world environments. We         frame after k seconds is more challenging than estimating
+  use 9, 468 video segments for training and 2, 367 video        a trajectory, as it requires both predicting the agent’s trajec-
+  segments for testing. Used for training and evaluation.        tory and its orientation in pixel space. Therefore, we do not
+• HuRoN [27] is a robotics dataset consisting of social in-      impose additional diversity constraints. For each dataset,
+  teractions using a Robot Roomba in indoor settings col-        we randomly select 500 test prediction examples.
+  lected at UC Berkeley. The dataset consists of over 75
+  hours in 5 different environments with 4, 000 human in-        8.2. Experiments and Results
+  teractions. We use 2, 451 video segments for training and      Training on Additional Unlabeled Data. We include re-
+  613 video segments for testing. Used for training and          sults for additional known environments in Table 5 and
+  evaluation.                                                    Figure 11. We find that in known environments, models
+• GO Stanford [24, 25], a robotics datasets capturing the        trained exclusively with in-domain data tend to perform bet-
+  fisheye video footage of two different teleoperated robots,    ter, likely because they are better tailored to the in-domain
+  collected at at least 27 different Stanford building with      distribution. The only exception is the SCAND dataset,
+  around 25 hours of video footage. Due to the low resolu-       where dynamic objects (e.g. humans walking) are present.
+  tion images, we only use it for out of domain evaluation.      In this case, adding unlabeled data may help improve per-
+• Ego4D [18] is a large-scale egocentric dataset consist-        formance by providing additional diverse examples.
+  ing of 3, 670 hours across 74 locations. Ego4D con-            Known Environments. We include additional visualiza-
+  sists a variety of scenarios such as Arts & Crafts, Cook-      tion results of following trajectories using NWM in the
+  ing, Construction, Cleaning & Laundry, and Grocery             known environments RECON (Figure 12), SCAND (Fig-
+  Shopping. We use only use videos which involve vi-             ure 13), HuRoN (Figure 14), and Tartan Drive (Figure 15).
+  sual navigation such as Grocery Shopping and Jogging.          Additionally, we include full FVD comparison of DIA-
+  We use a total 1619 videos of over 908 hours for train-        MOND and NWM in Table 6.
+  ing only. Only used for unlabeled training unlabeled
+  training. The videos we use are from the following                  dataset          DIAMOND               NWM (ours)
+  Ego4D scenarios: “Skateboard/scooter”, “Roller skat-                RECON          762.734 ± 3.361       200.969 ± 5.629
+  ing”, “Football”, “Attending a festival or fair”, “Gar-             HuRoN         881.981 ± 11.601       276.932 ± 4.346
+  dener”, “Mini golf”, “Riding motorcycle”, “Golfing”,                TartanDrive   2289.687 ± 6.991      494.247 ± 14.433
+  “Cycling/jogging”, “Walking on street”, “Walking the                SCAND         1945.085 ± 8.449      401.699 ± 11.216
+  dog/pet”, “Indoor Navigation (walking)”, “Working in
+                                                                 Table 6. Comparison of Video Synthesis Quality. 16 second
+  outdoor store”, “Clothes/other shopping”, “Playing with        videos generated at 4 FPS, reporting FVD (lower is better).
+  pets”, “Grocery shopping indoors”, “Working out out-
+  side”, “Farmer”, “Bike”, “Flower Picking”, “Attending
+                                                                 Planning (Ranking). Full goal-conditioned navigation re-
+  sporting events (watching and participating)”, “Drone fly-
+                                                                 sults for all in-domain datasets are presented in Table 7.
+  ing”, “Attending a lecture/class”, “Hiking”, “Basketball”,
+                                                                 Compared to NoMaD, we observe consistent improvements
+  “Gardening”, “Snow sledding”, “Going to the park”.
+                                                                 when using NWM to select from a pool of 16 trajectories,
+Visual Navigation Evaluation Set. Our main finding when          with further gains when selecting from a larger pool of 32.
+ model                            RECON                        HuRoN                       Tartan                        SCAND
+                             ATE          RTE            ATE           RTE           ATE            RTE             ATE          RTE
+ Forward                 1.92 ± 0.00 0.54 ± 0.00     4.14 ± 0.00 1.05 ± 0.00     5.75 ± 0.00    1.19 ± 0.00     2.97 ± 0.00  0.62 ± 0.00
+ GNM                     1.87 ± 0.00 0.73 ± 0.00     3.71 ± 0.00 1.00 ± 0.00     6.65 ± 0.00    1.62 ± 0.00     2.12 ± 0.00  0.61 ± 0.00
+ NoMaD                   1.95 ± 0.05 0.53 ± 0.01     3.73 ± 0.04 0.96 ± 0.01     6.32 ± 0.03    1.31 ± 0.01     2.24 ± 0.03  0.49 ± 0.01
+ NWM + NoMaD (×16)       1.88 ± 0.03 0.51 ± 0.01     3.73 ± 0.05 0.95 ± 0.01     6.26 ± 0.06    1.30 ± 0.01     2.18 ± 0.05  0.48 ± 0.01
+ NWM + NoMaD (×32)       1.79 ± 0.02  0.49 ± 0.00    3.68 ± 0.03   0.95 ± 0.01   6.25 ± 0.05 1.29 ± 0.01        2.19 ± 0.03 0.47 ± 0.01
+ NWM (only)              1.13 ± 0.02  0.35 ± 0.01    4.12 ± 0.03 0.96 ± 0.01     5.63 ± 0.06    1.18 ± 0.01     1.28 ± 0.02  0.33 ± 0.01
+
+Table 7. Goal Conditioned Visual Navigation. ATE and RPE results on on all in domain datasets, predicting trajectories of up to 2
+seconds. NWM achieves improved results on all metrics compared to previous approaches NoMaD [55] and GNM [53].
+
+
+For Tartan Drive, we note that the dataset is heavily dom-              CDiT-L    context 2   action only     goals 2    ours   ours + TTA
+                                                                         0.656     0.655        0.661         0.654     0.652      0.650
+inated by forward motion, as reflected in the results com-
+pared to the ”Forward” baseline, a prediction model that              Table 9. Results in unknown environment (“Go Stanford”). Re-
+always selects forward-only motion.                                   porting lpips on 4 seconds future prediction. Lower is better.
+
+Standalone Planning. For standalone planning, we run the
+optimization procedure outlined in Section 7 for 1 step, and          Test-time adaptation. Test-time adaptation has shown to
+evaluate each trajectories for 3 times. For all datasets, we          improve visual navigation [13, 16]. What is the relation be-
+                                    2
+initialize µ∆y and µϕ to be 0, and σ∆y and σϕ2 to be 0.1. We          tween planning using a world model and test-time adapta-
+                      2
+use different (µ∆x , σ∆x ) across each dataset: (−0.1, 0.02)          tion? We hypothesize that the two ideas are orthogonal, and
+for RECON, (0.5, 0.07) for TartanDrive, (−0.25, 0.04) for             include test-time adaptation results. We consider a simpli-
+SCAND, and (−0.33, 0.03) for HuRoN. We include the full               fied adaptation approach by fine-tuning NWM for 2k steps
+standalone navigation planning results in Table 7. We find            on trajectories from an unknown environment. We show that
+that using planning in the stand-alone setting performs bet-          this adaptation improves trajectory simulation in this envi-
+ter compared to other approaches, and specifically previous           ronment (see “ours+TTA” in Table 9), where we also in-
+hard-coded policies.                                                  clude additional baselines and ablations.
+Real-World Applicability. A key bottleneck in deploying
+NWM in real-world robotics is inference speed. We evalu-
+ate methods to improve NWM efficiency and measure their
+impact on runtime. We focus on using NWM with a genera-
+tive policy (Section 3.3) to rank 32 four-second trajectories.
+Since trajectory evaluation is parallelizable, we analyze the
+runtime of simulating a single trajectory. We find that ex-
+isting solutions can already enable real-time applications of
+NWM at 2-10HZ (Table 8).
+
+    NWM         +Time Skip     +Distillation.   +Quant. 4-bit
+  30.3 ± 0.2    14.7 ± 0.1      0.4 ± 0.1       0.1 (est. [12])
+
+Table 8. Runtime (seconds) on an NVIDIA RTX 6000 Ada card.
+
+   Inference time can be accelerated by composing every
+adjacent pair of actions (via Eq. 2) then simulating only 8
+future states instead of 16 (“Time Skip”), which does not
+degrade navigation performance. Reducing the diffusion
+denoising steps from 250 to 6 by model distillation [70]
+further speeds up inference with minor visual quality loss.3
+Taken together, these two ideas can enable NWM to run in
+real time. Quantization to 4-bit, which we haven’t explored,
+can lead to a ×4 speedup without performance hit [12].
+  3 Using the distillation implementation for DiTs from https://
+
+github.com/hao-ai-lab/FastVideo
+Figure 11. Navigating Unknown Environments. NWM is conditioned on a single image, and autoregressively predicts the next states
+given the associated actions (marked in yellow) up to 4 seconds and 4 FPS. We plot the generated results after 1, 2, 3, and 4 seconds.
+Figure 12. Video generation examples on RECON. NWM is conditioned on a single first image, and a ground truth trajectory and
+autoregressively predicts the next up to 16 seconds at 4 FPS. We plot the generated results from 2 to 16 seconds, every 1 second.
+
+
+
+
+Figure 13. Video generation examples on SCAND. NWM is conditioned on a single first image, and a ground truth trajectory and
+autoregressively predicts the next up to 16 seconds at 4 FPS. We plot the generated results from 2 to 16 seconds, every 1 second.
+Figure 14. Video generation examples on HuRoN. NWM is conditioned on a single first image, and a ground truth trajectory and
+autoregressively predicts the next up to 16 seconds at 4 FPS. We plot the generated results from 2 to 16 seconds, every 1 second.
+
+
+
+
+Figure 15. Video generation examples on Tartan Drive. NWM is conditioned on a single first image, and a ground truth trajectory and
+autoregressively predicts the next up to 16 seconds at 4 FPS. We plot the generated results from 2 to 16 seconds, every 1 second.
+

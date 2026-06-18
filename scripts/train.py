@@ -38,32 +38,78 @@ torch.backends.cudnn.allow_tf32 = True
 
 import matplotlib
 matplotlib.use('Agg')
+from collections import OrderedDict
 from copy import deepcopy
+from pathlib import Path
 from time import time
 import argparse
+import logging
 import matplotlib.pyplot as plt
-import yaml
 
 import torch.distributed as dist
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.utils.data import DataLoader, ConcatDataset
 from torch.utils.data.distributed import DistributedSampler
 
+from src.config import compose_hydra_config, load_runtime_config, namespace_from_config, save_yaml_config, update_runtime_section
 from src.core.env.distributed import init_distributed
+from src.core.wandb import finish_wandb_run, init_wandb_run, log_artifact, log_images, log_metrics
 from src.models.backbones.cdit import CDiT_models
 from src.diffusion import create_diffusion
 from src.data.datasets.train_dataset import TrainingDataset
-from src.core.io.paths import get_checkpoint_path, get_run_artifact_dir, get_run_checkpoint_dir, get_run_log_dir
+from src.core.paths import get_checkpoint_path, get_run_artifact_dir, get_run_checkpoint_dir, get_run_log_dir
 from src.data.transforms.image import build_transform
 from src.models.checkpoints.vae import load_vae
 from src.features.text.pipeline import get_text_conditioning_config
-from src.training.optim.ema import update_ema, requires_grad
 from src.models.checkpoints.loader import load_model_state, prepare_checkpoint_state_dict
-from src.core.logging.logger import create_logger
 
 #################################################################################
 #                             Training Helper Functions                         #
 #################################################################################
+
+def create_logger(logging_dir):
+    if dist.get_rank() == 0:
+        logging.basicConfig(
+            level=logging.INFO,
+            format='[\033[34m%(asctime)s\033[0m] %(message)s',
+            datefmt='%Y-%m-%d %H:%M:%S',
+            handlers=[logging.StreamHandler(), logging.FileHandler(f"{logging_dir}/log.txt")]
+        )
+        return logging.getLogger(__name__)
+
+    logger = logging.getLogger(__name__)
+    logger.addHandler(logging.NullHandler())
+    return logger
+
+
+@torch.no_grad()
+def update_ema(ema_model, model, decay=0.9999):
+    ema_params = OrderedDict(ema_model.named_parameters())
+    model_params = OrderedDict(model.named_parameters())
+
+    for name, param in model_params.items():
+        name = name.replace('_orig_mod.', '')
+        ema_params[name].mul_(decay).add_(param.data, alpha=1 - decay)
+
+
+def requires_grad(model, flag=True):
+    for param in model.parameters():
+        param.requires_grad = flag
+
+
+def configured_checkpoint_path(config):
+    checkpoint_path = config.get("from_checkpoint")
+    if checkpoint_path in (None, False, 0, "0", ""):
+        return None
+    return checkpoint_path
+
+
+def resolve_training_checkpoint(config):
+    latest_path = get_checkpoint_path(config, "latest")
+    if os.path.isfile(latest_path):
+        return latest_path, True
+    return configured_checkpoint_path(config), False
+
 
 def cleanup():
     """
@@ -87,13 +133,21 @@ def main(args):
     seed = args.global_seed * dist.get_world_size() + rank
     torch.manual_seed(seed)
     print(f"Starting rank={rank}, seed={seed}, world_size={dist.get_world_size()}.")
-    with open("configs/evaluation/eval_config.yaml", "r") as f:
-        default_config = yaml.safe_load(f)
-    config = default_config
-    
-    with open(args.config, "r") as f:
-        user_config = yaml.safe_load(f)
-    config.update(user_config)
+    config = update_runtime_section(
+        load_runtime_config(args),
+        "train",
+        args,
+        (
+            "epochs",
+            "global_seed",
+            "log_every",
+            "ckpt_every",
+            "eval_every",
+            "bfloat16",
+            "torch_compile",
+            "max_train_steps",
+        ),
+    )
     text_config = get_text_conditioning_config(config)
     checkpoint_strict = bool(config.get("checkpoint_strict", True))
     load_training_state = bool(config.get("load_training_state", True))
@@ -114,8 +168,10 @@ def main(args):
         logger.info(f"Log directory created at {log_dir}")
         logger.info(f"Artifact directory created at {artifact_dir}")
         logger.info(f"Checkpoint directory created at {checkpoint_dir}")
+        save_yaml_config(config, Path(log_dir) / "resolved_config.yaml")
     else:
         logger = create_logger(None)
+    wandb_run = init_wandb_run(config, rank=rank, job_type="train", logger=logger)
 
     # Create model:
     tokenizer = load_vae(device)
@@ -128,6 +184,8 @@ def main(args):
         input_size=latent_size,
         in_channels=4,
         text_dim=text_config["text_dim"] if text_config["enabled"] else 0,
+        text_gate_mode=text_config["gate_mode"],
+        text_gate_init=text_config["gate_init"],
     ).to(device)
     
     ema = deepcopy(model).to(device)  # Create an EMA of the model for use after training
@@ -141,53 +199,56 @@ def main(args):
     if bfloat_enable:
         scaler = torch.amp.GradScaler()
 
-    # load existing checkpoint
-    latest_path = get_checkpoint_path(config, "latest")
+    # Prefer exact run resume from latest.pth.tar; otherwise warm-start from config.
+    checkpoint_path, resume_training = resolve_training_checkpoint(config)
     print('Searching for model from ', checkpoint_dir)
     start_epoch = 0
     train_steps = 0
-    if os.path.isfile(latest_path) or config.get('from_checkpoint', 0):
-        if os.path.isfile(latest_path) and config.get('from_checkpoint', 0):
-            raise ValueError("Resuming from checkpoint, this might override latest.pth.tar!!")
-        latest_path = latest_path if os.path.isfile(latest_path) else config.get('from_checkpoint', 0)
-        print("Loading model from ", latest_path)
-        latest_checkpoint = torch.load(latest_path, map_location="cpu", weights_only=False) 
+    if checkpoint_path:
+        checkpoint_mode = "latest training checkpoint" if resume_training else "configured warm-start checkpoint"
+        print(f"Loading {checkpoint_mode} from {checkpoint_path}")
+        latest_checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
+        model_strict = True if resume_training else checkpoint_strict
+        model_ignore_keys = () if resume_training else checkpoint_ignore_keys
+        model_ignore_shape_mismatch = False if resume_training else checkpoint_ignore_shape_mismatch
+        model_interpolate_pos_embed = False if resume_training else checkpoint_interpolate_pos_embed
+        should_load_training_state = resume_training or load_training_state
 
         if "model" in latest_checkpoint:
             model_ckp = prepare_checkpoint_state_dict(
                 model,
                 latest_checkpoint["model"],
                 label="model",
-                ignore_keys=checkpoint_ignore_keys,
-                ignore_shape_mismatch=checkpoint_ignore_shape_mismatch,
-                interpolate_pos_embed=checkpoint_interpolate_pos_embed,
+                ignore_keys=model_ignore_keys,
+                ignore_shape_mismatch=model_ignore_shape_mismatch,
+                interpolate_pos_embed=model_interpolate_pos_embed,
             )
-            load_model_state(model, model_ckp, strict=checkpoint_strict, label="model")
+            load_model_state(model, model_ckp, strict=model_strict, label="model")
 
             model_ckp = prepare_checkpoint_state_dict(
                 ema,
                 latest_checkpoint["ema"],
                 label="EMA model",
-                ignore_keys=checkpoint_ignore_keys,
-                ignore_shape_mismatch=checkpoint_ignore_shape_mismatch,
-                interpolate_pos_embed=checkpoint_interpolate_pos_embed,
+                ignore_keys=model_ignore_keys,
+                ignore_shape_mismatch=model_ignore_shape_mismatch,
+                interpolate_pos_embed=model_interpolate_pos_embed,
             )
-            load_model_state(ema, model_ckp, strict=checkpoint_strict, label="EMA model")
+            load_model_state(ema, model_ckp, strict=model_strict, label="EMA model")
         else:
             update_ema(ema, model, decay=0)  # Ensure EMA is initialized with synced weights
 
-        if load_training_state and "opt" in latest_checkpoint:
+        if should_load_training_state and "opt" in latest_checkpoint:
             opt_ckp = {k.replace('_orig_mod.', ''):v for k,v in latest_checkpoint['opt'].items()}
             opt.load_state_dict(opt_ckp)
             print("Loading optimizer params")
         
-        if load_training_state and "epoch" in latest_checkpoint:
+        if should_load_training_state and "epoch" in latest_checkpoint:
             start_epoch = latest_checkpoint['epoch'] + 1
         
-        if load_training_state and "train_steps" in latest_checkpoint:
+        if should_load_training_state and "train_steps" in latest_checkpoint:
             train_steps = latest_checkpoint["train_steps"]
         
-        if load_training_state and "scaler" in latest_checkpoint:
+        if should_load_training_state and bfloat_enable and "scaler" in latest_checkpoint:
             scaler.load_state_dict(latest_checkpoint["scaler"])
         
     # ~40% speedup but might leads to worse performance depending on pytorch version
@@ -345,6 +406,16 @@ def main(args):
                 dist.all_reduce(avg_loss, op=dist.ReduceOp.SUM)
                 avg_loss = avg_loss.item() / dist.get_world_size()
                 logger.info(f"(step={train_steps:07d}) Train Loss: {avg_loss:.4f}, Train Steps/Sec: {steps_per_sec:.2f}, Samples/Sec: {samples_per_sec:.2f}")
+                log_metrics(
+                    wandb_run,
+                    {
+                        "train/loss": avg_loss,
+                        "train/steps_per_sec": steps_per_sec,
+                        "train/samples_per_sec": samples_per_sec,
+                        "train/epoch": epoch,
+                    },
+                    step=train_steps,
+                )
                 # Reset monitoring variables:
                 running_loss = 0
                 log_steps = 0
@@ -369,6 +440,13 @@ def main(args):
                         checkpoint_path = f"{checkpoint_dir}/{train_steps:07d}.pth.tar"
                         torch.save(checkpoint, checkpoint_path)
                     logger.info(f"Saved checkpoint to {checkpoint_path}")
+                    if config.get("wandb", {}).get("log_checkpoints", False):
+                        log_artifact(
+                            wandb_run,
+                            checkpoint_path,
+                            name=f"{config['run_name']}-{train_steps:07d}",
+                            artifact_type="model",
+                        )
             
             if train_steps % args.eval_every == 0 and train_steps > 0:
                 eval_start_time = time()
@@ -381,15 +459,39 @@ def main(args):
                 eval_end_time = time()
                 eval_time = eval_end_time - eval_start_time
                 logger.info(f"(step={train_steps:07d}) Perceptual Loss: {sim_score:.4f}, Eval Time: {eval_time:.2f}")
+                sim_score_value = sim_score.item() if hasattr(sim_score, "item") else float(sim_score)
+                log_metrics(
+                    wandb_run,
+                    {
+                        "eval/perceptual_loss": sim_score_value,
+                        "eval/time_sec": eval_time,
+                    },
+                    step=train_steps,
+                )
+                if config.get("wandb", {}).get("log_eval_images", True):
+                    log_images(
+                        wandb_run,
+                        sorted(Path(save_dir).glob("*.png")),
+                        key="eval/samples",
+                        step=train_steps,
+                    )
+
+            if args.max_train_steps is not None and train_steps >= args.max_train_steps:
+                logger.info(f"Reached max_train_steps={args.max_train_steps}; stopping training.")
+                break
+
+        if args.max_train_steps is not None and train_steps >= args.max_train_steps:
+            break
 
     model.eval()  # important! This disables randomized embedding dropout
     # do any sampling/FID calculation/etc. with ema (or model) in eval mode ...
 
     logger.info("Done!")
+    finish_wandb_run(wandb_run)
     cleanup()
 
 
-@torch.no_grad
+@torch.no_grad()
 def evaluate(model, vae, diffusion, test_dataloaders, rank, batch_size, num_workers, latent_size, device, save_dir, seed, bfloat_enable, num_cond):
     sampler = DistributedSampler(
         test_dataloaders,
@@ -463,9 +565,9 @@ def evaluate(model, vae, diffusion, test_dataloaders, rank, batch_size, num_work
     sim_score = score/n_samples
     return sim_score
 
-def get_args_parser():
+def get_args_parser(require_config=True):
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", type=str, required=True)
+    parser.add_argument("--config", type=str, required=require_config)
     parser.add_argument("--epochs", type=int, default=300)
     # parser.add_argument("--global-batch-size", type=int, default=256)
     parser.add_argument("--global-seed", type=int, default=0)
@@ -474,8 +576,36 @@ def get_args_parser():
     parser.add_argument("--eval-every", type=int, default=5000)
     parser.add_argument("--bfloat16", type=int, default=1)
     parser.add_argument("--torch-compile", type=int, default=1)
+    parser.add_argument("--max-train-steps", type=int, default=None)
     return parser
 
-if __name__ == "__main__":
-    args = get_args_parser().parse_args()
+def run_hydra_cli(argv):
+    config = compose_hydra_config(argv)
+    args = namespace_from_config(config, "train")
     main(args)
+
+
+def uses_legacy_cli(argv):
+    legacy_flags = {
+        "--config",
+        "--epochs",
+        "--global-seed",
+        "--log-every",
+        "--ckpt-every",
+        "--eval-every",
+        "--bfloat16",
+        "--torch-compile",
+        "--max-train-steps",
+        "-h",
+        "--help",
+    }
+    return not argv or any(arg in legacy_flags or arg.split("=", 1)[0] in legacy_flags for arg in argv)
+
+
+if __name__ == "__main__":
+    argv = sys.argv[1:]
+    if uses_legacy_cli(argv):
+        args = get_args_parser().parse_args()
+        main(args)
+    else:
+        run_hydra_cli(argv)

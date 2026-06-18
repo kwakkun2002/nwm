@@ -1,17 +1,24 @@
 # Artifact Layout
 
-`artifacts/` is split by retention policy. Keep large reproducible outputs out of
-the top level so the directory stays scannable.
+`artifacts/` is split by retention policy. Keep large reproducible outputs out
+of the top level so the directory stays scannable. Git should see only curated
+`summaries/` and `profiling/` outputs by default; bulk, tmp, trash, smoke, and
+DVC run outputs stay local unless an explicit `*.dvc` pointer is added.
 
 ## Layout
 
 - `artifacts/bulk/train/<run_name>/<step>/`: training sample dumps.
 - `artifacts/bulk/eval/<suite>/<run_name>_<checkpoint>/`: raw inference frames and GT frames.
 - `artifacts/bulk/planning/<suite>/<run_name>/`: planning prediction tensors and plots.
+- `artifacts/bulk/logs/...`: copied runtime logs that are useful locally but not worth tracking.
 - `artifacts/summaries/eval/...`: metric JSON, sweep manifests, and compact eval summaries.
 - `artifacts/summaries/preprocess/...`: manifests, reports, and preprocessing logs.
+- `artifacts/summaries/decks/...`: generated slides, PDFs, and deck notes worth keeping reviewable.
+- `artifacts/summaries/model_inventory/...`: compact model inventory reports.
 - `artifacts/profiling/...`: long-lived profiling CSV/PNG outputs.
 - `artifacts/smoke/...`: smoke-test outputs.
+- `artifacts/dvc/...`: local outputs written by DVC smoke/repro stages.
+- `artifacts/tmp/...`: temporary manual checks.
 - `artifacts/_trash/<timestamp>/`: quarantined legacy or bulk outputs pending deletion.
 
 ## Cleanup

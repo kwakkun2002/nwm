@@ -1,18 +1,66 @@
-__pycache__
-results
-diffusion/__pycache__
-logs
-.vscode
-.ipynb_checkpoints
-models
-nwm/data
+# Python, notebook, and local tool caches.
+__pycache__/
+**/__pycache__/
+*.py[cod]
+.cache/
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/
+.vscode/
+
+# Runtime logs and scratch directories.
+/logs/
+/wandb/
+/results/
+
+# Legacy or local-only bulk roots.
+/models/
+/diffusion/
+/cdit_s_100000.pth.tar
+/nwm/data/
 data_splits/**/dataset*.pkl
-data
-datasets
-cdit_s_100000.pth.tar
-artifacts/*
-!artifacts/profiling/
-!artifacts/profiling/**
-artifacts/profiling/raw/
-.cache
-weights
+
+# Static split metadata stays in Git; large data files are ignored unless they
+# are represented by explicit DVC pointer files.
+/data/**
+!/data/
+!/data/**/
+!/data/splits/**
+!/data/**/*.dvc
+/data/splits/**/dataset_dist_*.pkl
+
+# Large dataset and weight roots are local/DVC-managed by default.
+/datasets/**
+!/datasets/
+!/datasets/**/
+!/datasets/**/*.dvc
+!/datasets/**/.gitignore
+
+/weights/**
+!/weights/
+!/weights/**/
+!/weights/**/*.dvc
+
+# Artifact retention policy:
+# - keep curated summaries and profiling outputs reviewable in Git
+# - keep bulk, smoke, dvc outputs, tmp, and trash local/DVC-only
+/artifacts/**
+!/artifacts/
+!/artifacts/**/
+!/artifacts/**/*.dvc
+!/artifacts/profiling/**
+!/artifacts/summaries/**
+/artifacts/bulk/**
+/artifacts/tmp/**
+/artifacts/_trash/**
+/artifacts/smoke/**
+/artifacts/dvc/**
+/artifacts/logs/**
+/artifacts/profiling/raw/**
+/artifacts/profiling/**/*.log
+/artifacts/profiling/**/*.pid
+
+# DVC project metadata is intentionally tracked. DVC cache/tmp remain ignored by
+# .dvc/.gitignore.
+!.dvc/
+!.dvc/config
+!.dvc/.gitignore

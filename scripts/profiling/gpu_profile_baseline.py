@@ -22,23 +22,22 @@ from typing import Callable
 
 import numpy as np
 import torch
-import yaml
 from torch.profiler import ProfilerActivity, profile
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
-from src.core.io.paths import get_checkpoint_path
-from src.data.datasets.eval_dataset import EvalDataset
-from src.data.transforms.image import build_transform
+from src.config import compose_hydra_config, load_experiment_config, namespace_from_config, update_runtime_section
+from src.core.paths import get_checkpoint_path
+from src.data.datasets.factory import build_eval_dataset
 from src.diffusion import create_diffusion
 from src.evaluation.inference.rollout import model_forward_wrapper
 from src.models.backbones.cdit import CDiT_models
 from src.models.checkpoints.vae import load_vae
 
 
-def parse_args():
+def build_parser():
     parser = argparse.ArgumentParser(
         description="Measure latency, VRAM, and FLOPs baselines for NWM inference."
     )
@@ -62,43 +61,85 @@ def parse_args():
     parser.add_argument("--disable-compile", action="store_true")
     parser.add_argument("--skip-flops", action="store_true")
     parser.add_argument("--output-dir", default="artifacts/profiling/raw/gpu_profile_baseline")
-    return parser.parse_args()
+    return parser
+
+
+def parse_args(argv=None):
+    argv = sys.argv[1:] if argv is None else argv
+    if uses_legacy_cli(argv):
+        return build_parser().parse_args(argv)
+    config = compose_hydra_config(argv)
+    return namespace_from_config(config, "profiling")
+
+
+def uses_legacy_cli(argv):
+    legacy_flags = {
+        "--eval-config",
+        "--model-config",
+        "--dataset",
+        "--eval-type",
+        "--sample-index",
+        "--checkpoint",
+        "--checkpoint-tag",
+        "--device",
+        "--batch-size",
+        "--warmup-runs",
+        "--repeat-runs",
+        "--mode",
+        "--horizon-steps",
+        "--input-fps",
+        "--rollout-fps",
+        "--rollout-frames",
+        "--diffusion-steps",
+        "--disable-compile",
+        "--skip-flops",
+        "--output-dir",
+        "-h",
+        "--help",
+    }
+    return not argv or any(arg in legacy_flags or arg.split("=", 1)[0] in legacy_flags for arg in argv)
 
 
 def load_config(eval_config_path: str, model_config_path: str) -> dict:
-    with open(eval_config_path, "r") as f:
-        config = yaml.safe_load(f)
-    with open(model_config_path, "r") as f:
-        config.update(yaml.safe_load(f))
-    return config
+    return load_experiment_config(model_config_path, default_config_path=eval_config_path)
+
+
+def load_runtime_profile_config(args) -> dict:
+    if getattr(args, "runtime_config", None) is not None:
+        return update_runtime_section(
+            args.runtime_config,
+            "profiling",
+            args,
+            (
+                "eval_config",
+                "model_config",
+                "dataset",
+                "eval_type",
+                "sample_index",
+                "checkpoint",
+                "checkpoint_tag",
+                "device",
+                "batch_size",
+                "warmup_runs",
+                "repeat_runs",
+                "mode",
+                "horizon_steps",
+                "input_fps",
+                "rollout_fps",
+                "rollout_frames",
+                "diffusion_steps",
+                "disable_compile",
+                "skip_flops",
+                "output_dir",
+            ),
+        )
+    return load_config(args.eval_config, args.model_config)
 
 
 def resolve_checkpoint(config: dict, args) -> str:
     if args.checkpoint:
         return args.checkpoint
     return get_checkpoint_path(config, args.checkpoint_tag)
-
-
-def build_eval_dataset(config: dict, dataset_name: str, eval_type: str) -> EvalDataset:
-    dataset_config = config["eval_datasets"][dataset_name]
-    predefined_index = os.path.join("data", "splits", dataset_name, "test", f"{eval_type}.pkl")
-    image_transform = build_transform(config["image_size"])
-    return EvalDataset(
-        data_folder=dataset_config["data_folder"],
-        data_split_folder=dataset_config["test"],
-        dataset_name=dataset_name,
-        image_size=config["image_size"],
-        min_dist_cat=config["eval_distance"]["eval_min_dist_cat"],
-        max_dist_cat=config["eval_distance"]["eval_max_dist_cat"],
-        len_traj_pred=config["eval_len_traj_pred"],
-        traj_stride=config["traj_stride"],
-        context_size=config["eval_context_size"],
-        normalize=config["normalize"],
-        transform=image_transform,
-        goals_per_obs=dataset_config.get("goals_per_obs", 4),
-        predefined_index=predefined_index,
-        traj_names="traj_names.txt",
-    )
 
 
 def build_models(config: dict, checkpoint_path: str, device: torch.device, diffusion_steps: int, use_compile: bool):
@@ -124,8 +165,12 @@ def repeat_batch(tensor: torch.Tensor, batch_size: int) -> torch.Tensor:
     return tensor.unsqueeze(0).repeat(batch_size, *([1] * tensor.ndim))
 
 
-def prepare_sample(dataset: EvalDataset, sample_index: int, batch_size: int):
-    idx, obs, pred, delta = dataset[sample_index]
+def prepare_sample(dataset, sample_index: int, batch_size: int):
+    sample = dataset[sample_index]
+    if len(sample) == 5:
+        idx, obs, pred, delta, _ = sample
+    else:
+        idx, obs, pred, delta = sample
     idxs = torch.tensor([int(idx.item())] * batch_size, dtype=torch.long)
     obs_batch = repeat_batch(obs, batch_size)
     pred_batch = repeat_batch(pred, batch_size)
@@ -329,7 +374,7 @@ def main():
     if device.type != "cuda" or not torch.cuda.is_available():
         raise SystemExit("CUDA device is required for GPU profiling.")
 
-    config = load_config(args.eval_config, args.model_config)
+    config = load_runtime_profile_config(args)
     checkpoint_path = resolve_checkpoint(config, args)
     dataset = build_eval_dataset(config, args.dataset, args.eval_type)
     _, obs_batch, pred_batch, delta_batch = prepare_sample(dataset, args.sample_index, args.batch_size)

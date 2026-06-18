@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 
-ALLOWED_TOP_LEVEL = {"bulk", "logs", "profiling", "smoke", "summaries", "_trash"}
+ALLOWED_TOP_LEVEL = {"bulk", "dvc", "profiling", "smoke", "summaries", "tmp", "_trash"}
 SUMMARY_SUFFIXES = {".csv", ".html", ".json", ".jsonl", ".log", ".txt"}
 REPORT_DIRS = {"phase1_cache_report", "phase1_recon_subset_gallery"}
 
@@ -83,6 +83,10 @@ def summary_destination(artifact_root: Path, source: Path) -> Path | None:
         return artifact_root / "summaries" / "eval" / rel
     if top == "gpu_profile_baseline":
         return artifact_root / "profiling" / "raw" / rel
+    if top == "decks":
+        return artifact_root / "summaries" / rel
+    if top.startswith("model_inventory"):
+        return artifact_root / "summaries" / "model_inventory" / source.name
     return None
 
 

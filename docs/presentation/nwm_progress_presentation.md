@@ -54,7 +54,7 @@
 - raw RECON `.hdf5`를 직접 읽도록 `datasets.py` 확장
 - 로컬 VAE 우선 로드, Docker runtime env 정리, `torchaudio` ABI mismatch 해결
 - `isolated_nwm_infer.py`, `isolated_nwm_eval.py`, `planning_eval.py`가 실제 컨테이너 환경에서 돌도록 정비
-- `scripts/recon/recon_smoke_test.py` 추가로 데이터셋 로딩 + 1-sample forward 재현 가능하게 정리
+- `tests/smoke/recon_smoke_test.py` 추가로 데이터셋 로딩 + 1-sample forward 재현 가능하게 정리
 
 ### 확보한 베이스라인 결과
 

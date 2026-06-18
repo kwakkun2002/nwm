@@ -166,8 +166,12 @@ class CDiT(nn.Module):
         num_heads=16,
         mlp_ratio=4.0,
         learn_sigma=True,
+        text_gate_mode="add",
+        text_gate_init=-4.0,
     ):
         super().__init__()
+        if text_gate_mode not in {"add", "alpha"}:
+            raise ValueError(f"Unsupported text_gate_mode: {text_gate_mode}")
         self.context_size = context_size
         self.learn_sigma = learn_sigma
         self.in_channels = in_channels
@@ -175,10 +179,12 @@ class CDiT(nn.Module):
         self.patch_size = patch_size
         self.num_heads = num_heads
         self.text_dim = text_dim
+        self.text_gate_mode = text_gate_mode
         self.x_embedder = PatchEmbed(input_size, patch_size, in_channels, hidden_size, bias=True)
         self.t_embedder = TimestepEmbedder(hidden_size)
         self.y_embedder = ActionEmbedder(hidden_size)
         self.text_proj = nn.Linear(text_dim, hidden_size, bias=True) if text_dim > 0 else None
+        self.text_alpha = nn.Parameter(torch.tensor(float(text_gate_init))) if text_dim > 0 and text_gate_mode == "alpha" else None
         num_patches = self.x_embedder.num_patches
         self.pos_embed = nn.Parameter(torch.zeros(self.context_size + 1, num_patches, hidden_size), requires_grad=True) # for context and for predicted frame
         self.blocks = nn.ModuleList([CDiTBlock(hidden_size, num_heads, mlp_ratio=mlp_ratio) for _ in range(depth)])
@@ -265,7 +271,10 @@ class CDiT(nn.Module):
         time_emb = self.time_embedder(rel_t[..., None])
         c = t + time_emb + y # if training on unlabeled data, dont add y.
         if text_emb is not None and self.text_proj is not None:
-            c = c + self.text_proj(text_emb)
+            text_c = self.text_proj(text_emb)
+            if self.text_alpha is not None:
+                text_c = torch.sigmoid(self.text_alpha) * text_c
+            c = c + text_c
 
         for block in self.blocks:
             x = block(x, c, x_cond)

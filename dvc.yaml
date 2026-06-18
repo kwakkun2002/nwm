@@ -1,0 +1,54 @@
+# Conservative DVC scaffold for host-driven Docker workflows.
+# Run from the host after starting the dev container:
+#   ./scripts/docker/nwm-start.sh
+#   dvc repro smoke_recon_load
+
+stages:
+  smoke_recon_load:
+    cmd: >-
+      ./scripts/docker/nwm-run.sh "python tests/smoke/recon_smoke_test.py
+      --eval-config configs/evaluation/eval_config.yaml
+      --model-config configs/experiment/nwm_cdit_s_recon_128.yaml
+      --dataset recon
+      --eval-type time
+      --output-dir artifacts/dvc/smoke/recon_load
+      --skip-forward"
+    deps:
+      - configs/evaluation/eval_config.yaml
+      - configs/experiment/nwm_cdit_s_recon_128.yaml
+      - data/splits/recon/test
+      - datasets/recon_raw/recon_release
+      - src/config.py
+      - src/data/datasets
+      - src/data/transforms
+      - tests/smoke/recon_smoke_test.py
+    outs:
+      - artifacts/dvc/smoke/recon_load:
+          cache: false
+
+  smoke_recon_forward:
+    cmd: >-
+      ./scripts/docker/nwm-run.sh "python tests/smoke/recon_smoke_test.py
+      --eval-config configs/evaluation/eval_config.yaml
+      --model-config configs/experiment/nwm_cdit_s_recon_128.yaml
+      --checkpoint weights/checkpoints/nwm_cdit_s_recon_128/latest.pth.tar
+      --dataset recon
+      --eval-type time
+      --horizon-steps 8
+      --output-dir artifacts/dvc/smoke/recon"
+    deps:
+      - configs/evaluation/eval_config.yaml
+      - configs/experiment/nwm_cdit_s_recon_128.yaml
+      - data/splits/recon/test
+      - datasets/recon_raw/recon_release
+      - src/config.py
+      - src/data/datasets
+      - src/data/transforms
+      - src/diffusion
+      - src/evaluation/inference
+      - src/models
+      - tests/smoke/recon_smoke_test.py
+      - weights/checkpoints/nwm_cdit_s_recon_128/latest.pth.tar
+    outs:
+      - artifacts/dvc/smoke/recon:
+          cache: false

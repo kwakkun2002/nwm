@@ -25,18 +25,21 @@ import torch
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
 
-import yaml
 import argparse
+from pathlib import Path
 import numpy as np
 
 from src.diffusion import create_diffusion
-from src.core.io.paths import DEFAULT_EVAL_ARTIFACT_ROOT, get_checkpoint_path
+from src.config import compose_hydra_config, int_list, load_runtime_config, namespace_from_config, save_yaml_config, str_list, update_runtime_section
+from src.core.paths import DEFAULT_EVAL_ARTIFACT_ROOT, get_checkpoint_path
 from src.models.checkpoints.vae import load_vae
 import src.core.env.distributed as dist
 from src.models.backbones.cdit import CDiT_models
-from src.features.text.pipeline import get_text_conditioning_config
+from src.features.text.pipeline import get_text_conditioning_config, override_text_embedding_root
+from src.data.datasets.factory import build_eval_dataset
+from src.evaluation.metrics.logger import MetricLogger
 from src.evaluation.inference.rollout import (
-    model_forward_wrapper, get_dataset_eval, generate_rollout, generate_time,
+    generate_rollout, generate_time,
 )
 
 @torch.no_grad()
@@ -46,6 +49,25 @@ def main(args):
     device = torch.device(device)
     num_tasks = dist.get_world_size()
     global_rank = dist.get_rank()
+    config = override_text_embedding_root(
+        load_runtime_config(args, config_attr="exp"),
+        getattr(args, "text_embedding_root", None),
+    )
+    if args.exp is None:
+        args.exp = config["run_name"]
+    args.ckp = str(args.ckp)
+    args.rollout_fps_values = int_list(args.rollout_fps_values)
+    dataset_names = str_list(args.datasets)
+    if not dataset_names:
+        raise ValueError("At least one dataset is required. Pass --datasets or infer.datasets.")
+    if args.eval_type not in ("time", "rollout"):
+        raise ValueError("eval_type must be either 'time' or 'rollout'.")
+    config = update_runtime_section(
+        config,
+        "infer",
+        args,
+        ("output_dir", "exp", "ckp", "num_sec_eval", "input_fps", "datasets", "num_workers", "batch_size", "eval_type", "rollout_fps_values", "gt"),
+    )
     exp_eval = args.exp
     if args.output_dir is None:
         args.output_dir = os.path.join(DEFAULT_EVAL_ARTIFACT_ROOT, "manual")
@@ -61,14 +83,8 @@ def main(args):
         args.save_output_dir = args.save_output_dir + "_%s"%(args.ckp)
 
     os.makedirs(args.save_output_dir, exist_ok=True)
-
-    with open("configs/evaluation/eval_config.yaml", "r") as f:
-        default_config = yaml.safe_load(f)
-    config = default_config
-
-    with open(exp_eval, "r") as f:
-        user_config = yaml.safe_load(f)
-    config.update(user_config)
+    if global_rank == 0:
+        save_yaml_config(config, Path(args.save_output_dir) / "resolved_config.yaml")
     text_config = get_text_conditioning_config(config)
 
     latent_size = config['image_size'] // 8
@@ -83,6 +99,8 @@ def main(args):
             input_size=latent_size,
             in_channels=4,
             text_dim=text_config["text_dim"] if text_config["enabled"] else 0,
+            text_gate_mode=text_config["gate_mode"],
+            text_gate_init=text_config["gate_init"],
         )
         checkpoint_path = get_checkpoint_path(config, args.ckp)
         ckp = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
@@ -96,11 +114,10 @@ def main(args):
         model_lst = (model, diffusion, vae)
 
     # Loading Datasets
-    dataset_names = args.datasets.split(',')
     datasets = {}
 
     for dataset_name in dataset_names:
-        dataset_val = get_dataset_eval(config, dataset_name, args.eval_type, predefined_index=True)
+        dataset_val = build_eval_dataset(config, dataset_name, args.eval_type, predefined_index=True)
 
         if len(dataset_val) % num_tasks != 0:
             print('Warning: Enabling distributed evaluation with an eval dataset not divisible by process number. '
@@ -120,7 +137,7 @@ def main(args):
 
     print_freq = 1
     header = 'Evaluation: '
-    metric_logger = dist.MetricLogger(delimiter="  ")
+    metric_logger = MetricLogger(delimiter="  ")
 
     for dataset_name in dataset_names:
         dataset_save_output_dir = os.path.join(args.save_output_dir, dataset_name)
@@ -150,7 +167,7 @@ def main(args):
                     generate_time(args, curr_time_output_dir, idxs, model_lst, obs_image, gt_image, delta, secs, num_cond, device, text_emb=text_emb)
     
 
-if __name__ == "__main__":
+def build_parser():
     parser = argparse.ArgumentParser()
     
     parser.add_argument("--output_dir", type=str, default=None, help="output directory")
@@ -162,11 +179,44 @@ if __name__ == "__main__":
     parser.add_argument("--num_workers", type=int, default=8, help="num workers")
     parser.add_argument("--batch_size", type=int, default=16, help="batch size")
     parser.add_argument("--eval_type", type=str, default=None, help="type of evaluation has to be either 'time' or 'rollout'")
+    parser.add_argument("--text_embedding_root", type=str, default=None, help="override text conditioning embedding root")
     # Rollout Evaluation Args
     parser.add_argument("--rollout_fps_values", type=str, default='1,4', help="")
     parser.add_argument("--gt", type=int, default=0, help="set to 1 to produce ground truth evaluation set")
-    args = parser.parse_args()
-    
-    args.rollout_fps_values = [int(fps) for fps in args.rollout_fps_values.split(',')]
-    
+    return parser
+
+
+def run_hydra_cli(argv):
+    config = compose_hydra_config(argv)
+    args = namespace_from_config(config, "infer")
     main(args)
+
+
+def uses_legacy_cli(argv):
+    legacy_flags = {
+        "--output_dir",
+        "--exp",
+        "--ckp",
+        "--num_sec_eval",
+        "--input_fps",
+        "--datasets",
+        "--num_workers",
+        "--batch_size",
+        "--eval_type",
+        "--text_embedding_root",
+        "--rollout_fps_values",
+        "--gt",
+        "-h",
+        "--help",
+    }
+    return not argv or any(arg in legacy_flags or arg.split("=", 1)[0] in legacy_flags for arg in argv)
+
+
+if __name__ == "__main__":
+    argv = sys.argv[1:]
+    if uses_legacy_cli(argv):
+        args = build_parser().parse_args()
+        args.rollout_fps_values = int_list(args.rollout_fps_values)
+        main(args)
+    else:
+        run_hydra_cli(argv)

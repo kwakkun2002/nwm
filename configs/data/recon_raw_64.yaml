@@ -1,0 +1,9 @@
+# @package _global_
+
+image_size: 64
+datasets:
+  recon:
+    data_folder: datasets/recon_raw/recon_release
+    train: data/splits/recon/train/
+    test: data/splits/recon/test/
+    goals_per_obs: 4

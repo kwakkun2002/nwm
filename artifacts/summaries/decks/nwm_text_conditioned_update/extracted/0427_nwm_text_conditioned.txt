@@ -1,0 +1,302 @@
+                                   Data Analytics and Systems
+                                                  @ Soongsil University
+
+
+
+
+컴퓨터비전 프로젝트 중간 발표
+Text-Conditioned Lightweight
+  Navigation World Model
+
+     저해상도 visual world modeling에서
+     텍스트 기반 semantic 주입효과 검증
+
+                   곽건
+             Soongsil University
+Navigation World Model (CVPR 2025)
+
+         ●         이미지 + action(상대적 위치변화 , 회전변화 ) + time
+         ●         CDiT에 입력
+         ●         다음 이미지 생성
+
+
+
+
+Data Analytics and Systems Lab.                            2
+@ Soongsil University
+NWM (CDit) 구조
+
+                                  ●   Input
+                                       ○ Future State(노이즈 상태에서
+                                          시작)
+                                       ○ Conditioning(action, time)
+                                       ○ Context States(과거 프레임
+                                          이미지 )
+                                  ●   Output
+                                       ○ 노이즈가 제거된 Future State
+
+
+
+                                  … 그리고 계속 반복!
+
+
+
+Data Analytics and Systems Lab.                                       3
+@ Soongsil University
+Problem
+
+         ●         고해상도 이미지와 큰 모델에 의존해서 추론 비용이 큼
+         ●         저해상도로 줄이면 장면의 semantic 정보가 쉽게 사라짐
+         ●         긴 rollout에서는 작은 예측 오류가 누적되어 drift, hallucination이
+                   생김
+         ●         OOD 환경에서는 visual context만으로 장면 구조를 안정적으로
+                   이해하기 어려움
+
+
+
+
+Data Analytics and Systems Lab.                                        4
+@ Soongsil University
+Core Idea
+
+         ●         이미지만으로 부족한 장면 의미를 텍스트가 압축적으로 보완
+                   ○ 예를 들어 이미지에서는 흐릿하게 보이는 구조도 텍스트로는
+                     “앞에 열린 길”, “오른쪽에 장애물 ”, “좌측으로 이어지는 통로”
+                     처럼 명확하게 표현
+         ●         텍스트가 policy를 직접 결정하는 게 아니라 , NWM이 미래 프레임을
+                   생성할 때 참고하는 semantic prior 역할
+
+
+
+
+Data Analytics and Systems Lab.                                5
+@ Soongsil University
+Mechanism / Insight
+
+       1.          오프라인에서 RECON 프레임에 대해 Qwen 같은 VLM으로 caption
+                   생성
+       2.          caption을 정제한 뒤 CLIP text encoder로 embedding 변환
+       3.          이 text embedding을 NWM의 conditioning stream에 추가
+       4.          CDiT가 image context, action, time/delta, diffusion timestep과
+                   함께 text condition을 사용해 미래 latent를 예측
+       5.          VAE decoder로 미래 이미지를 복원
+       6.          rollout이나 planning에서는 이 예측 결과를 trajectory 평가에 사용
+
+
+
+Data Analytics and Systems Lab.                                                   6
+@ Soongsil University
+Qwen Image Caption 생성 (Qwen2-VL-7B-Instruct)
+
+
+
+
+Data Analytics and Systems Lab.                7
+@ Soongsil University
+Evaluation
+
+       1.          Future Frame Prediction
+                   a. LPIPS, DreamSim, FID 비교
+       2.          Autoregressive Rollout
+                   a. 긴 rollout에서 text condition이 drift를 줄이는지 확인
+       3.          Planning Evaluation
+                   a. ATE, RPE 같은 trajectory metric으로 실제 planning 품질 확인
+       4.          Lightweight / Low-resolution Evaluation
+                   a. 텍스트가 저해상도 손실을 보완하는가 ?
+       5.          OOD Generalization
+                   a. 텍스트가 새로운 환경에서 semantic stability를 주는가 ?
+
+
+
+
+Data Analytics and Systems Lab.                                           8
+@ Soongsil University
+진행상황
+
+         ●         Baseline No-Text{원본모델} 과 224 Text에 성능비교
+         ●         128 No-Text와 128 Text의 성능비교
+
+
+
+
+Data Analytics and Systems Lab.                              9
+@ Soongsil University
+먼저 평가지표에 대한 설명
+
+         ●         time
+                     같은 현재 context에서, 각 horizon을 "직접 한 번에" 예측
+                     [t] ───────────────► [t+1s]
+                     [t] ─────────────────────────────► [t+2s]
+                     [t] ─────────────────────────────────────────────► [t+4s]
+                     특징: 1s, 2s, 4s 예측이 서로 독립적 . 이전 예측을 다시 넣지 않음.
+
+         ●          rollout_4fps
+                     0.25초씩 autoregressive rollout
+                     [t] ─► [t+0.25] ─► [t+0.50] ─► [t+0.75] ─► [t+1.0] ─► ...
+                           pred1      pred2       pred3     pred4
+                     평가 예:
+                     1s = 4번째 예측
+                     2s = 8번째 예측
+                     4s = 16번째 예측
+
+
+
+Data Analytics and Systems Lab.                                                  10
+@ Soongsil University
+먼저 평가지표에 대한 설명
+
+         ●          3) rollout_1fps
+                           1.0초씩 autoregressive rollout
+                                    pred1       pred2     pred3   pred4
+                           평가 예:
+                           1s = 1번째 예측
+                           2s = 2번째 예측
+
+
+
+         ●         한줄요약
+                      time: “현재에서 4초 뒤를 바로 맞출 수 있나?”
+                      rollout_1fps 4s: 1초 예측을 4번 연속 수행한 뒤 마지막 프레임 평가
+         ●         셋다 필요한 이유
+                      time은 누적오차가 없어서 “순수 horizon 예측 능력”
+                      rollout_4fps는 실제 닫힌 루프에 가까운 촘촘한 누적오차
+
+
+
+Data Analytics and Systems Lab.                                           11
+@ Soongsil University
+LPIPS, DreamSim, FID의 차이
+
+         ●         생성 이미지가 GT와 얼마나 다른가
+         ●          LPIPS
+                    ○ 두 이미지를 1:1로 비교하는 perceptual distance. CNN feature 공간에서
+                        얼마나 다른지 봄. 샘플별 대응쌍이 필요.
+         ●          DreamSim
+                    ○ 두 이미지를 1:1로 비교하는 perceptual distance, 최근의
+                        representation을 써서 “사람이 느끼는 유사성”에 더 맞추려는 계열. 역시
+                        대응쌍이 필요.
+         ●          FID
+                    ○ 개별 이미지 쌍을 직접 비교하지 않고,
+                    ○ 생성 이미지 집합과 GT 이미지 집합의 분포
+                        차이를 봄. 전체 샘플의 품질과 다양성을 같이 보는 데 더 가까움.
+                        대응쌍이 없어도 계산 가능.
+
+       LPIPS = AlexNet
+       DreamSim = 기본 ensemble = DINO ViT-B/16 + CLIP ViT-B/16 + OpenCLIP ViT-B/16
+
+
+Data Analytics and Systems Lab.                                                     12
+@ Soongsil University
+LPIPS, DreamSim, FID의 차이
+
+         ●              공통점: 낮을수록 좋고, 생성 품질 평가용 지표
+         ●              LPIPS/DreamSim: “이 예측 한 장이 GT 한 장과 얼마나 비슷한가 ?”
+         ●              FID: “예측 이미지들의 전체 분포가 GT 분포와 얼마나 비슷한가 ?”
+
+
+
+
+Data Analytics and Systems Lab.                                          13
+@ Soongsil University
+결과 plots
+
+
+
+224
+원본모델
+vs 224
+텍스트주
+입모델
+
+
+
+
+ Data Analytics and Systems Lab.   14
+ @ Soongsil University
+결과 plots
+
+
+
+128
+해상도
+축소 모델
+vs
+128
+텍스트주
+입 모델
+
+
+
+
+Data Analytics and Systems Lab.   15
+@ Soongsil University
+Step 별 성능
+변화
+
+
+
+ 학습 step
+ 이
+ 증가함에
+ 따라
+ 3대지표
+ 모두 하락
+
+
+
+
+  Data Analytics and Systems Lab.   16
+  @ Soongsil University
+추후 진행 상황
+
+          -        추후 진행 예정
+                    - 주입 텍스트를 다양하게 해보기
+                       - 텍스트 모델(장황,짧게, 수치를 주입하는 방식)
+                       - RGB -> 흑백처리 ?
+                    - 유독 어떤 상황에서 텍스트 주입의 성능이 안좋은지 확인하기
+                    - 네비게이션 성능에 대해서도 평가하기
+                       - 이미지 생성 성능이 좋아졌다면 네비게이션도 좋아졌을까 ?
+                       - 아직 네비게이션 성능 측정 방법은 알아보는 중
+                    - 코드 리팩토링
+
+
+
+
+Data Analytics and Systems Lab.                            17
+@ Soongsil University
+네비게이션 메트릭
+
+          -        ATE — Absolute Trajectory Error
+                    - 최종적으로 전체 경로가 실제 경로와 얼마나 떨어져 있냐
+                    - 내 모델이 카메라 /로봇이 어디서 어디로 움직였는지 얼마나
+                       정확히 맞혔는지
+          -        RPE — Relative Pose Error
+                    - 짧은 구간에서의 상대 이동 오차
+                    - 1초 전 위치에서 지금 위치로 이동한 양을 제대로 예측하는지
+
+
+
+
+Data Analytics and Systems Lab.                           18
+@ Soongsil University
+네비게이션 성능 측정
+
+
+
+
+Data Analytics and Systems Lab.   19
+@ Soongsil University
+추후
+
+          -        왜 네비게이션 성능이 떨어졌는지
+          -        이미지 생성 성능은 좋아졌지만 , 네비게이션 성능이 안좋아졌다 .
+          -        프롬프트에 위치정보가 더해져야할지 ?
+          -        위치정보 RAG?
+                    - 현재 위치를 기반으로 검색하면 텍스트정보를 주는…
+
+
+
+
+Data Analytics and Systems Lab.                           20
+@ Soongsil University
+

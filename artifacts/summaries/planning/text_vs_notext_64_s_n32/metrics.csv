@@ -1,0 +1,3 @@
+image,condition,checkpoint,source_path,ate,rpe_trans,pos_error,yaw_error,time_s
+64,No-Text,nwm_cdit_s_recon_64/0030000,artifacts/bulk/planning/recon64_s_notext_0030000_full_n32/nwm_cdit_s_recon_64/recon_CEM_repeat_N32_K5_RS1_rep1_OPT1.json,1.3730764406039413,0.40266156612565746,2.2048683166503906,0.378206787109375,2354.156056880951
+64,Text,nwm_cdit_s_recon_64_text_dense/0030000,artifacts/bulk/planning/recon64_s_text_dense_0030000_full_n32/nwm_cdit_s_recon_64_text_dense/recon_CEM_repeat_N32_K5_RS1_rep1_OPT1.json,1.3767723380836439,0.4006325489998774,2.174499053955078,0.3520270538330078,2369.591258764267

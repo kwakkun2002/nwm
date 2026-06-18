@@ -16,19 +16,20 @@ RECON 데이터셋 로딩과 1-sample inference를 빠르게 확인하는 스모
 """
 
 import argparse
+import json
 import os
 import sys
 
 import torch
-import yaml
 from PIL import Image
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
-from src.data.datasets.eval_dataset import EvalDataset
-from src.data.transforms.image import build_transform, unnormalize
+from src.config import compose_hydra_config, load_experiment_config, namespace_from_config, update_runtime_section
+from src.data.datasets.factory import build_eval_dataset
+from src.data.transforms.image import unnormalize
 from src.diffusion import create_diffusion
 from src.evaluation.inference.rollout import model_forward_wrapper
 from src.models.backbones.cdit import CDiT_models
@@ -36,39 +37,32 @@ from src.models.checkpoints.vae import load_vae
 
 
 def load_config(eval_config_path, model_config_path):
-    with open(eval_config_path, "r") as f:
-        config = yaml.safe_load(f)
-    with open(model_config_path, "r") as f:
-        config.update(yaml.safe_load(f))
-    return config
-
-
-def build_eval_dataset(config, dataset_name, eval_type):
-    dataset_config = config["eval_datasets"][dataset_name]
-    predefined_index = os.path.join("data", "splits", dataset_name, "test", f"{eval_type}.pkl")
-    image_transform = build_transform(config["image_size"])
-    return EvalDataset(
-        data_folder=dataset_config["data_folder"],
-        data_split_folder=dataset_config["test"],
-        dataset_name=dataset_name,
-        image_size=config["image_size"],
-        min_dist_cat=config["eval_distance"]["eval_min_dist_cat"],
-        max_dist_cat=config["eval_distance"]["eval_max_dist_cat"],
-        len_traj_pred=config["eval_len_traj_pred"],
-        traj_stride=config["traj_stride"],
-        context_size=config["eval_context_size"],
-        normalize=config["normalize"],
-        transform=image_transform,
-        goals_per_obs=dataset_config.get("goals_per_obs", 4),
-        predefined_index=predefined_index,
-        traj_names="traj_names.txt",
-    )
+    return load_experiment_config(model_config_path, default_config_path=eval_config_path)
 
 
 def save_tensor_image(image_tensor, output_path):
     image = unnormalize(image_tensor.detach().cpu()).clamp(0, 1)
     image = (image * 255).byte().permute(1, 2, 0).numpy()
     Image.fromarray(image).save(output_path)
+
+
+def write_load_report(args, dataset, idx, obs, pred, delta):
+    os.makedirs(args.output_dir, exist_ok=True)
+    report_path = os.path.join(args.output_dir, "load_report.json")
+    report = {
+        "dataset": args.dataset,
+        "eval_type": args.eval_type,
+        "dataset_len": len(dataset),
+        "sample_idx": int(idx.item()),
+        "obs_shape": list(obs.shape),
+        "pred_shape": list(pred.shape),
+        "delta_shape": list(delta.shape),
+        "obs_min": float(obs.min()),
+        "obs_max": float(obs.max()),
+    }
+    with open(report_path, "w") as f:
+        json.dump(report, f, indent=2)
+    print("load_report =", report_path)
 
 
 def run_forward(config, args, obs, delta):
@@ -119,7 +113,7 @@ def run_forward(config, args, obs, delta):
     print("saved =", output_path)
 
 
-def main():
+def build_parser():
     parser = argparse.ArgumentParser(
         description="RECON 데이터셋 로딩과 1-sample inference를 확인하는 스모크 테스트.",
         epilog=(
@@ -184,15 +178,74 @@ def main():
         action="store_true",
         help="모델 forward는 건너뛰고 데이터셋 로딩/shape 확인만 합니다.",
     )
-    args = parser.parse_args()
+    return parser
+
+
+def load_smoke_config(args):
+    if getattr(args, "runtime_config", None) is not None:
+        return update_runtime_section(
+            args.runtime_config,
+            "smoke",
+            args,
+            (
+                "eval_config",
+                "model_config",
+                "dataset",
+                "eval_type",
+                "sample_index",
+                "checkpoint",
+                "horizon_steps",
+                "device",
+                "output_dir",
+                "skip_forward",
+            ),
+        )
+    return load_config(args.eval_config, args.model_config)
+
+
+def run_hydra_cli(argv):
+    config = compose_hydra_config(argv)
+    args = namespace_from_config(config, "smoke")
+    main(args)
+
+
+def uses_legacy_cli(argv):
+    legacy_flags = {
+        "--eval-config",
+        "--model-config",
+        "--dataset",
+        "--eval-type",
+        "--sample-index",
+        "--checkpoint",
+        "--horizon-steps",
+        "--device",
+        "--output-dir",
+        "--skip-forward",
+        "-h",
+        "--help",
+    }
+    return not argv or any(arg in legacy_flags or arg.split("=", 1)[0] in legacy_flags for arg in argv)
+
+
+def main(args=None):
+    if args is None:
+        argv = sys.argv[1:]
+        if uses_legacy_cli(argv):
+            args = build_parser().parse_args(argv)
+        else:
+            return run_hydra_cli(argv)
 
     torch.backends.cuda.matmul.allow_tf32 = True
     torch.backends.cudnn.allow_tf32 = True
 
-    config = load_config(args.eval_config, args.model_config)
+    config = load_smoke_config(args)
     dataset = build_eval_dataset(config, args.dataset, args.eval_type)
 
-    idx, obs, pred, delta = dataset[args.sample_index]
+    sample = dataset[args.sample_index]
+    if len(sample) == 5:
+        idx, obs, pred, delta, _ = sample
+    else:
+        idx, obs, pred, delta = sample
     print("dataset_len =", len(dataset))
     print("sample_idx =", int(idx.item()))
     print("obs_shape =", tuple(obs.shape))
@@ -201,6 +254,7 @@ def main():
     print("obs_range =", float(obs.min()), float(obs.max()))
 
     if args.skip_forward:
+        write_load_report(args, dataset, idx, obs, pred, delta)
         return
 
     run_forward(config, args, obs, delta)

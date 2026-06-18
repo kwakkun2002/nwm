@@ -1,0 +1,5 @@
+method,lpips4,dream4,psnr4,source
+Paper time only,0.76,0.783,7.839,Table 1
+Paper action only,0.318,0.1,14.858,Table 1
+Paper action+time,0.295,0.091,15.343,Table 1
+Paper 4-goal/context,0.296,0.091,15.331,Table 1

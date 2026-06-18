@@ -24,17 +24,32 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 import torch
 import argparse
 import numpy as np
+from pathlib import Path
 
-import src.core.env.distributed as dist
+from src.config import compose_hydra_config, int_list, namespace_from_config, save_yaml_config, str_list, update_runtime_section
+from src.evaluation.metrics.logger import MetricLogger
 from src.evaluation.metrics.perceptual import get_loss_fn, evaluate, save_metric_to_disk
 
 
 def main(args):
     device = 'cuda'
+    args.eval_types = str_list(args.eval_types)
+    args.rollout_fps_values = int_list(args.rollout_fps_values)
+    dataset_names = str_list(args.datasets)
+    if not dataset_names:
+        raise ValueError("At least one dataset is required. Pass --datasets or evaluate.datasets.")
+    if args.gt_dir is None or args.exp_dir is None:
+        raise ValueError("Both --gt_dir and --exp_dir are required for metric evaluation.")
+    if getattr(args, "runtime_config", None) is not None and args.exp_dir is not None:
+        update_runtime_section(
+            args.runtime_config,
+            "evaluate",
+            args,
+            ("batch_size", "eval_types", "gt_dir", "exp_dir", "num_sec_eval", "datasets", "input_fps", "rollout_fps_values", "exp"),
+        )
+        save_yaml_config(args.runtime_config, Path(args.exp_dir) / "resolved_evaluate_config.yaml")
           
     # Loading Datasets
-    dataset_names = args.datasets.split(',')
-    
     secs = np.array([2**i for i in range(0, args.num_sec_eval)])
     
     # These loss functions do not accumulate
@@ -48,7 +63,7 @@ def main(args):
         if 'rollout' in args.eval_types:
             for rollout_fps in args.rollout_fps_values:
                 try:
-                    metric_logger = dist.MetricLogger(delimiter="  ")
+                    metric_logger = MetricLogger(delimiter="  ")
                     print("Evaluating rollout", rollout_fps, dataset_name)
                     # Rollout (LPIPS, DreamSim, FID)
                     eval_name = f'rollout_{rollout_fps}fps'
@@ -65,7 +80,7 @@ def main(args):
 
         if 'time' in args.eval_types:
             try:
-                metric_logger = dist.MetricLogger(delimiter="  ")
+                metric_logger = MetricLogger(delimiter="  ")
                 print("Evaluating time", dataset_name)
                 eval_name = 'time'
                 gt_dataset_time_dir = os.path.join(gt_dataset_dir, eval_name)
@@ -79,7 +94,7 @@ def main(args):
             except Exception as e:
                 print(e)
 
-if __name__ == "__main__":
+def build_parser():
     parser = argparse.ArgumentParser()
     
     parser.add_argument("--batch_size", type=int, default=64, help="batch size")
@@ -93,11 +108,36 @@ if __name__ == "__main__":
     parser.add_argument("--rollout_fps_values", type=str, default='1,4', help="")
     
     parser.add_argument("--exp", type=str, default=None, help="experiment name")
-    
-    args = parser.parse_args()
-    
-    args.rollout_fps_values = [int(fps) for fps in args.rollout_fps_values.split(',')]
-    
-    args.eval_types = args.eval_types.split(',')
-    
+    return parser
+
+
+def run_hydra_cli(argv):
+    config = compose_hydra_config(argv)
+    args = namespace_from_config(config, "evaluate")
     main(args)
+
+
+def uses_legacy_cli(argv):
+    legacy_flags = {
+        "--batch_size",
+        "--eval_types",
+        "--gt_dir",
+        "--exp_dir",
+        "--num_sec_eval",
+        "--datasets",
+        "--input_fps",
+        "--rollout_fps_values",
+        "--exp",
+        "-h",
+        "--help",
+    }
+    return not argv or any(arg in legacy_flags or arg.split("=", 1)[0] in legacy_flags for arg in argv)
+
+
+if __name__ == "__main__":
+    argv = sys.argv[1:]
+    if uses_legacy_cli(argv):
+        args = build_parser().parse_args()
+        main(args)
+    else:
+        run_hydra_cli(argv)

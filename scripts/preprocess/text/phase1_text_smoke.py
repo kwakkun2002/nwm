@@ -4,12 +4,12 @@ import os
 import sys
 
 import torch
-import yaml
 
-REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
+from src.config import compose_hydra_config, load_experiment_config, namespace_from_config, update_runtime_section
 from src.data.datasets.train_dataset import TrainingDataset
 from src.data.transforms.image import build_transform
 from src.diffusion import create_diffusion
@@ -18,12 +18,7 @@ from src.models.backbones.cdit import CDiT_models
 from src.models.checkpoints.vae import load_vae
 
 
-def load_config(config_path: str):
-    with open(config_path, "r", encoding="utf-8") as f:
-        return yaml.safe_load(f)
-
-
-def main():
+def build_parser():
     parser = argparse.ArgumentParser(description="Phase 1 cached text conditioning smoke test.")
     parser.add_argument("--config", default="configs/experiment/nwm_cdit_s.yaml")
     parser.add_argument("--dataset-name", default="recon")
@@ -35,12 +30,64 @@ def main():
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--len-traj-pred", type=int, default=None)
     parser.add_argument("--context-size", type=int, default=None)
-    args = parser.parse_args()
+    return parser
+
+
+def parse_args(argv=None):
+    argv = sys.argv[1:] if argv is None else argv
+    if uses_legacy_cli(argv):
+        return build_parser().parse_args(argv)
+    config = compose_hydra_config(argv)
+    return namespace_from_config(config, "text_smoke")
+
+
+def uses_legacy_cli(argv):
+    legacy_flags = {
+        "--config",
+        "--dataset-name",
+        "--data-folder",
+        "--data-split-folder",
+        "--embedding-root",
+        "--sample-index",
+        "--goals-per-obs",
+        "--device",
+        "--len-traj-pred",
+        "--context-size",
+        "-h",
+        "--help",
+    }
+    return not argv or any(arg in legacy_flags or arg.split("=", 1)[0] in legacy_flags for arg in argv)
+
+
+def load_text_smoke_config(args):
+    if getattr(args, "runtime_config", None) is not None:
+        return update_runtime_section(
+            args.runtime_config,
+            "text_smoke",
+            args,
+            (
+                "config",
+                "dataset_name",
+                "data_folder",
+                "data_split_folder",
+                "embedding_root",
+                "sample_index",
+                "goals_per_obs",
+                "device",
+                "len_traj_pred",
+                "context_size",
+            ),
+        )
+    return load_experiment_config(args.config)
+
+
+def main():
+    args = parse_args()
 
     torch.backends.cuda.matmul.allow_tf32 = True
     torch.backends.cudnn.allow_tf32 = True
 
-    config = load_config(args.config)
+    config = load_text_smoke_config(args)
     distance_cfg = config.get("distance", {})
     dataset_cfg = config["datasets"][args.dataset_name]
     data_folder = args.data_folder if args.data_folder is not None else dataset_cfg["data_folder"]
@@ -101,6 +148,8 @@ def main():
         input_size=config["image_size"] // 8,
         in_channels=4,
         text_dim=text_dim,
+        text_gate_mode=config.get("text_conditioning", {}).get("gate_mode", "add"),
+        text_gate_init=float(config.get("text_conditioning", {}).get("gate_init", -4.0)),
     ).to(device)
     model.eval()
 

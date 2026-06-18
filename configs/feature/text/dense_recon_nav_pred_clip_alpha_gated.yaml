@@ -1,0 +1,9 @@
+# @package _global_
+
+text_conditioning:
+  enabled: true
+  embedding_root: datasets/derived/phase2_nav_pred_qwen_clip/text_embeds_dense/recon_all_raw_rel
+  condition_source: current
+  text_dim: 0
+  gate_mode: alpha
+  gate_init: -4.0

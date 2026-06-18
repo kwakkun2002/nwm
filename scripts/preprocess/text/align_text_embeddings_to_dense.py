@@ -5,11 +5,11 @@ import sys
 
 import numpy as np
 
-REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
-from src.core.io.serialization import load_traj_data
+from src.data.io import load_traj_data
 from src.features.text.pipeline import build_text_cache_path
 
 

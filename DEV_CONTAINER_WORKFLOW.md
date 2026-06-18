@@ -92,6 +92,7 @@ You can also use the wrapper script in this repository:
 NWM_GPU_REQUEST='device=1' ./scripts/docker/nwm-start.sh
 NWM_GPU_REQUEST='device=0,1' ./scripts/docker/nwm-start.sh
 ./scripts/docker/nwm-run.sh "python scripts/train.py --config configs/experiment/nwm_cdit_xl.yaml"
+./scripts/docker/nwm-run.sh "python scripts/train.py experiment=nwm_cdit_xl train.epochs=300 wandb.enabled=false"
 ./scripts/docker/nwm-run.sh "python scripts/evaluate.py --datasets recon ..."
 ```
 

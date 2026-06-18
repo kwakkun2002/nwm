@@ -3,18 +3,24 @@ import argparse
 import os
 import sys
 
-REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
-from src.features.text.utils import caption_to_tags, iter_jsonl, normalize_caption_text, write_jsonl
+from src.features.text.utils import (
+    caption_to_tags,
+    iter_jsonl,
+    normalize_caption_text,
+    normalize_structured_caption_text,
+    write_jsonl,
+)
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", type=str, required=True)
     parser.add_argument("--output", type=str, required=True)
-    parser.add_argument("--format", type=str, default="sentence", choices=["sentence", "tags"])
+    parser.add_argument("--format", type=str, default="sentence", choices=["sentence", "structured", "tags"])
     args = parser.parse_args()
 
     output_records = []
@@ -22,6 +28,8 @@ def main():
         raw_caption = record.get("raw_caption", "")
         if args.format == "sentence":
             clean_text = normalize_caption_text(raw_caption)
+        elif args.format == "structured":
+            clean_text = normalize_structured_caption_text(raw_caption)
         else:
             clean_text = caption_to_tags(raw_caption)
 

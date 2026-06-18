@@ -1,0 +1,446 @@
+[
+  {
+    "kind": "copy",
+    "source": "artifacts/phase1_cache_report",
+    "destination": "artifacts/summaries/preprocess/phase1_cache_report",
+    "reason": "preserve generated report"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/phase1_recon_subset_gallery",
+    "destination": "artifacts/summaries/preprocess/phase1_recon_subset_gallery",
+    "reason": "preserve generated report"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/eval_s_recon_128/b64/nwm_cdit_s_recon_128_0030000/recon_rollout_1fps.json",
+    "destination": "artifacts/summaries/eval/eval_s_recon_128/b64/nwm_cdit_s_recon_128_0030000/recon_rollout_1fps.json",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/eval_s_recon_128/b64/nwm_cdit_s_recon_128_0030000/recon_rollout_4fps.json",
+    "destination": "artifacts/summaries/eval/eval_s_recon_128/b64/nwm_cdit_s_recon_128_0030000/recon_rollout_4fps.json",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/eval_s_recon_128/b64/nwm_cdit_s_recon_128_0030000/recon_time.json",
+    "destination": "artifacts/summaries/eval/eval_s_recon_128/b64/nwm_cdit_s_recon_128_0030000/recon_time.json",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/eval_s_recon_128/nwm_cdit_s_recon_128_0005000/recon_rollout_1fps.json",
+    "destination": "artifacts/summaries/eval/eval_s_recon_128/nwm_cdit_s_recon_128_0005000/recon_rollout_1fps.json",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/eval_s_recon_128/nwm_cdit_s_recon_128_0005000/recon_rollout_4fps.json",
+    "destination": "artifacts/summaries/eval/eval_s_recon_128/nwm_cdit_s_recon_128_0005000/recon_rollout_4fps.json",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/eval_s_recon_128/nwm_cdit_s_recon_128_0005000/recon_time.json",
+    "destination": "artifacts/summaries/eval/eval_s_recon_128/nwm_cdit_s_recon_128_0005000/recon_time.json",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/eval_s_recon_128/nwm_cdit_s_recon_128_0010000/recon_rollout_1fps.json",
+    "destination": "artifacts/summaries/eval/eval_s_recon_128/nwm_cdit_s_recon_128_0010000/recon_rollout_1fps.json",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/eval_s_recon_128/nwm_cdit_s_recon_128_0010000/recon_rollout_4fps.json",
+    "destination": "artifacts/summaries/eval/eval_s_recon_128/nwm_cdit_s_recon_128_0010000/recon_rollout_4fps.json",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/eval_s_recon_128/nwm_cdit_s_recon_128_0010000/recon_time.json",
+    "destination": "artifacts/summaries/eval/eval_s_recon_128/nwm_cdit_s_recon_128_0010000/recon_time.json",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/eval_s_recon_128/nwm_cdit_s_recon_128_0015000/recon_time.json",
+    "destination": "artifacts/summaries/eval/eval_s_recon_128/nwm_cdit_s_recon_128_0015000/recon_time.json",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/eval_s_recon_128/nwm_cdit_s_recon_128_0020000/recon_time.json",
+    "destination": "artifacts/summaries/eval/eval_s_recon_128/nwm_cdit_s_recon_128_0020000/recon_time.json",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/eval_s_recon_128/nwm_cdit_s_recon_128_0025000/recon_time.json",
+    "destination": "artifacts/summaries/eval/eval_s_recon_128/nwm_cdit_s_recon_128_0025000/recon_time.json",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/eval_s_recon_128/nwm_cdit_s_recon_128_0030000/recon_time.json",
+    "destination": "artifacts/summaries/eval/eval_s_recon_128/nwm_cdit_s_recon_128_0030000/recon_time.json",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/eval_s_recon_128/nwm_cdit_s_recon_128_0035000/recon_time.json",
+    "destination": "artifacts/summaries/eval/eval_s_recon_128/nwm_cdit_s_recon_128_0035000/recon_time.json",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/eval_s_recon_128/nwm_cdit_s_recon_128_0040000/recon_time.json",
+    "destination": "artifacts/summaries/eval/eval_s_recon_128/nwm_cdit_s_recon_128_0040000/recon_time.json",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/eval_s_recon_128/nwm_cdit_s_recon_128_0045000/recon_time.json",
+    "destination": "artifacts/summaries/eval/eval_s_recon_128/nwm_cdit_s_recon_128_0045000/recon_time.json",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/eval_s_recon_128/nwm_cdit_s_recon_128_0050000/recon_time.json",
+    "destination": "artifacts/summaries/eval/eval_s_recon_128/nwm_cdit_s_recon_128_0050000/recon_time.json",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/eval_s_recon_128/nwm_cdit_s_recon_128_0055000/recon_time.json",
+    "destination": "artifacts/summaries/eval/eval_s_recon_128/nwm_cdit_s_recon_128_0055000/recon_time.json",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/eval_s_recon_128/nwm_cdit_s_recon_128_latest/recon_time.json",
+    "destination": "artifacts/summaries/eval/eval_s_recon_128/nwm_cdit_s_recon_128_latest/recon_time.json",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/eval_s_recon_128_text_dense/nwm_cdit_s_recon_128_text_dense_0005000/recon_time.json",
+    "destination": "artifacts/summaries/eval/eval_s_recon_128_text_dense/nwm_cdit_s_recon_128_text_dense_0005000/recon_time.json",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/eval_s_recon_128_text_dense/nwm_cdit_s_recon_128_text_dense_0010000/recon_time.json",
+    "destination": "artifacts/summaries/eval/eval_s_recon_128_text_dense/nwm_cdit_s_recon_128_text_dense_0010000/recon_time.json",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/eval_s_recon_128_text_dense/nwm_cdit_s_recon_128_text_dense_0015000/recon_time.json",
+    "destination": "artifacts/summaries/eval/eval_s_recon_128_text_dense/nwm_cdit_s_recon_128_text_dense_0015000/recon_time.json",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/eval_s_recon_128_text_dense/nwm_cdit_s_recon_128_text_dense_0020000/recon_time.json",
+    "destination": "artifacts/summaries/eval/eval_s_recon_128_text_dense/nwm_cdit_s_recon_128_text_dense_0020000/recon_time.json",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/eval_s_recon_128_text_dense/nwm_cdit_s_recon_128_text_dense_0025000/recon_time.json",
+    "destination": "artifacts/summaries/eval/eval_s_recon_128_text_dense/nwm_cdit_s_recon_128_text_dense_0025000/recon_time.json",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/eval_s_recon_128_text_dense/nwm_cdit_s_recon_128_text_dense_0030000/recon_rollout_1fps.json",
+    "destination": "artifacts/summaries/eval/eval_s_recon_128_text_dense/nwm_cdit_s_recon_128_text_dense_0030000/recon_rollout_1fps.json",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/eval_s_recon_128_text_dense/nwm_cdit_s_recon_128_text_dense_0030000/recon_rollout_4fps.json",
+    "destination": "artifacts/summaries/eval/eval_s_recon_128_text_dense/nwm_cdit_s_recon_128_text_dense_0030000/recon_rollout_4fps.json",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/eval_s_recon_128_text_dense/nwm_cdit_s_recon_128_text_dense_0030000/recon_time.json",
+    "destination": "artifacts/summaries/eval/eval_s_recon_128_text_dense/nwm_cdit_s_recon_128_text_dense_0030000/recon_time.json",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/eval_s_recon_128_text_dense/nwm_cdit_s_recon_128_text_dense_latest/recon_time.json",
+    "destination": "artifacts/summaries/eval/eval_s_recon_128_text_dense/nwm_cdit_s_recon_128_text_dense_latest/recon_time.json",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/eval_s_recon_raw_text_dense/nwm_cdit_s_recon_raw_text_dense_0005000/recon_time.json",
+    "destination": "artifacts/summaries/eval/eval_s_recon_raw_text_dense/nwm_cdit_s_recon_raw_text_dense_0005000/recon_time.json",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/eval_s_recon_raw_text_dense/nwm_cdit_s_recon_raw_text_dense_0010000/recon_time.json",
+    "destination": "artifacts/summaries/eval/eval_s_recon_raw_text_dense/nwm_cdit_s_recon_raw_text_dense_0010000/recon_time.json",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/eval_s_recon_raw_text_dense/nwm_cdit_s_recon_raw_text_dense_0015000/recon_time.json",
+    "destination": "artifacts/summaries/eval/eval_s_recon_raw_text_dense/nwm_cdit_s_recon_raw_text_dense_0015000/recon_time.json",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/eval_s_recon_raw_text_dense/nwm_cdit_s_recon_raw_text_dense_0020000/recon_time.json",
+    "destination": "artifacts/summaries/eval/eval_s_recon_raw_text_dense/nwm_cdit_s_recon_raw_text_dense_0020000/recon_time.json",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/eval_s_recon_raw_text_dense/nwm_cdit_s_recon_raw_text_dense_0025000/recon_time.json",
+    "destination": "artifacts/summaries/eval/eval_s_recon_raw_text_dense/nwm_cdit_s_recon_raw_text_dense_0025000/recon_time.json",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/eval_s_recon_raw_text_dense/nwm_cdit_s_recon_raw_text_dense_0030000/recon_rollout_1fps.json",
+    "destination": "artifacts/summaries/eval/eval_s_recon_raw_text_dense/nwm_cdit_s_recon_raw_text_dense_0030000/recon_rollout_1fps.json",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/eval_s_recon_raw_text_dense/nwm_cdit_s_recon_raw_text_dense_0030000/recon_rollout_4fps.json",
+    "destination": "artifacts/summaries/eval/eval_s_recon_raw_text_dense/nwm_cdit_s_recon_raw_text_dense_0030000/recon_rollout_4fps.json",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/eval_s_recon_raw_text_dense/nwm_cdit_s_recon_raw_text_dense_0030000/recon_time.json",
+    "destination": "artifacts/summaries/eval/eval_s_recon_raw_text_dense/nwm_cdit_s_recon_raw_text_dense_0030000/recon_time.json",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/eval_s_recon_raw_text_dense/nwm_cdit_s_recon_raw_text_dense_latest/recon_time.json",
+    "destination": "artifacts/summaries/eval/eval_s_recon_raw_text_dense/nwm_cdit_s_recon_raw_text_dense_latest/recon_time.json",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/gpu_profile_baseline/nwm_cdit_s_recon_sample0_bs1_diff250.json",
+    "destination": "artifacts/profiling/raw/gpu_profile_baseline/nwm_cdit_s_recon_sample0_bs1_diff250.json",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/gpu_profile_baseline/nwm_cdit_s_recon_sample0_bs1_diff250_rollout.csv",
+    "destination": "artifacts/profiling/raw/gpu_profile_baseline/nwm_cdit_s_recon_sample0_bs1_diff250_rollout.csv",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/gpu_profile_baseline/nwm_cdit_s_recon_sample0_bs1_diff250_rollout.json",
+    "destination": "artifacts/profiling/raw/gpu_profile_baseline/nwm_cdit_s_recon_sample0_bs1_diff250_rollout.json",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/gpu_profile_baseline/nwm_cdit_s_recon_sample0_bs1_diff250_single.json",
+    "destination": "artifacts/profiling/raw/gpu_profile_baseline/nwm_cdit_s_recon_sample0_bs1_diff250_single.json",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/gpu_profile_baseline/nwm_cdit_s_recon_sample0_bs1_diff250_single_step.csv",
+    "destination": "artifacts/profiling/raw/gpu_profile_baseline/nwm_cdit_s_recon_sample0_bs1_diff250_single_step.csv",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/lpips_time_recon_s/nwm_cdit_s/recon_rollout_1fps.json",
+    "destination": "artifacts/summaries/eval/lpips_time_recon_s/nwm_cdit_s/recon_rollout_1fps.json",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/lpips_time_recon_s/nwm_cdit_s/recon_rollout_4fps.json",
+    "destination": "artifacts/summaries/eval/lpips_time_recon_s/nwm_cdit_s/recon_rollout_4fps.json",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/lpips_time_recon_s/nwm_cdit_s/recon_time.json",
+    "destination": "artifacts/summaries/eval/lpips_time_recon_s/nwm_cdit_s/recon_time.json",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/phase1/recon_test_1fps_manifest.jsonl",
+    "destination": "artifacts/summaries/preprocess/phase1/recon_test_1fps_manifest.jsonl",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/phase1/recon_train_1fps_manifest.jsonl",
+    "destination": "artifacts/summaries/preprocess/phase1/recon_train_1fps_manifest.jsonl",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/phase1_qwen/full_run.log",
+    "destination": "artifacts/summaries/preprocess/phase1_qwen/full_run.log",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/phase1_text_embeds/full_run.log",
+    "destination": "artifacts/summaries/preprocess/phase1_text_embeds/full_run.log",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/phase1_text_embeds_dense/full_run.log",
+    "destination": "artifacts/summaries/preprocess/phase1_text_embeds_dense/full_run.log",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/time_checkpoint_sweep_manifest.json",
+    "destination": "artifacts/summaries/eval/time_checkpoint_sweep_manifest.json",
+    "reason": "preserve summary artifact"
+  },
+  {
+    "kind": "copy",
+    "source": "artifacts/recon_smoke",
+    "destination": "artifacts/smoke/recon",
+    "reason": "preserve smoke output"
+  },
+  {
+    "kind": "move",
+    "source": "artifacts/eval_s_recon_128",
+    "destination": "artifacts/_trash/20260428_002100/eval_s_recon_128",
+    "reason": "legacy top-level artifact directory"
+  },
+  {
+    "kind": "move",
+    "source": "artifacts/eval_s_recon_128_text_dense",
+    "destination": "artifacts/_trash/20260428_002100/eval_s_recon_128_text_dense",
+    "reason": "legacy top-level artifact directory"
+  },
+  {
+    "kind": "move",
+    "source": "artifacts/eval_s_recon_raw_text_dense",
+    "destination": "artifacts/_trash/20260428_002100/eval_s_recon_raw_text_dense",
+    "reason": "legacy top-level artifact directory"
+  },
+  {
+    "kind": "move",
+    "source": "artifacts/gpu_profile_baseline",
+    "destination": "artifacts/_trash/20260428_002100/gpu_profile_baseline",
+    "reason": "legacy top-level artifact directory"
+  },
+  {
+    "kind": "move",
+    "source": "artifacts/lpips_time_recon_s",
+    "destination": "artifacts/_trash/20260428_002100/lpips_time_recon_s",
+    "reason": "legacy top-level artifact directory"
+  },
+  {
+    "kind": "move",
+    "source": "artifacts/nwm_cdit_s_recon_128",
+    "destination": "artifacts/_trash/20260428_002100/nwm_cdit_s_recon_128",
+    "reason": "legacy top-level artifact directory"
+  },
+  {
+    "kind": "move",
+    "source": "artifacts/nwm_cdit_s_recon_128_from10k_30k",
+    "destination": "artifacts/_trash/20260428_002100/nwm_cdit_s_recon_128_from10k_30k",
+    "reason": "legacy top-level artifact directory"
+  },
+  {
+    "kind": "move",
+    "source": "artifacts/nwm_cdit_s_recon_128_text_dense",
+    "destination": "artifacts/_trash/20260428_002100/nwm_cdit_s_recon_128_text_dense",
+    "reason": "legacy top-level artifact directory"
+  },
+  {
+    "kind": "move",
+    "source": "artifacts/nwm_cdit_s_recon_raw_text_dense",
+    "destination": "artifacts/_trash/20260428_002100/nwm_cdit_s_recon_raw_text_dense",
+    "reason": "legacy top-level artifact directory"
+  },
+  {
+    "kind": "move",
+    "source": "artifacts/phase1",
+    "destination": "artifacts/_trash/20260428_002100/phase1",
+    "reason": "legacy top-level artifact directory"
+  },
+  {
+    "kind": "move",
+    "source": "artifacts/phase1_cache_report",
+    "destination": "artifacts/_trash/20260428_002100/phase1_cache_report",
+    "reason": "legacy top-level artifact directory"
+  },
+  {
+    "kind": "move",
+    "source": "artifacts/phase1_qwen",
+    "destination": "artifacts/_trash/20260428_002100/phase1_qwen",
+    "reason": "legacy top-level artifact directory"
+  },
+  {
+    "kind": "move",
+    "source": "artifacts/phase1_recon_subset_gallery",
+    "destination": "artifacts/_trash/20260428_002100/phase1_recon_subset_gallery",
+    "reason": "legacy top-level artifact directory"
+  },
+  {
+    "kind": "move",
+    "source": "artifacts/phase1_text_embeds",
+    "destination": "artifacts/_trash/20260428_002100/phase1_text_embeds",
+    "reason": "legacy top-level artifact directory"
+  },
+  {
+    "kind": "move",
+    "source": "artifacts/phase1_text_embeds_dense",
+    "destination": "artifacts/_trash/20260428_002100/phase1_text_embeds_dense",
+    "reason": "legacy top-level artifact directory"
+  },
+  {
+    "kind": "move",
+    "source": "artifacts/plan_eval",
+    "destination": "artifacts/_trash/20260428_002100/plan_eval",
+    "reason": "legacy top-level artifact directory"
+  },
+  {
+    "kind": "move",
+    "source": "artifacts/plan_eval_s_recon_raw_text_dense",
+    "destination": "artifacts/_trash/20260428_002100/plan_eval_s_recon_raw_text_dense",
+    "reason": "legacy top-level artifact directory"
+  },
+  {
+    "kind": "move",
+    "source": "artifacts/recon_smoke",
+    "destination": "artifacts/_trash/20260428_002100/recon_smoke",
+    "reason": "legacy top-level artifact directory"
+  },
+  {
+    "kind": "move",
+    "source": "artifacts/time_checkpoint_sweep_manifest.json",
+    "destination": "artifacts/_trash/20260428_002100/time_checkpoint_sweep_manifest.json",
+    "reason": "legacy top-level artifact file"
+  },
+  {
+    "kind": "remove",
+    "source": "artifacts/_trash/20260428_002000",
+    "destination": null,
+    "reason": "empty directory"
+  }
+]

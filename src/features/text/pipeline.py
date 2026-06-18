@@ -16,7 +16,20 @@ def get_text_conditioning_config(config):
         "embedding_root": embedding_root,
         "condition_source": text_config.get("condition_source", "current"),
         "text_dim": text_dim,
+        "gate_mode": text_config.get("gate_mode", "add"),
+        "gate_init": float(text_config.get("gate_init", -4.0)),
     }
+
+
+def override_text_embedding_root(config, embedding_root):
+    if not embedding_root:
+        return config
+    text_config = dict(config.get("text_conditioning", {}))
+    if not bool(text_config.get("enabled", False)):
+        raise ValueError("--text_embedding_root was provided, but text_conditioning.enabled is false")
+    text_config["embedding_root"] = str(embedding_root)
+    config["text_conditioning"] = text_config
+    return config
 
 
 def infer_trajectory_name(image_path: str, input_root: Optional[str] = None) -> str:

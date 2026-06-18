@@ -1,0 +1,17 @@
+{
+    "recon_time_lpips_1s": 0.1743200272321701,
+    "recon_time_dreamsim_1s": 0.2384359985589981,
+    "recon_time_lpips_2s": 0.1883346140384674,
+    "recon_time_dreamsim_2s": 0.24216321110725403,
+    "recon_time_lpips_4s": 0.2018738090991974,
+    "recon_time_dreamsim_4s": 0.24911527335643768,
+    "recon_time_lpips_8s": 0.22604259848594666,
+    "recon_time_dreamsim_8s": 0.26327112317085266,
+    "recon_time_lpips_16s": 0.2797730267047882,
+    "recon_time_dreamsim_16s": 0.30706480145454407,
+    "recon_time_fid_1s": 40.117706298828125,
+    "recon_time_fid_2s": 38.10441589355469,
+    "recon_time_fid_4s": 38.07476806640625,
+    "recon_time_fid_8s": 38.199798583984375,
+    "recon_time_fid_16s": 42.0833740234375
+}

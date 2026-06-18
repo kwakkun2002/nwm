@@ -3,9 +3,7 @@ import os
 import numpy as np
 from PIL import Image
 
-from src.data.transforms.image import unnormalize, build_transform
-from src.data.datasets.eval_dataset import EvalDataset
-from src.features.text.pipeline import get_text_conditioning_config
+from src.data.transforms.image import unnormalize
 
 
 def save_image(output_file, img, unnormalize_img):
@@ -17,37 +15,6 @@ def save_image(output_file, img, unnormalize_img):
     img = img.byte()
     image = Image.fromarray(img.permute(1, 2, 0).numpy(), mode='RGB')
     image.save(output_file)
-
-
-def get_dataset_eval(config, dataset_name, eval_type, predefined_index=True):
-    data_config = config["eval_datasets"][dataset_name]
-    text_config = get_text_conditioning_config(config)
-    image_transform = build_transform(config["image_size"])
-    if predefined_index:
-        predefined_index = f"data/splits/{dataset_name}/test/{eval_type}.pkl"
-    else:
-        predefined_index = None
-
-    dataset = EvalDataset(
-                data_folder=data_config["data_folder"],
-                data_split_folder=data_config["test"],
-                dataset_name=dataset_name,
-                image_size=config["image_size"],
-                min_dist_cat=config["eval_distance"]["eval_min_dist_cat"],
-                max_dist_cat=config["eval_distance"]["eval_max_dist_cat"],
-                len_traj_pred=config["eval_len_traj_pred"],
-                traj_stride=config["traj_stride"],
-                context_size=config["eval_context_size"],
-                normalize=config["normalize"],
-                transform=image_transform,
-                goals_per_obs=4,
-                predefined_index=predefined_index,
-                traj_names='traj_names.txt',
-                text_embedding_root=text_config["embedding_root"] if text_config["enabled"] else None,
-                text_condition_source=text_config["condition_source"],
-            )
-
-    return dataset
 
 
 @torch.no_grad()
