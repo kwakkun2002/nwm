@@ -52,6 +52,12 @@ EXPERIMENTS = {
         "suite": "eval_b_recon_64_text_nav_pred_clip",
         "gt_suite": "eval_b_recon_64",
     },
+    "nwm_cdit_b_recon_64_text_nav_pred_clip_alpha_gated": {
+        "config": Path("configs/experiment/nwm_cdit_b_recon_64_text_nav_pred_clip_alpha_gated.yaml"),
+        "checkpoint_dir": Path("weights/checkpoints/nwm_cdit_b_recon_64_text_nav_pred_clip_alpha_gated"),
+        "suite": "eval_b_recon_64_text_nav_pred_clip_alpha_gated",
+        "gt_suite": "eval_b_recon_64",
+    },
     "nwm_cdit_b_recon_128_text_dense": {
         "config": Path("configs/experiment/nwm_cdit_b_recon_128_text_dense.yaml"),
         "checkpoint_dir": Path("weights/checkpoints/nwm_cdit_b_recon_128_text_dense"),
@@ -106,6 +112,12 @@ EXPERIMENTS = {
         "config": Path("configs/experiment/nwm_cdit_s_recon_64_text_nav_pred_clip.yaml"),
         "checkpoint_dir": Path("weights/checkpoints/nwm_cdit_s_recon_64_text_nav_pred_clip"),
         "suite": "eval_s_recon_64_text_nav_pred_clip",
+        "gt_suite": "eval_s_recon_64",
+    },
+    "nwm_cdit_s_recon_64_text_nav_pred_clip_alpha_gated": {
+        "config": Path("configs/experiment/nwm_cdit_s_recon_64_text_nav_pred_clip_alpha_gated.yaml"),
+        "checkpoint_dir": Path("weights/checkpoints/nwm_cdit_s_recon_64_text_nav_pred_clip_alpha_gated"),
+        "suite": "eval_s_recon_64_text_nav_pred_clip_alpha_gated",
         "gt_suite": "eval_s_recon_64",
     },
     "nwm_cdit_s_recon_128_text_dense": {

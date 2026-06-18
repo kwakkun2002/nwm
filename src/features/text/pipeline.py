@@ -16,6 +16,8 @@ def get_text_conditioning_config(config):
         "embedding_root": embedding_root,
         "condition_source": text_config.get("condition_source", "current"),
         "text_dim": text_dim,
+        "gate_mode": text_config.get("gate_mode", "add"),
+        "gate_init": float(text_config.get("gate_init", -4.0)),
     }
 
 

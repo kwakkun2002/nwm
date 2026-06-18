@@ -148,6 +148,8 @@ def main():
         input_size=config["image_size"] // 8,
         in_channels=4,
         text_dim=text_dim,
+        text_gate_mode=config.get("text_conditioning", {}).get("gate_mode", "add"),
+        text_gate_init=float(config.get("text_conditioning", {}).get("gate_init", -4.0)),
     ).to(device)
     model.eval()
 

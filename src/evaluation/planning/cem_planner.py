@@ -163,6 +163,8 @@ class WM_Planning_Evaluator:
             context_size=self.num_cond,
             input_size=latent_size,
             text_dim=self.text_config["text_dim"] if self.text_config["enabled"] else 0,
+            text_gate_mode=self.text_config["gate_mode"],
+            text_gate_init=self.text_config["gate_init"],
         )
 
         checkpoint_path = get_checkpoint_path(self.config, args.ckp)

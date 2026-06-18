@@ -184,6 +184,8 @@ def main(args):
         input_size=latent_size,
         in_channels=4,
         text_dim=text_config["text_dim"] if text_config["enabled"] else 0,
+        text_gate_mode=text_config["gate_mode"],
+        text_gate_init=text_config["gate_init"],
     ).to(device)
     
     ema = deepcopy(model).to(device)  # Create an EMA of the model for use after training
